@@ -1,0 +1,233 @@
+{
+  "count": 4,
+  "states": {
+    "StageState": {
+      "ports": [
+        {
+          "validators": [],
+          "key": "x",
+          "label": null,
+          "kind": "FLOAT",
+          "description": null,
+          "identifier": null,
+          "nullable": false,
+          "effects": [],
+          "default": null,
+          "children": null,
+          "choices": null,
+          "assignWidget": null,
+          "returnWidget": null,
+          "descriptors": null
+        },
+        {
+          "validators": [],
+          "key": "y",
+          "label": null,
+          "kind": "FLOAT",
+          "description": null,
+          "identifier": null,
+          "nullable": false,
+          "effects": [],
+          "default": null,
+          "children": null,
+          "choices": null,
+          "assignWidget": null,
+          "returnWidget": null,
+          "descriptors": null
+        },
+        {
+          "validators": [],
+          "key": "z",
+          "label": null,
+          "kind": "FLOAT",
+          "description": null,
+          "identifier": null,
+          "nullable": false,
+          "effects": [],
+          "default": null,
+          "children": null,
+          "choices": null,
+          "assignWidget": null,
+          "returnWidget": null,
+          "descriptors": null
+        },
+        {
+          "validators": [],
+          "key": "a",
+          "label": null,
+          "kind": "FLOAT",
+          "description": null,
+          "identifier": null,
+          "nullable": false,
+          "effects": [],
+          "default": null,
+          "children": null,
+          "choices": null,
+          "assignWidget": null,
+          "returnWidget": null,
+          "descriptors": null
+        }
+      ],
+      "name": "StageState"
+    },
+    "IlluminationState": {
+      "ports": [
+        {
+          "validators": [],
+          "key": "intensity",
+          "label": null,
+          "kind": "FLOAT",
+          "description": null,
+          "identifier": null,
+          "nullable": false,
+          "effects": [],
+          "default": null,
+          "children": null,
+          "choices": null,
+          "assignWidget": null,
+          "returnWidget": null,
+          "descriptors": null
+        },
+        {
+          "validators": [],
+          "key": "wavelength",
+          "label": null,
+          "kind": "FLOAT",
+          "description": null,
+          "identifier": null,
+          "nullable": false,
+          "effects": [],
+          "default": null,
+          "children": null,
+          "choices": null,
+          "assignWidget": null,
+          "returnWidget": null,
+          "descriptors": null
+        },
+        {
+          "validators": [],
+          "key": "channel",
+          "label": null,
+          "kind": "INT",
+          "description": null,
+          "identifier": null,
+          "nullable": false,
+          "effects": [],
+          "default": null,
+          "children": null,
+          "choices": null,
+          "assignWidget": null,
+          "returnWidget": null,
+          "descriptors": null
+        }
+      ],
+      "name": "IlluminationState"
+    },
+    "CameraState": {
+      "ports": [
+        {
+          "validators": [],
+          "key": "exposure_time",
+          "label": null,
+          "kind": "FLOAT",
+          "description": null,
+          "identifier": null,
+          "nullable": false,
+          "effects": [],
+          "default": null,
+          "children": null,
+          "choices": null,
+          "assignWidget": null,
+          "returnWidget": null,
+          "descriptors": null
+        },
+        {
+          "validators": [],
+          "key": "gain",
+          "label": null,
+          "kind": "FLOAT",
+          "description": null,
+          "identifier": null,
+          "nullable": false,
+          "effects": [],
+          "default": null,
+          "children": null,
+          "choices": null,
+          "assignWidget": null,
+          "returnWidget": null,
+          "descriptors": null
+        },
+        {
+          "validators": [],
+          "key": "frame_number",
+          "label": null,
+          "kind": "INT",
+          "description": null,
+          "identifier": null,
+          "nullable": false,
+          "effects": [],
+          "default": null,
+          "children": null,
+          "choices": null,
+          "assignWidget": null,
+          "returnWidget": null,
+          "descriptors": null
+        }
+      ],
+      "name": "CameraState"
+    },
+    "ObjectiveState": {
+      "ports": [
+        {
+          "validators": [],
+          "key": "slot",
+          "label": null,
+          "kind": "INT",
+          "description": null,
+          "identifier": null,
+          "nullable": false,
+          "effects": [],
+          "default": null,
+          "children": null,
+          "choices": null,
+          "assignWidget": null,
+          "returnWidget": null,
+          "descriptors": null
+        },
+        {
+          "validators": [],
+          "key": "magnification",
+          "label": null,
+          "kind": "FLOAT",
+          "description": null,
+          "identifier": null,
+          "nullable": false,
+          "effects": [],
+          "default": null,
+          "children": null,
+          "choices": null,
+          "assignWidget": null,
+          "returnWidget": null,
+          "descriptors": null
+        },
+        {
+          "validators": [],
+          "key": "name",
+          "label": null,
+          "kind": "STRING",
+          "description": null,
+          "identifier": null,
+          "nullable": false,
+          "effects": [],
+          "default": null,
+          "children": null,
+          "choices": null,
+          "assignWidget": null,
+          "returnWidget": null,
+          "descriptors": null
+        }
+      ],
+      "name": "ObjectiveState"
+    }
+  }
+}
