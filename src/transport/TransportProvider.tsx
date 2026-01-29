@@ -10,7 +10,6 @@ import React, {
   useMemo,
 } from 'react';
 import { toast } from 'sonner';
-import { applyPatch } from 'fast-json-patch';
 import type { Operation } from 'fast-json-patch';
 import {
   FromAgentMessageType,
@@ -22,6 +21,7 @@ import {
   type AssignResponse,
   type AssignOptions,
 } from './types';
+import { useGlobalStateStore } from '../store';
 
 const TransportContext = createContext<TransportContextValue | null>(null);
 
@@ -47,19 +47,16 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
   const [isReconnecting, setIsReconnecting] = useState(false);
   const [reconnectAttempt, setReconnectAttempt] = useState(0);
   const [tasks, setTasks] = useState<Map<string, Task>>(new Map());
-  const [states, setStates] = useState<Map<string, unknown>>(new Map());
+
+  // Get Zustand store actions
+  const globalStateStore = useGlobalStateStore();
 
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const subscribersRef = useRef<Map<string, Set<(task: Task) => void>>>(new Map());
-  const stateSubscribersRef = useRef<Map<string, Set<(value: unknown) => void>>>(new Map());
-  const statesRef = useRef<Map<string, unknown>>(new Map());
   const shouldReconnectRef = useRef(true);
   const mountedRef = useRef(true);
-  
-  // Keep statesRef in sync with states
-  statesRef.current = states;
 
   const reconnectConfig = useMemo(
     () => ({ ...DEFAULT_RECONNECT_CONFIG, ...config.reconnect }),
@@ -248,56 +245,18 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
         }
 
         case FromAgentMessageType.STATE_UPDATE: {
-          // Update state cache and notify subscribers
-          setStates((prevStates) => {
-            const newStates = new Map(prevStates);
-            newStates.set(message.state, message.value);
-            return newStates;
-          });
-
-          // Notify state subscribers
-          const stateSubs = stateSubscribersRef.current.get(message.state);
-          if (stateSubs) {
-            stateSubs.forEach((callback) => callback(message.value));
-          }
+          // Update state in Zustand store
+          globalStateStore.setState(message.state, message.value);
           break;
         }
 
         case FromAgentMessageType.STATE_PATCH: {
-          // Apply JSON patch to existing state
+          // Apply JSON patch to existing state using Zustand store
           const stateName = message.interface;
           const patchOperations: Operation[] = JSON.parse(message.patch);
           
-          // We need to get the current state, apply patch, update state, then notify
-          // Can't do this inside setStates because notification is a side effect
-          const currentState = statesRef.current.get(stateName);
-          if (currentState === undefined) {
-            console.warn(`[Transport] Cannot apply patch to unknown state: ${stateName}`);
-            break;
-          }
-          
-          try {
-            // Clone the current state and apply patch
-            const clonedState = JSON.parse(JSON.stringify(currentState));
-            const { newDocument } = applyPatch(clonedState, patchOperations);
-            
-            // Update state cache
-            setStates((prevStates) => {
-              const newStates = new Map(prevStates);
-              newStates.set(stateName, newDocument);
-              return newStates;
-            });
-            
-            // Notify state subscribers (outside of setStates)
-            const patchSubs = stateSubscribersRef.current.get(stateName);
-            if (patchSubs) {
-              patchSubs.forEach((callback) => callback(newDocument));
-            }
-
-            console.log(`[Transport] Applied patch to state ${stateName}`);
-          } catch (err) {
-            console.error(`[Transport] Failed to apply patch to state ${stateName}:`, err);
-          }
+          globalStateStore.applyJsonPatch(stateName, patchOperations);
+          console.log(`[Transport] Applied patch to state ${stateName}`);
           break;
         }
 
@@ -552,42 +511,16 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
 
     const data = await response.json() as T;
 
-    // Update local cache
-    setStates((prev) => {
-      const newStates = new Map(prev);
-      newStates.set(stateName, data);
-      return newStates;
-    });
+    // Update Zustand store
+    globalStateStore.setState(stateName, data);
 
     return data;
-  }, [config.apiEndpoint]);
+  }, [config.apiEndpoint, globalStateStore]);
 
-  // Get cached state
+  // Get cached state from Zustand store
   const getCachedState = useCallback(<T = unknown>(stateName: string): T | undefined => {
-    return states.get(stateName) as T | undefined;
-  }, [states]);
-
-  // Subscribe to state updates
-  const subscribeToState = useCallback(<T = unknown>(
-    stateName: string,
-    callback: (value: T) => void
-  ): (() => void) => {
-    if (!stateSubscribersRef.current.has(stateName)) {
-      stateSubscribersRef.current.set(stateName, new Set());
-    }
-    stateSubscribersRef.current.get(stateName)!.add(callback as (value: unknown) => void);
-
-    // Return unsubscribe function
-    return () => {
-      const subs = stateSubscribersRef.current.get(stateName);
-      if (subs) {
-        subs.delete(callback as (value: unknown) => void);
-        if (subs.size === 0) {
-          stateSubscribersRef.current.delete(stateName);
-        }
-      }
-    };
-  }, []);
+    return globalStateStore.getState<T>(stateName);
+  }, [globalStateStore]);
 
   // Connect on mount
   useEffect(() => {
@@ -607,7 +540,6 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
       isReconnecting,
       reconnectAttempt,
       tasks,
-      states,
       assign,
       getTask,
       getCachedTask,
@@ -615,7 +547,6 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
       subscribeToTask,
       fetchState,
       getCachedState,
-      subscribeToState,
       reconnect,
       disconnect,
     }),
@@ -624,7 +555,6 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
       isReconnecting,
       reconnectAttempt,
       tasks,
-      states,
       assign,
       getTask,
       getCachedTask,
@@ -632,7 +562,6 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
       subscribeToTask,
       fetchState,
       getCachedState,
-      subscribeToState,
       reconnect,
       disconnect,
     ]

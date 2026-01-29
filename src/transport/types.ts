@@ -324,8 +324,6 @@ export interface TransportContextValue {
   reconnectAttempt: number;
   /** All tracked tasks */
   tasks: Map<string, Task>;
-  /** All cached states */
-  states: Map<string, unknown>;
   /** Assign an action with args, returns task_id */
   assign: <TArgs, TReturn>(
     actionName: string,
@@ -349,13 +347,8 @@ export interface TransportContextValue {
   ) => () => void;
   /** Fetch a state from the server */
   fetchState: <T = unknown>(stateName: string) => Promise<T>;
-  /** Get a state from local cache */
+  /** Get a state from Zustand store cache */
   getCachedState: <T = unknown>(stateName: string) => T | undefined;
-  /** Subscribe to updates for a specific state */
-  subscribeToState: <T = unknown>(
-    stateName: string,
-    callback: (value: T) => void
-  ) => () => void;
   /** Manually reconnect the WebSocket */
   reconnect: () => void;
   /** Disconnect the WebSocket */

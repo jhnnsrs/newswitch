@@ -1,7 +1,8 @@
 // src/hooks/useStateSync.ts
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { ZodType } from 'zod';
 import { useTransport } from '../transport/TransportProvider';
+import { useGlobalStateStore, selectState, selectLoading, selectError } from '../store';
 
 // --- The Definition Interface ---
 export interface StateDefinition<T> {
@@ -33,11 +34,17 @@ export const useStateSync = <T extends Record<string, unknown>>(
 ): UseStateSyncResult<T> => {
   const { subscribe = false, fetchOnMount = true } = options;
   
-  const [data, setData] = useState<T | null>(null);
-  const [loading, setLoading] = useState(fetchOnMount);
-  const [error, setError] = useState<Error | null>(null);
-
-  const { fetchState, subscribeToState, getCachedState } = useTransport();
+  // Use Zustand selectors for state subscription
+  // Direct selector without useShallow - Zustand will properly detect changes
+  const data = useGlobalStateStore(selectState<T>(definition.key)) ?? null;
+  const loading = useGlobalStateStore(selectLoading(definition.key));
+  const error = useGlobalStateStore(selectError(definition.key));
+  
+  // Get store actions
+  const { setState, setLoading, setError } = useGlobalStateStore();
+  
+  // Get transport for fetching
+  const { fetchState } = useTransport();
   
   const hasFetchedRef = useRef(false);
   const schemaRef = useRef(definition.schema);
@@ -46,8 +53,8 @@ export const useStateSync = <T extends Record<string, unknown>>(
   // Fetch data from server
   const fetchData = useCallback(async () => {
     try {
-      setLoading(true);
-      setError(null);
+      setLoading(definition.key, true);
+      setError(definition.key, null);
       
       const rawData = await fetchState<unknown>(definition.key);
       
@@ -55,16 +62,16 @@ export const useStateSync = <T extends Record<string, unknown>>(
       const parsed = schemaRef.current.safeParse(rawData);
       if (!parsed.success) {
         console.error(`[${definition.key}] Validation Failed:`, parsed.error);
-        setError(new Error(`Validation failed for ${definition.key}`));
+        setError(definition.key, new Error(`Validation failed for ${definition.key}`));
       } else {
-        setData(parsed.data);
+        setState(definition.key, parsed.data);
       }
     } catch (err) {
-      setError(err as Error);
+      setError(definition.key, err as Error);
     } finally {
-      setLoading(false);
+      setLoading(definition.key, false);
     }
-  }, [fetchState, definition.key]);
+  }, [fetchState, definition.key, setState, setLoading, setError]);
 
   // Refetch function exposed to consumers
   const refetch = useCallback(async () => {
@@ -79,40 +86,17 @@ export const useStateSync = <T extends Record<string, unknown>>(
     }
   }, [fetchOnMount, fetchData]);
 
-  // Subscribe to WebSocket updates if enabled
+  // Subscribe effect - just for logging/debugging, actual updates come through the store
   useEffect(() => {
-    if (!subscribe) return;
-
-    console.log(`[useStateSync] Subscribing to ${definition.key}`);
-    
-    const unsubscribe = subscribeToState<unknown>(definition.key, (rawValue) => {
-      console.log(`[useStateSync] Received update for ${definition.key}:`, rawValue);
-      // Runtime Validation
-      const parsed = schemaRef.current.safeParse(rawValue);
-      if (!parsed.success) {
-        console.error(`[${definition.key}] WebSocket Validation Failed:`, parsed.error);
-      } else {
-        console.log(`[useStateSync] Setting data for ${definition.key}:`, parsed.data);
-        setData(parsed.data);
-      }
-    });
-
-    return () => {
-      console.log(`[useStateSync] Unsubscribing from ${definition.key}`);
-      unsubscribe();
-    };
-  }, [subscribe, subscribeToState, definition.key]);
-
-  // Sync with cached state when it changes
-  useEffect(() => {
-    const cached = getCachedState<unknown>(definition.key);
-    if (cached !== undefined) {
-      const parsed = schemaRef.current.safeParse(cached);
-      if (parsed.success && JSON.stringify(parsed.data) !== JSON.stringify(data)) {
-        setData(parsed.data);
-      }
+    if (subscribe) {
+      console.log(`[useStateSync] Component subscribed to ${definition.key}`);
     }
-  }, [getCachedState, definition.key, data]);
+    return () => {
+      if (subscribe) {
+        console.log(`[useStateSync] Component unsubscribed from ${definition.key}`);
+      }
+    };
+  }, [subscribe, definition.key]);
 
   return { data, loading, error, refetch };
 };
