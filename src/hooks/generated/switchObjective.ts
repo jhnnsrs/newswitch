@@ -20,13 +20,14 @@ export const SwitchObjectiveDefinition: ActionDefinition<
   SwitchObjectiveReturn
 > = {
   name: "switch_objective",
-  description: "Switch to a specific objective slot.",
+  description: "",
   argsSchema: SwitchObjectiveArgsSchema,
   returnSchema: SwitchObjectiveReturnSchema,
+  lockKeys: [],
 };
 
 /**
- * Switch to a specific objective slot.
+ * undefined
  */
 export const useSwitchObjective = () => {
   return useTransportAction(SwitchObjectiveDefinition);

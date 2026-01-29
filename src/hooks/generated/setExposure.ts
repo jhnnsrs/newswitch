@@ -20,13 +20,14 @@ export const SetExposureDefinition: ActionDefinition<
   SetExposureReturn
 > = {
   name: "set_exposure",
-  description: "Set detector exposure time.",
+  description: "",
   argsSchema: SetExposureArgsSchema,
   returnSchema: SetExposureReturnSchema,
+  lockKeys: [],
 };
 
 /**
- * Set detector exposure time.
+ * undefined
  */
 export const useSetExposure = () => {
   return useTransportAction(SetExposureDefinition);

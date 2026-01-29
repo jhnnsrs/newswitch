@@ -29,13 +29,14 @@ export const TimelapseAcquisitionDefinition: ActionDefinition<
   TimelapseAcquisitionReturn
 > = {
   name: "timelapse_acquisition",
-  description: "Perform a timelapse acquisition.",
+  description: "",
   argsSchema: TimelapseAcquisitionArgsSchema,
   returnSchema: TimelapseAcquisitionReturnSchema,
+  lockKeys: [],
 };
 
 /**
- * Perform a timelapse acquisition.
+ * undefined
  */
 export const useTimelapseAcquisition = () => {
   return useTransportAction(TimelapseAcquisitionDefinition);

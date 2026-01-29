@@ -20,13 +20,14 @@ export const GetStagePositionDefinition: ActionDefinition<
   GetStagePositionReturn
 > = {
   name: "get_stage_position",
-  description: "Get current stage position.",
+  description: "",
   argsSchema: GetStagePositionArgsSchema,
   returnSchema: GetStagePositionReturnSchema,
+  lockKeys: [],
 };
 
 /**
- * Get current stage position.
+ * undefined
  */
 export const useGetStagePosition = () => {
   return useTransportAction(GetStagePositionDefinition);

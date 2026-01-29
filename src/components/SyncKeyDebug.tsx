@@ -1,15 +1,16 @@
-import { useSyncKeyStore, useTransportStore } from '@/store';
+import {  useTransportStore } from '@/store';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Bug } from 'lucide-react';
+import { useLockSync } from '@/hooks/useLockSync';
 
 interface SyncKeyDebugProps {
   syncKey: string;
 }
 
 export function SyncKeyDebug({ syncKey }: SyncKeyDebugProps) {
-  const syncKeyState = useSyncKeyStore((state) => state.syncKeys[syncKey]);
-  const task = useTransportStore((state) => syncKeyState?.taskId ? state.tasks[syncKeyState.taskId] : undefined);
+  const syncKeyState = useLockSync({ key: syncKey });
+  const task = useTransportStore((state) => syncKeyState?.lockingTaskId ? state.tasks[syncKeyState.lockingTaskId] : undefined);
 
   return (
     <Card className="border-dashed border-orange-500/50 bg-orange-50/50 dark:bg-orange-950/20">
@@ -20,14 +21,10 @@ export function SyncKeyDebug({ syncKey }: SyncKeyDebugProps) {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-2 text-xs font-mono">
-        <div className="flex items-center justify-between">
-          <span className="text-muted-foreground">Reference:</span>
-          <span className="font-semibold truncate max-w-[150px]">{syncKeyState?.reference ?? '—'}</span>
-        </div>
         
         <div className="flex items-center justify-between">
           <span className="text-muted-foreground">Task ID:</span>
-          <span className="font-semibold truncate max-w-[150px]">{syncKeyState?.taskId ?? '—'}</span>
+          <span className="font-semibold truncate max-w-[150px]">{syncKeyState?.lockingTaskId ?? '—'}</span>
         </div>
         
         {task && (
@@ -84,21 +81,17 @@ export function SyncKeyDebug({ syncKey }: SyncKeyDebugProps) {
           </>
         )}
         
-        {!task && syncKeyState?.reference && !syncKeyState?.taskId && (
-          <div className="text-xs text-yellow-600 dark:text-yellow-400 italic">
-            Reference set, waiting for task assignment...
-          </div>
-        )}
         
-        {!task && syncKeyState?.taskId && (
+        {!task && syncKeyState?.lockingTaskId && (
           <div className="text-xs text-destructive">
             Task ID exists but task not found in store
+            TODO: Implement this
           </div>
         )}
         
         {!syncKeyState && (
           <div className="text-xs text-muted-foreground italic">
-            No active task for this sync key
+            No active task locking this action
           </div>
         )}
       </CardContent>

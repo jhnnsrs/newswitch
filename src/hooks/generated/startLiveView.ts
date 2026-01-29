@@ -18,13 +18,14 @@ export const StartLiveViewDefinition: ActionDefinition<
   StartLiveViewReturn
 > = {
   name: "start_live_view",
-  description: "Start continuous frame acquisition for live view.",
+  description: "",
   argsSchema: StartLiveViewArgsSchema,
   returnSchema: StartLiveViewReturnSchema,
+  lockKeys: [],
 };
 
 /**
- * Start continuous frame acquisition for live view.
+ * undefined
  */
 export const useStartLiveView = () => {
   return useTransportAction(StartLiveViewDefinition);

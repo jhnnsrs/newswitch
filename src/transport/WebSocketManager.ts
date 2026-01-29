@@ -2,7 +2,6 @@
 import type { Operation } from 'fast-json-patch';
 import { useGlobalStateStore } from '../store/stateStore';
 import { useTransportStore } from '../store/transportStore';
-import { useSyncKeyStore } from '../store/syncKeyStore';
 import { FromAgentMessageType, type FromAgentMessage } from './types';
 import { toast } from 'sonner';
 
@@ -214,6 +213,20 @@ export class WebSocketManager {
           break;
         }
 
+        case FromAgentMessageType.LOCK: {
+          const stateStore = useGlobalStateStore.getState();
+          stateStore.setLock(message.key, message.assignation);
+          console.log(`[WebSocketManager] Locked state "${message.key}" with assigniation ID "${message.assignation}"`);
+          break;
+        }
+
+        case FromAgentMessageType.UNLOCK: {
+          const stateStore = useGlobalStateStore.getState();
+          stateStore.setLock(message.key, undefined);
+          console.log(`[WebSocketManager] Unlocked state "${message.key}"`);
+          break;
+        }
+
         case FromAgentMessageType.DONE: {
 
           const existingTask = transportStore.getTask(message.assignation);
@@ -227,8 +240,6 @@ export class WebSocketManager {
             status: 'completed',
           });
           
-          // Clear sync key for completed task
-          this.clearSyncKeyForTask(message.assignation);
           break;
         }
 
@@ -238,8 +249,6 @@ export class WebSocketManager {
             error: message.error,
           });
           
-          // Clear sync key for failed task
-          this.clearSyncKeyForTask(message.assignation);
           break;
         }
 
@@ -250,8 +259,6 @@ export class WebSocketManager {
           });
           console.error('[WebSocketManager] Critical error:', message.error);
           
-          // Clear sync key for critical error
-          this.clearSyncKeyForTask(message.assignation);
           break;
         }
 
@@ -274,8 +281,6 @@ export class WebSocketManager {
             status: 'cancelled',
           });
           
-          // Clear sync key for cancelled task
-          this.clearSyncKeyForTask(message.assignation);
           break;
         }
 
@@ -284,8 +289,6 @@ export class WebSocketManager {
             status: 'interrupted',
           });
           
-          // Clear sync key for interrupted task
-          this.clearSyncKeyForTask(message.assignation);
           break;
         }
 
@@ -350,21 +353,6 @@ export class WebSocketManager {
 
   isConnected(): boolean {
     return this.ws?.readyState === WebSocket.OPEN;
-  }
-
-  /**
-   * Clear sync key associated with a task when it reaches a terminal state
-   */
-  private clearSyncKeyForTask(taskId: string) {
-    const syncKeyStore = useSyncKeyStore.getState();
-    
-    // Find and clear any sync key that matches this task ID
-    Object.entries(syncKeyStore.syncKeys).forEach(([syncKey, state]) => {
-      if (state.taskId === taskId) {
-        console.log(`[WebSocketManager] Clearing sync key "${syncKey}" for completed task ${taskId}`);
-        syncKeyStore.clearSyncKey(syncKey);
-      }
-    });
   }
 }
 

@@ -1,37 +1,60 @@
-import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { ActionButton } from '@/components/ActionButton';
-import { SyncKeyDebug } from '@/components/SyncKeyDebug';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { MoveStageDefinition, MoveHomeDefinition } from '@/hooks/generated';
+import { MoveHomeDefinition, MoveStageDefinition } from '@/hooks/generated';
+import { useStagePositionLock } from '@/hooks/locks';
 import { useStageState } from '@/hooks/states';
-import { useSyncKeyStore, useTransportStore } from '@/store';
-import { useTransport } from '@/transport/TransportProvider';
-import { ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, Move, X } from 'lucide-react';
+import { useTransportStore } from '@/store';
+import useCancelTask from '@/transport/useCancelTask';
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Home, Move } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 const STEP_SIZES = [1, 10, 100, 1000];
-const SYNC_KEY = 'stage-movement';
+
+
+export const ProgressDisplay = () => {
+
+  const activeTaskId = useStagePositionLock();
+  const task = useTransportStore((state) => state.tasks[activeTaskId || ''] || undefined);
+  const cancel = useCancelTask();
+
+
+  if (!task) return null;
+
+
+
+  return (
+    <div className="space-y-2 pt-4 border-t">
+      <div className="flex items-center justify-between text-sm">
+        <span className="text-muted-foreground">Moving stage...</span>
+        {task.progress !== null && task.progress !== undefined && (
+          <span className="font-mono font-semibold">{Math.round(task.progress)}%</span>
+        )}
+      </div>
+      <Progress 
+        value={task.progress ?? 0} 
+        className="h-2"
+      />
+      <Button variant="outline" size="sm" onClick={() => cancel(activeTaskId!)}>Cancel</Button>
+    </div>
+  );
+};
 
 export function StageControl() {
   const { data: stageState, loading: stateLoading } = useStageState({ subscribe: true });
-  const transport = useTransport();
-  const syncKeyState = useSyncKeyStore((state) => state.syncKeys[SYNC_KEY]);
-  const activeTask = useTransportStore((state) => 
-    syncKeyState?.taskId ? state.tasks[syncKeyState.taskId] : undefined
-  );
   
+  const activeTaskId = useStagePositionLock();
   const [stepSize, setStepSize] = useState(10);
   const [zStep, setZStep] = useState(10);
   const [targetX, setTargetX] = useState('');
   const [targetY, setTargetY] = useState('');
   const [targetZ, setTargetZ] = useState('');
 
-  const isLoading = !!syncKeyState;
-
+  const isLoading = !!activeTaskId;
   return (
     <Card className="w-full">
       <CardHeader>
@@ -104,7 +127,6 @@ export function StageControl() {
               <ActionButton
                 action={MoveStageDefinition}
                 args={{ y: stepSize, is_absolute: false }}
-                syncKey={SYNC_KEY}
                 variant="outline"
                 size="icon"
                 className="h-12 w-12"
@@ -115,7 +137,6 @@ export function StageControl() {
               <ActionButton
                 action={MoveStageDefinition}
                 args={{ x: -stepSize, is_absolute: false }}
-                syncKey={SYNC_KEY}
                 variant="outline"
                 size="icon"
                 className="h-12 w-12"
@@ -125,7 +146,6 @@ export function StageControl() {
               <ActionButton
                 action={MoveHomeDefinition}
                 args={{}}
-                syncKey={SYNC_KEY}
                 variant="secondary"
                 size="icon"
                 className="h-12 w-12"
@@ -135,7 +155,6 @@ export function StageControl() {
               <ActionButton
                 action={MoveStageDefinition}
                 args={{ x: stepSize, is_absolute: false }}
-                syncKey={SYNC_KEY}
                 variant="outline"
                 size="icon"
                 className="h-12 w-12"
@@ -146,7 +165,6 @@ export function StageControl() {
               <ActionButton
                 action={MoveStageDefinition}
                 args={{ y: -stepSize, is_absolute: false }}
-                syncKey={SYNC_KEY}
                 variant="outline"
                 size="icon"
                 className="h-12 w-12"
@@ -176,7 +194,6 @@ export function StageControl() {
             <ActionButton
               action={MoveStageDefinition}
               args={{ z: zStep, is_absolute: false }}
-              syncKey={SYNC_KEY}
               variant="outline"
               className="flex-1 h-12"
             >
@@ -186,7 +203,6 @@ export function StageControl() {
             <ActionButton
               action={MoveStageDefinition}
               args={{ z: -zStep, is_absolute: false }}
-              syncKey={SYNC_KEY}
               variant="outline"
               className="flex-1 h-12"
             >
@@ -235,7 +251,6 @@ export function StageControl() {
               z: targetZ ? parseFloat(targetZ) : undefined,
               is_absolute: true
             }}
-            syncKey={SYNC_KEY}
             disabled={!targetX && !targetY && !targetZ}
             className="w-full"
           >
@@ -244,34 +259,7 @@ export function StageControl() {
           </ActionButton>
         </div>
         
-        {/* Movement Progress Bar */}
-        {activeTask && (activeTask.status === 'pending' || activeTask.status === 'running') && (
-          <div className="space-y-2 pt-4 border-t">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Moving stage...</span>
-              {activeTask.progress !== null && activeTask.progress !== undefined && (
-                <span className="font-mono font-semibold">{Math.round(activeTask.progress)}%</span>
-              )}
-            </div>
-            <Progress 
-              value={activeTask.progress ?? 0} 
-              className="h-2"
-            />
-            <Button
-              variant="destructive"
-              size="sm"
-              className="w-full"
-              onClick={() => {
-                if (activeTask?.id) {
-                  transport.cancelTask(activeTask.id);
-                }
-              }}
-            >
-              <X className="h-4 w-4 mr-2" />
-              Cancel Movement
-            </Button>
-          </div>
-        )}
+          <ProgressDisplay />
         </div>
       </CardContent>
     </Card>

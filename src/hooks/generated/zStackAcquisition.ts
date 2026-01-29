@@ -28,13 +28,14 @@ export const ZStackAcquisitionDefinition: ActionDefinition<
   ZStackAcquisitionReturn
 > = {
   name: "z_stack_acquisition",
-  description: "Perform a Z-stack acquisition.",
+  description: "",
   argsSchema: ZStackAcquisitionArgsSchema,
   returnSchema: ZStackAcquisitionReturnSchema,
+  lockKeys: [],
 };
 
 /**
- * Perform a Z-stack acquisition.
+ * undefined
  */
 export const useZStackAcquisition = () => {
   return useTransportAction(ZStackAcquisitionDefinition);

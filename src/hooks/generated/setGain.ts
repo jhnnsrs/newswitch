@@ -17,13 +17,14 @@ export type SetGainReturn = z.infer<typeof SetGainReturnSchema>;
 // --- Definition ---
 export const SetGainDefinition: ActionDefinition<SetGainArgs, SetGainReturn> = {
   name: "set_gain",
-  description: "Set detector gain.",
+  description: "",
   argsSchema: SetGainArgsSchema,
   returnSchema: SetGainReturnSchema,
+  lockKeys: [],
 };
 
 /**
- * Set detector gain.
+ * undefined
  */
 export const useSetGain = () => {
   return useTransportAction(SetGainDefinition);

@@ -18,13 +18,14 @@ export const CaptureImageDefinition: ActionDefinition<
   CaptureImageReturn
 > = {
   name: "capture_image",
-  description: "Capture a single image from the detector.",
+  description: "",
   argsSchema: CaptureImageArgsSchema,
   returnSchema: CaptureImageReturnSchema,
+  lockKeys: [],
 };
 
 /**
- * Capture a single image from the detector.
+ * undefined
  */
 export const useCaptureImage = () => {
   return useTransportAction(CaptureImageDefinition);

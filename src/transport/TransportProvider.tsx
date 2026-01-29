@@ -86,6 +86,37 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
     };
   }, [wsUrl, pingInterval, reconnectConfig]);
 
+  // Fetch locks when connected
+  useEffect(() => {
+    if (!isConnected) return;
+
+    const fetchLocks = async () => {
+      try {
+        const url = `${config.apiEndpoint.replace(/\/$/, '')}/locks`;
+        const response = await fetch(url);
+
+        if (!response.ok) {
+          console.error('[TransportProvider] Failed to fetch locks:', response.status);
+          return;
+        }
+
+        const locks: Record<string, string> = await response.json();
+        
+        // Update global state store with all locks
+        const globalState = useGlobalStateStore.getState();
+        Object.entries(locks).forEach(([key, taskId]) => {
+          globalState.setLock(key, taskId);
+        });
+
+        console.log('[TransportProvider] Fetched locks:', locks);
+      } catch (error) {
+        console.error('[TransportProvider] Error fetching locks:', error);
+      }
+    };
+
+    fetchLocks();
+  }, [isConnected, config.apiEndpoint]);
+
   // Reconnect function
   const reconnect = useCallback(() => {
     managerRef.current?.reconnect();
@@ -185,9 +216,9 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
 
   // Cancel a task
   const cancelTask = useCallback(async (taskId: string): Promise<void> => {
-    const url = `${config.apiEndpoint.replace(/\/$/, '')}/tasks/${taskId}/cancel`;
+    const url = `${config.apiEndpoint.replace(/\/$/, '')}/cancel`;
 
-    const response = await fetch(url, { method: 'POST' });
+    const response = await fetch(url, { method: 'POST', body: JSON.stringify({ assignation: taskId }) });
 
     if (!response.ok) {
       const errorText = await response.text();

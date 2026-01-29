@@ -56,11 +56,11 @@ const generateContent = (key: string, impl: any) => {
   const returnType = `${toPascal(key)}Return`;
 
   // 1. Generate Input Schema
-  const argsFields = impl.args.map((a: any) => `  ${a.key}: ${mapToZod(a)}`).join(',\n');
+  const argsFields = impl.definition.args.map((a: any) => `  ${a.key}: ${mapToZod(a)}`).join(',\n');
   const argsDef = `export const ${argsSchemaName} = z.object({\n${argsFields}\n});`;
 
   // 2. Generate Return Schema
-  const returnArg = impl.returns?.[0];
+  const returnArg = impl.definition.returns?.[0];
   const returnDefString = returnArg ? mapToZod(returnArg) : 'z.void()';
   const returnDef = `export const ${returnSchemaName} = ${returnDefString};`;
 
@@ -82,6 +82,7 @@ export const ${defName}: ActionDefinition<${argsType}, ${returnType}> = {
   description: "${impl.description || ''}",
   argsSchema: ${argsSchemaName},
   returnSchema: ${returnSchemaName},
+  lockKeys: ${JSON.stringify(impl.locks || [])},
 };
 
 /**

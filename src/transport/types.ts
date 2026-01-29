@@ -156,6 +156,8 @@ export const FromAgentMessageType = {
   HEARTBEAT_ANSWER: 'HEARTBEAT_ANSWER',
   STATE_UPDATE: 'STATE_UPDATE',
   STATE_PATCH: 'STATE_PATCH',
+  LOCK: 'LOCK',
+  UNLOCK: 'UNLOCK',
 } as const;
 
 export type FromAgentMessageType = typeof FromAgentMessageType[keyof typeof FromAgentMessageType];
@@ -271,6 +273,17 @@ export interface StatePatchEvent {
   patch: string; // JSON string of patch operations
 }
 
+export interface LockEvent {
+  type: typeof FromAgentMessageType.LOCK;
+  key: string;
+  assignation: string;
+}
+
+export interface UnlockEvent {
+  type: typeof FromAgentMessageType.UNLOCK;
+  key: string;
+}
+
 // Union type for all messages from the agent
 export type FromAgentMessage =
   | LogEvent
@@ -283,6 +296,8 @@ export type FromAgentMessage =
   | ResumedEvent
   | SteppedEvent
   | CancelledEvent
+  | LockEvent
+  | UnlockEvent
   | InterruptedEvent
   | HeartbeatAnswerEvent
   | RegisterMessage

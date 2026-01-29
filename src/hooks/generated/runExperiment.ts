@@ -23,13 +23,14 @@ export const RunExperimentDefinition: ActionDefinition<
   RunExperimentReturn
 > = {
   name: "run_experiment",
-  description: "Run a simple acquisition experiment.",
+  description: "",
   argsSchema: RunExperimentArgsSchema,
   returnSchema: RunExperimentReturnSchema,
+  lockKeys: [],
 };
 
 /**
- * Run a simple acquisition experiment.
+ * undefined
  */
 export const useRunExperiment = () => {
   return useTransportAction(RunExperimentDefinition);

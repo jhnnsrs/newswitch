@@ -1,10 +1,11 @@
 import React, { type ButtonHTMLAttributes } from 'react';
 import { Button, buttonVariants } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { type VariantProps } from 'class-variance-authority';
 import { type ActionDefinition } from '@/transport/useTransportAction';
 import { type AssignOptions } from '@/transport/types';
 import { useTransport } from '@/transport/TransportProvider';
-import { useSyncKeyStore } from '@/store';
+import { useGlobalStateStore } from '@/store';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -17,7 +18,6 @@ interface ActionButtonProps<TArgs, TReturn> extends Omit<ButtonHTMLAttributes<HT
   action: ActionDefinition<TArgs, TReturn>;
   args: TArgs;
   assignOptions?: AssignOptions;
-  syncKey?: string;
   children?: React.ReactNode;
 }
 
@@ -25,7 +25,6 @@ export function ActionButton<TArgs, TReturn>({
   action,
   args,
   assignOptions,
-  syncKey,
   className,
   variant,
   size,
@@ -34,10 +33,13 @@ export function ActionButton<TArgs, TReturn>({
   disabled,
   ...props
 }: ActionButtonProps<TArgs, TReturn>) {
-  // Only subscribe to the specific syncKey state we need
-  const hasSyncKeyActive = useSyncKeyStore((state) => 
-    syncKey ? !!state.syncKeys[syncKey] : false
-  );
+  // Check all lockKeys to see if any have an active task
+  const locks = useGlobalStateStore((state) => state.locks);
+  
+  // Find the first lockKey that has a task blocking it
+  const blockingLock = action.lockKeys?.find(key => locks[key] !== undefined);
+  const blockingTaskId = blockingLock ? locks[blockingLock] : undefined;
+  const isLocked = !!blockingTaskId;
 
   const transport = useTransport();
 
@@ -45,55 +47,60 @@ export function ActionButton<TArgs, TReturn>({
     onClick?.(e);
     if (e.isDefaultPrevented()) return;
 
-    // Check if another task with the same syncKey is running
-    if (syncKey && hasSyncKeyActive) {
-      toast.warning('Action already in progress', {
-        description: `Please wait for the current ${action.name} to complete.`
+    // Check if any lockKey has an active task
+    if (isLocked) {
+      toast.warning('Action locked', {
+        description: `Another task (${blockingTaskId}) is using a required resource.`
       });
       return;
     }
 
     // Generate a local reference before assignment
     const reference = generateReference();
-    
-    // Set sync key with reference before making the request
-    if (syncKey) {
-      useSyncKeyStore.getState().setSyncKeyReference(syncKey, reference);
-    }
 
     try {
       console.log('Assigning action:', action.name, 'with args:', args, 'reference:', reference);
       const task = await transport.assign(action.name, args, { ...assignOptions, reference });
       console.log('Assigned task:', task);
-      
-      // Update sync key with task ID after successful assignment
-      if (syncKey && task.id) {
-        useSyncKeyStore.getState().setSyncKeyTaskId(syncKey, task.id);
-      }
     } catch (e) {
       console.error(e);
-      // Clear sync key on error since assignment failed
-      if (syncKey) {
-        useSyncKeyStore.getState().clearSyncKey(syncKey);
-      }
       if (e instanceof Error) {
         toast.error(`Failed to assign ${action.name}`, { description: e.message });
       }
     }
   };
 
-  return (
+  const button = (
     <Button
       variant={variant}
       size={size}
       className={cn(className)}
-      disabled={disabled || hasSyncKeyActive}
+      disabled={disabled || isLocked}
       onClick={handleClick}
-      data-sync-key={syncKey}
-      data-busy={hasSyncKeyActive}
+      data-locked={isLocked}
+      data-blocking-task={blockingTaskId}
       {...props}
     >
       {children || action.name}
     </Button>
   );
+
+  // If locked, wrap in tooltip showing the blocking task
+  if (isLocked && !disabled) {
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            {button}
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Blocked by task: {blockingTaskId}</p>
+            {blockingLock && <p className="text-xs text-muted-foreground">Lock: {blockingLock}</p>}
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  }
+
+  return button;
 }

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { z, ZodType } from 'zod';
 import { useTransport } from './TransportProvider';
-import { useTransportStore, selectTask } from '../store';
+import { useTransportStore, selectTask, useGlobalStateStore } from '../store';
 import type { Task, TaskStatus, AssignOptions } from './types';
 
 export interface ActionDefinition<TArgs, TReturn> {
@@ -11,6 +11,7 @@ export interface ActionDefinition<TArgs, TReturn> {
   description?: string;
   argsSchema: ZodType<TArgs>;
   returnSchema?: ZodType<TReturn>;
+  lockKeys: string[];
 }
 
 export interface UseTransportActionOptions {
@@ -43,6 +44,12 @@ export interface UseTransportActionResult<TArgs, TReturn> {
   progress: number | null;
   /** Whether any task is loading (pending/running) */
   isLoading: boolean;
+  /** Whether the action is locked by another task */
+  isLocked: boolean;
+  /** The taskId that is blocking this action (if locked) */
+  lockedBy: string | null;
+  /** The lock key name that is blocking this action (if locked) */
+  lockedByKey: string | null;
   /** Validation error from args schema */
   validationError: z.ZodError | null;
   /** Refresh task state from server */
@@ -95,6 +102,12 @@ export const useTransportAction = <TArgs, TReturn>(
     .map((id) => allTasks[id] as Task<TArgs, TReturn> | undefined)
     .filter((t): t is Task<TArgs, TReturn> => t !== undefined);
 
+  // Check lock status
+  const locks = useGlobalStateStore((state) => state.locks);
+  const blockingLockKey = definition.lockKeys?.find(key => locks[key] !== undefined);
+  const isLocked = !!blockingLockKey;
+  const lockedBy = blockingLockKey ? locks[blockingLockKey] ?? null : null;
+
   // Derived state from current task
   const status = task?.status ?? null;
   const result = (task?.result as TReturn) ?? null;
@@ -138,6 +151,15 @@ export const useTransportAction = <TArgs, TReturn>(
   // Assign action
   const assign = useCallback(async (args: TArgs, options?: AssignOptions): Promise<Task<TArgs, TReturn>> => {
     setValidationError(null);
+
+    // Check if locked
+    const currentLocks = useGlobalStateStore.getState().locks;
+    const blockingKey = definition.lockKeys?.find(key => currentLocks[key] !== undefined);
+    if (blockingKey) {
+      const blockingTaskId = currentLocks[blockingKey];
+      const error = new Error(`Action is locked by task ${blockingTaskId} (lock: ${blockingKey})`);
+      throw error;
+    }
 
     // Validate args
     const parsed = definition.argsSchema.safeParse(args);
@@ -188,6 +210,9 @@ export const useTransportAction = <TArgs, TReturn>(
     error,
     progress,
     isLoading,
+    isLocked,
+    lockedBy,
+    lockedByKey: blockingLockKey ?? null,
     validationError,
     refresh,
     cancel,

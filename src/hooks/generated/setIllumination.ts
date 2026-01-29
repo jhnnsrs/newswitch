@@ -22,13 +22,14 @@ export const SetIlluminationDefinition: ActionDefinition<
   SetIlluminationReturn
 > = {
   name: "set_illumination",
-  description: "Set illumination parameters.",
+  description: "",
   argsSchema: SetIlluminationArgsSchema,
   returnSchema: SetIlluminationReturnSchema,
+  lockKeys: [],
 };
 
 /**
- * Set illumination parameters.
+ * undefined
  */
 export const useSetIllumination = () => {
   return useTransportAction(SetIlluminationDefinition);

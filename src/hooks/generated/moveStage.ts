@@ -11,6 +11,7 @@ export const MoveStageArgsSchema = z.object({
   z: z.number().optional(),
   a: z.number().optional(),
   is_absolute: z.boolean().optional(),
+  step_size: z.number().optional(),
 });
 export const MoveStageReturnSchema = z.record(z.string(), z.any());
 
@@ -24,13 +25,14 @@ export const MoveStageDefinition: ActionDefinition<
   MoveStageReturn
 > = {
   name: "move_stage",
-  description: "Move the stage to a new position.",
+  description: "",
   argsSchema: MoveStageArgsSchema,
   returnSchema: MoveStageReturnSchema,
+  lockKeys: ["stage_position"],
 };
 
 /**
- * Move the stage to a new position.
+ * undefined
  */
 export const useMoveStage = () => {
   return useTransportAction(MoveStageDefinition);

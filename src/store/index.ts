@@ -17,11 +17,3 @@ export {
 } from './transportStore';
 export type { TransportStore } from './transportStore';
 
-export {
-  useSyncKeyStore,
-  selectSyncKeyState,
-  selectSyncKeyTaskId,
-  selectSyncKeyReference,
-  selectIsSyncKeyActive,
-} from './syncKeyStore';
-export type { SyncKeyStore, SyncKeyState } from './syncKeyStore';

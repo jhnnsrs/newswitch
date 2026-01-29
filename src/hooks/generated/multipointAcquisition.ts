@@ -28,13 +28,14 @@ export const MultipointAcquisitionDefinition: ActionDefinition<
   MultipointAcquisitionReturn
 > = {
   name: "multipoint_acquisition",
-  description: "Acquire images at multiple stage positions.",
+  description: "",
   argsSchema: MultipointAcquisitionArgsSchema,
   returnSchema: MultipointAcquisitionReturnSchema,
+  lockKeys: [],
 };
 
 /**
- * Acquire images at multiple stage positions.
+ * undefined
  */
 export const useMultipointAcquisition = () => {
   return useTransportAction(MultipointAcquisitionDefinition);

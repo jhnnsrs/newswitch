@@ -18,13 +18,14 @@ export const StopLiveViewDefinition: ActionDefinition<
   StopLiveViewReturn
 > = {
   name: "stop_live_view",
-  description: "Stop continuous frame acquisition.",
+  description: "",
   argsSchema: StopLiveViewArgsSchema,
   returnSchema: StopLiveViewReturnSchema,
+  lockKeys: [],
 };
 
 /**
- * Stop continuous frame acquisition.
+ * undefined
  */
 export const useStopLiveView = () => {
   return useTransportAction(StopLiveViewDefinition);

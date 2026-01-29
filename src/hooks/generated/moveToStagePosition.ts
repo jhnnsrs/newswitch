@@ -26,13 +26,14 @@ export const MoveToStagePositionDefinition: ActionDefinition<
   MoveToStagePositionReturn
 > = {
   name: "move_to_stage_position",
-  description: "Move the stage to a specified position.",
+  description: "",
   argsSchema: MoveToStagePositionArgsSchema,
   returnSchema: MoveToStagePositionReturnSchema,
+  lockKeys: ["stage_position"],
 };
 
 /**
- * Move the stage to a specified position.
+ * undefined
  */
 export const useMoveToStagePosition = () => {
   return useTransportAction(MoveToStagePositionDefinition);

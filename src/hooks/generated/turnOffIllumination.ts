@@ -22,13 +22,14 @@ export const TurnOffIlluminationDefinition: ActionDefinition<
   TurnOffIlluminationReturn
 > = {
   name: "turn_off_illumination",
-  description: "Turn off all illumination channels.",
+  description: "",
   argsSchema: TurnOffIlluminationArgsSchema,
   returnSchema: TurnOffIlluminationReturnSchema,
+  lockKeys: [],
 };
 
 /**
- * Turn off all illumination channels.
+ * undefined
  */
 export const useTurnOffIllumination = () => {
   return useTransportAction(TurnOffIlluminationDefinition);

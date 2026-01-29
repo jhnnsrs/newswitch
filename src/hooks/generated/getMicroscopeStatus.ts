@@ -22,13 +22,14 @@ export const GetMicroscopeStatusDefinition: ActionDefinition<
   GetMicroscopeStatusReturn
 > = {
   name: "get_microscope_status",
-  description: "Get the complete status of the virtual microscope.",
+  description: "",
   argsSchema: GetMicroscopeStatusArgsSchema,
   returnSchema: GetMicroscopeStatusReturnSchema,
+  lockKeys: [],
 };
 
 /**
- * Get the complete status of the virtual microscope.
+ * undefined
  */
 export const useGetMicroscopeStatus = () => {
   return useTransportAction(GetMicroscopeStatusDefinition);

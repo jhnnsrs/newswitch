@@ -4,6 +4,7 @@ import path from "path"
 import tailwindcss from "@tailwindcss/vite"
 import generateHooksPlugin from './plugins/generate-hooks';
 import generateStatesPlugin from './plugins/generate-states';
+import generateLocksPlugin from './plugins/generate-locks';
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
@@ -18,6 +19,9 @@ export default defineConfig(({ mode }) => {
       }),
       generateStatesPlugin({
         schemaUrl: env.VITE_SCHEMA_STATES_URL,
+      }),
+      generateLocksPlugin({
+        schemaUrl: env.VITE_SCHEMA_LOCKS_URL,
       }),
       tailwindcss(),
     ],
