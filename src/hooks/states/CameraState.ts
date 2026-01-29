@@ -1,5 +1,9 @@
 import { z } from "zod";
-import { useStateSync, type StateDefinition, type UseStateSyncOptions } from "../useStateSync";
+import {
+  useStateSync,
+  type StateDefinition,
+  type UseStateSyncOptions,
+} from "../useStateSync";
 
 // --- Schema ---
 export const CameraStateSchema = z.object({
@@ -19,9 +23,6 @@ export const CameraStateDefinition: StateDefinition<CameraState> = {
 
 /**
  * Hook to sync CameraState
- * @param options - Options for the state sync
- * @param options.subscribe - Whether to subscribe to real-time updates (default: false)
- * @param options.fetchOnMount - Whether to fetch initial state on mount (default: true)
  */
 export const useCameraState = (options?: UseStateSyncOptions) => {
   return useStateSync<CameraState>(CameraStateDefinition, options);

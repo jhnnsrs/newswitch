@@ -1,5 +1,8 @@
 import { z } from "zod";
-import { useAction, type ActionDefinition } from "../useAction";
+import {
+  useTransportAction,
+  type ActionDefinition,
+} from "../../transport/useTransportAction";
 
 // --- Schemas ---
 export const SetExposureArgsSchema = z.object({
@@ -26,5 +29,5 @@ export const SetExposureDefinition: ActionDefinition<
  * Set detector exposure time.
  */
 export const useSetExposure = () => {
-  return useAction(SetExposureDefinition);
+  return useTransportAction(SetExposureDefinition);
 };

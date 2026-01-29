@@ -1,5 +1,8 @@
 import { z } from "zod";
-import { useAction, type ActionDefinition } from "../useAction";
+import {
+  useTransportAction,
+  type ActionDefinition,
+} from "../../transport/useTransportAction";
 
 // --- Schemas ---
 export const RunExperimentArgsSchema = z.object({
@@ -29,5 +32,5 @@ export const RunExperimentDefinition: ActionDefinition<
  * Run a simple acquisition experiment.
  */
 export const useRunExperiment = () => {
-  return useAction(RunExperimentDefinition);
+  return useTransportAction(RunExperimentDefinition);
 };

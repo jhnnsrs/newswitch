@@ -1,5 +1,8 @@
 import { z } from "zod";
-import { useAction, type ActionDefinition } from "../useAction";
+import {
+  useTransportAction,
+  type ActionDefinition,
+} from "../../transport/useTransportAction";
 
 // --- Schemas ---
 export const GetMicroscopeStatusArgsSchema = z.object({});
@@ -28,5 +31,5 @@ export const GetMicroscopeStatusDefinition: ActionDefinition<
  * Get the complete status of the virtual microscope.
  */
 export const useGetMicroscopeStatus = () => {
-  return useAction(GetMicroscopeStatusDefinition);
+  return useTransportAction(GetMicroscopeStatusDefinition);
 };

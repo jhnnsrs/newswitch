@@ -1,5 +1,8 @@
 import { z } from "zod";
-import { useAction, type ActionDefinition } from "../useAction";
+import {
+  useTransportAction,
+  type ActionDefinition,
+} from "../../transport/useTransportAction";
 
 // --- Schemas ---
 export const ToggleObjectiveArgsSchema = z.object({});
@@ -24,5 +27,5 @@ export const ToggleObjectiveDefinition: ActionDefinition<
  * Toggle to the next objective in the turret.
  */
 export const useToggleObjective = () => {
-  return useAction(ToggleObjectiveDefinition);
+  return useTransportAction(ToggleObjectiveDefinition);
 };

@@ -1,5 +1,9 @@
 import { z } from "zod";
-import { useStateSync, type StateDefinition, type UseStateSyncOptions } from "../useStateSync";
+import {
+  useStateSync,
+  type StateDefinition,
+  type UseStateSyncOptions,
+} from "../useStateSync";
 
 // --- Schema ---
 export const IlluminationStateSchema = z.object({
@@ -19,9 +23,6 @@ export const IlluminationStateDefinition: StateDefinition<IlluminationState> = {
 
 /**
  * Hook to sync IlluminationState
- * @param options - Options for the state sync
- * @param options.subscribe - Whether to subscribe to real-time updates (default: false)
- * @param options.fetchOnMount - Whether to fetch initial state on mount (default: true)
  */
 export const useIlluminationState = (options?: UseStateSyncOptions) => {
   return useStateSync<IlluminationState>(IlluminationStateDefinition, options);

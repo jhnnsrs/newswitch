@@ -1,5 +1,8 @@
 import { z } from "zod";
-import { useAction, type ActionDefinition } from "../useAction";
+import {
+  useTransportAction,
+  type ActionDefinition,
+} from "../../transport/useTransportAction";
 
 // --- Schemas ---
 export const SwitchObjectiveArgsSchema = z.object({
@@ -26,5 +29,5 @@ export const SwitchObjectiveDefinition: ActionDefinition<
  * Switch to a specific objective slot.
  */
 export const useSwitchObjective = () => {
-  return useAction(SwitchObjectiveDefinition);
+  return useTransportAction(SwitchObjectiveDefinition);
 };

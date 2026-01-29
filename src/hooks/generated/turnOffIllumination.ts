@@ -1,5 +1,8 @@
 import { z } from "zod";
-import { useAction, type ActionDefinition } from "../useAction";
+import {
+  useTransportAction,
+  type ActionDefinition,
+} from "../../transport/useTransportAction";
 
 // --- Schemas ---
 export const TurnOffIlluminationArgsSchema = z.object({});
@@ -28,5 +31,5 @@ export const TurnOffIlluminationDefinition: ActionDefinition<
  * Turn off all illumination channels.
  */
 export const useTurnOffIllumination = () => {
-  return useAction(TurnOffIlluminationDefinition);
+  return useTransportAction(TurnOffIlluminationDefinition);
 };

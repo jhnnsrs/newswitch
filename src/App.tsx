@@ -1,36 +1,111 @@
 import './App.css'
-import reactLogo from './assets/react.svg'
-import { Button } from './components/ui/button'
-import { SetExposureDefinition, useSetExposure } from './hooks/generated'
-import { useCameraState } from './hooks/states'
-import { useTransportAction } from './transport'
-import viteLogo from '/vite.svg'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs'
+import { Toaster } from './components/ui/sonner'
+import {
+  StageControl,
+  CameraControl,
+  IlluminationControl,
+  ObjectiveControl,
+  AcquisitionControl,
+  StatusPanel,
+} from './components/microscope'
+import { TransportProvider } from './transport'
+import { Microscope, Camera, Layers, Activity } from 'lucide-react'
+
+
+function MicroscopeControlPanel() {
+  return (
+    <div className="min-h-screen bg-background text-foreground">
+      {/* Header */}
+      <header className="border-b bg-card">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Microscope className="h-8 w-8 text-primary" />
+              <div>
+                <h1 className="text-2xl font-bold">Microscope Control</h1>
+                <p className="text-sm text-muted-foreground">Real-time instrument control</p>
+              </div>
+            </div>
+            <StatusPanel />
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="container mx-auto px-4 py-6">
+        <Tabs defaultValue="control" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-grid">
+            <TabsTrigger value="control" className="gap-2">
+              <Camera className="h-4 w-4" />
+              Control
+            </TabsTrigger>
+            <TabsTrigger value="acquisition" className="gap-2">
+              <Layers className="h-4 w-4" />
+              Acquisition
+            </TabsTrigger>
+            <TabsTrigger value="status" className="gap-2">
+              <Activity className="h-4 w-4" />
+              Status
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Control Tab */}
+          <TabsContent value="control" className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Left Column */}
+              <div className="space-y-6">
+                <StageControl />
+                <ObjectiveControl />
+              </div>
+              
+              {/* Right Column */}
+              <div className="space-y-6">
+                <CameraControl />
+                <IlluminationControl />
+              </div>
+            </div>
+          </TabsContent>
+
+          {/* Acquisition Tab */}
+          <TabsContent value="acquisition" className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <AcquisitionControl />
+              <div className="space-y-6">
+                <CameraControl />
+                <IlluminationControl />
+              </div>
+            </div>
+          </TabsContent>
+
+          {/* Status Tab */}
+          <TabsContent value="status" className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="lg:col-span-2">
+                <StatusPanel />ss
+              </div>
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <StageControl />
+              <CameraControl />
+            </div>
+          </TabsContent>
+        </Tabs>
+      </main>
+    </div>
+  )
+}
+
 
 function App() {
-  const { assign, progress }= useTransportAction(SetExposureDefinition)
-
-  const { data } = useCameraState();
-
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + Reacsst</h1>
-      {data?.gain && <h2>Current Gain: {data.gain} dB</h2>}
-      {data?.exposure_time && <h2>Current Exposure Time: {data.exposure_time} ms</h2>}
-      <h2>Progress: {progress ?? 0}%</h2>
-      <Button variant="outline" onClick={() => assign({ exposure_time: (data?.exposure_time || 1000) + 40 }, {notify: true})}>Set Exposure Time</Button>
-      
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
+    <TransportProvider config={{ 
+      apiEndpoint: import.meta.env.VITE_BACKEND_URL, 
+      wsEndpoint: import.meta.env.VITE_WEBSOCKET_URL 
+    }}>
+      <MicroscopeControlPanel />
+      <Toaster position="bottom-right" richColors />
+    </TransportProvider>
   )
 }
 

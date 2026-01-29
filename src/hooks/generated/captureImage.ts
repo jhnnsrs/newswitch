@@ -1,5 +1,8 @@
 import { z } from "zod";
-import { useAction, type ActionDefinition } from "../useAction";
+import {
+  useTransportAction,
+  type ActionDefinition,
+} from "../../transport/useTransportAction";
 
 // --- Schemas ---
 export const CaptureImageArgsSchema = z.object({});
@@ -24,5 +27,5 @@ export const CaptureImageDefinition: ActionDefinition<
  * Capture a single image from the detector.
  */
 export const useCaptureImage = () => {
-  return useAction(CaptureImageDefinition);
+  return useTransportAction(CaptureImageDefinition);
 };

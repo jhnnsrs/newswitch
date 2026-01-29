@@ -1,5 +1,8 @@
 import { z } from "zod";
-import { useAction, type ActionDefinition } from "../useAction";
+import {
+  useTransportAction,
+  type ActionDefinition,
+} from "../../transport/useTransportAction";
 
 // --- Schemas ---
 export const MoveStageArgsSchema = z.object({
@@ -30,5 +33,5 @@ export const MoveStageDefinition: ActionDefinition<
  * Move the stage to a new position.
  */
 export const useMoveStage = () => {
-  return useAction(MoveStageDefinition);
+  return useTransportAction(MoveStageDefinition);
 };

@@ -1,5 +1,8 @@
 import { z } from "zod";
-import { useAction, type ActionDefinition } from "../useAction";
+import {
+  useTransportAction,
+  type ActionDefinition,
+} from "../../transport/useTransportAction";
 
 // --- Schemas ---
 export const StopLiveViewArgsSchema = z.object({});
@@ -24,5 +27,5 @@ export const StopLiveViewDefinition: ActionDefinition<
  * Stop continuous frame acquisition.
  */
 export const useStopLiveView = () => {
-  return useAction(StopLiveViewDefinition);
+  return useTransportAction(StopLiveViewDefinition);
 };

@@ -1,5 +1,8 @@
 import { z } from "zod";
-import { useAction, type ActionDefinition } from "../useAction";
+import {
+  useTransportAction,
+  type ActionDefinition,
+} from "../../transport/useTransportAction";
 
 // --- Schemas ---
 export const SetIlluminationArgsSchema = z.object({
@@ -28,5 +31,5 @@ export const SetIlluminationDefinition: ActionDefinition<
  * Set illumination parameters.
  */
 export const useSetIllumination = () => {
-  return useAction(SetIlluminationDefinition);
+  return useTransportAction(SetIlluminationDefinition);
 };

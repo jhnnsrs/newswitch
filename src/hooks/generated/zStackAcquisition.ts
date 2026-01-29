@@ -1,5 +1,8 @@
 import { z } from "zod";
-import { useAction, type ActionDefinition } from "../useAction";
+import {
+  useTransportAction,
+  type ActionDefinition,
+} from "../../transport/useTransportAction";
 
 // --- Schemas ---
 export const ZStackAcquisitionArgsSchema = z.object({
@@ -34,5 +37,5 @@ export const ZStackAcquisitionDefinition: ActionDefinition<
  * Perform a Z-stack acquisition.
  */
 export const useZStackAcquisition = () => {
-  return useAction(ZStackAcquisitionDefinition);
+  return useTransportAction(ZStackAcquisitionDefinition);
 };

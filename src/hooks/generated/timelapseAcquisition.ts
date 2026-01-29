@@ -1,5 +1,8 @@
 import { z } from "zod";
-import { useAction, type ActionDefinition } from "../useAction";
+import {
+  useTransportAction,
+  type ActionDefinition,
+} from "../../transport/useTransportAction";
 
 // --- Schemas ---
 export const TimelapseAcquisitionArgsSchema = z.object({
@@ -35,5 +38,5 @@ export const TimelapseAcquisitionDefinition: ActionDefinition<
  * Perform a timelapse acquisition.
  */
 export const useTimelapseAcquisition = () => {
-  return useAction(TimelapseAcquisitionDefinition);
+  return useTransportAction(TimelapseAcquisitionDefinition);
 };

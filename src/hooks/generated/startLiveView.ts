@@ -1,5 +1,8 @@
 import { z } from "zod";
-import { useAction, type ActionDefinition } from "../useAction";
+import {
+  useTransportAction,
+  type ActionDefinition,
+} from "../../transport/useTransportAction";
 
 // --- Schemas ---
 export const StartLiveViewArgsSchema = z.object({});
@@ -24,5 +27,5 @@ export const StartLiveViewDefinition: ActionDefinition<
  * Start continuous frame acquisition for live view.
  */
 export const useStartLiveView = () => {
-  return useAction(StartLiveViewDefinition);
+  return useTransportAction(StartLiveViewDefinition);
 };

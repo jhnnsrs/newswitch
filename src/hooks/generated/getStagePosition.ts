@@ -1,5 +1,8 @@
 import { z } from "zod";
-import { useAction, type ActionDefinition } from "../useAction";
+import {
+  useTransportAction,
+  type ActionDefinition,
+} from "../../transport/useTransportAction";
 
 // --- Schemas ---
 export const GetStagePositionArgsSchema = z.object({});
@@ -26,5 +29,5 @@ export const GetStagePositionDefinition: ActionDefinition<
  * Get current stage position.
  */
 export const useGetStagePosition = () => {
-  return useAction(GetStagePositionDefinition);
+  return useTransportAction(GetStagePositionDefinition);
 };

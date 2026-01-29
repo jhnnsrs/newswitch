@@ -2,6 +2,7 @@ export * from './setIllumination';
 export * from './turnOffIllumination';
 export * from './moveStage';
 export * from './moveHome';
+export * from './moveToStagePosition';
 export * from './getStagePosition';
 export * from './captureImage';
 export * from './setExposure';

@@ -1,5 +1,8 @@
 import { z } from "zod";
-import { useAction, type ActionDefinition } from "../useAction";
+import {
+  useTransportAction,
+  type ActionDefinition,
+} from "../../transport/useTransportAction";
 
 // --- Schemas ---
 export const SetGainArgsSchema = z.object({
@@ -23,5 +26,5 @@ export const SetGainDefinition: ActionDefinition<SetGainArgs, SetGainReturn> = {
  * Set detector gain.
  */
 export const useSetGain = () => {
-  return useAction(SetGainDefinition);
+  return useTransportAction(SetGainDefinition);
 };

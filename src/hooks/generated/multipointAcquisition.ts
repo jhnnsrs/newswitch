@@ -1,5 +1,8 @@
 import { z } from "zod";
-import { useAction, type ActionDefinition } from "../useAction";
+import {
+  useTransportAction,
+  type ActionDefinition,
+} from "../../transport/useTransportAction";
 
 // --- Schemas ---
 export const MultipointAcquisitionArgsSchema = z.object({
@@ -34,5 +37,5 @@ export const MultipointAcquisitionDefinition: ActionDefinition<
  * Acquire images at multiple stage positions.
  */
 export const useMultipointAcquisition = () => {
-  return useAction(MultipointAcquisitionDefinition);
+  return useTransportAction(MultipointAcquisitionDefinition);
 };

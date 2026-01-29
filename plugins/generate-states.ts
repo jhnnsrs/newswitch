@@ -4,9 +4,14 @@ import prettier from 'prettier';
 import type { Plugin } from 'vite';
 
 // --- CONFIG ---
-const SCHEMA_FILE = path.resolve(__dirname, '../state_schema.json'); // Adjust path
 const OUTPUT_DIR = path.resolve(__dirname, '../src/hooks/states');   // Output folder
 const IMPORT_PATH_TO_SYNC = '../useStateSync';                    // Relative path
+
+// --- PLUGIN OPTIONS ---
+export interface GenerateStatesPluginOptions {
+  /** URL to fetch the states schema from */
+  schemaUrl?: string;
+}
 
 // --- HELPER TYPES ---
 interface Port {
@@ -60,7 +65,7 @@ const generateContent = (key: string, stateDef: any) => {
 
   return `
 import { z } from 'zod';
-import { useStateSync, type StateDefinition } from '${IMPORT_PATH_TO_SYNC}';
+import { useStateSync, type StateDefinition, type UseStateSyncOptions } from '${IMPORT_PATH_TO_SYNC}';
 
 // --- Schema ---
 ${schemaCode}
@@ -77,18 +82,35 @@ export const ${defName}: StateDefinition<${typeName}> = {
 /**
  * Hook to sync ${key}
  */
-export const ${hookName} = () => {
-  return useStateSync<${typeName}>(${defName});
+export const ${hookName} = (options?: UseStateSyncOptions) => {
+  return useStateSync<${typeName}>(${defName}, options);
 };`;
 };
 
 // --- VITE PLUGIN ---
-export default function generateStatesPlugin(): Plugin {
+export default function generateStatesPlugin(options: GenerateStatesPluginOptions = {}): Plugin {
+  const { schemaUrl } = options;
+  
   return {
     name: 'vite-plugin-generate-states',
     async buildStart() {
-      if (!fs.existsSync(SCHEMA_FILE)) return;
-      const schema = JSON.parse(fs.readFileSync(SCHEMA_FILE, 'utf-8'));
+      if (!schemaUrl) {
+        console.warn('⚠️ [GenStates] No schemaUrl provided, skipping state hook generation.');
+        return;
+      }
+      
+      let schema: any;
+      try {
+        const response = await fetch(schemaUrl);
+        if (!response.ok) {
+          console.error(`❌ [GenStates] Failed to fetch schema from ${schemaUrl}: ${response.status}`);
+          return;
+        }
+        schema = await response.json();
+      } catch (error) {
+        console.error(`❌ [GenStates] Error fetching schema from ${schemaUrl}:`, error);
+        return;
+      }
       
       if (!fs.existsSync(OUTPUT_DIR)) fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 
@@ -109,13 +131,7 @@ export default function generateStatesPlugin(): Plugin {
       const index = files.map(f => `export * from './${f}';`).join('\n');
       fs.writeFileSync(path.join(OUTPUT_DIR, 'index.ts'), index);
       
-      console.log(`✅ [GenStates] Generated ${files.length} state hooks.`);
+      console.log(`✅ [GenStates] Generated ${files.length} state hooks from ${schemaUrl}`);
     },
-    handleHotUpdate({ file, server }) {
-      if (file === SCHEMA_FILE) {
-        this.buildStart?.call(this as any, {} as any);
-        server.ws.send({ type: 'full-reload' });
-      }
-    }
   };
 }

@@ -4,9 +4,14 @@ import prettier from 'prettier';
 import type { Plugin } from 'vite';
 
 // --- CONFIG ---
-const SCHEMA_FILE = path.resolve(__dirname, '../schema.json');
 const OUTPUT_DIR = path.resolve(__dirname, '../src/hooks/generated');
-const IMPORT_PATH_TO_USE_ACTION = '../useAction'; // Relative path from generated file to useAction
+const IMPORT_PATH_TO_USE_ACTION = '../../transport/useTransportAction'; // Relative path from generated file to useAction
+
+// --- PLUGIN OPTIONS ---
+export interface GenerateHooksPluginOptions {
+  /** URL to fetch the implementation schema from */
+  schemaUrl?: string;
+}
 
 // --- HELPERS (Same as before) ---
 interface SchemaArg {
@@ -61,7 +66,7 @@ const generateContent = (key: string, impl: any) => {
 
   return `
 import { z } from 'zod';
-import { useAction, type ActionDefinition } from '${IMPORT_PATH_TO_USE_ACTION}';
+import { useTransportAction, type ActionDefinition } from '${IMPORT_PATH_TO_USE_ACTION}';
 
 // --- Schemas ---
 ${argsDef}
@@ -83,17 +88,34 @@ export const ${defName}: ActionDefinition<${argsType}, ${returnType}> = {
  * ${impl.description}
  */
 export const ${hookName} = () => {
-  return useAction(${defName});
+  return useTransportAction(${defName});
 };`;
 };
 
 // --- VITE PLUGIN EXPORT ---
-export default function generateHooksPlugin(): Plugin {
+export default function generateHooksPlugin(options: GenerateHooksPluginOptions = {}): Plugin {
+  const { schemaUrl } = options;
+  
   return {
     name: 'vite-plugin-generate-hooks',
     async buildStart() {
-      if (!fs.existsSync(SCHEMA_FILE)) return;
-      const schema = JSON.parse(fs.readFileSync(SCHEMA_FILE, 'utf-8'));
+      if (!schemaUrl) {
+        console.warn('⚠️ [GenHooks] No schemaUrl provided, skipping hook generation.');
+        return;
+      }
+      
+      let schema: any;
+      try {
+        const response = await fetch(schemaUrl);
+        if (!response.ok) {
+          console.error(`❌ [GenHooks] Failed to fetch schema from ${schemaUrl}: ${response.status}`);
+          return;
+        }
+        schema = await response.json();
+      } catch (error) {
+        console.error(`❌ [GenHooks] Error fetching schema from ${schemaUrl}:`, error);
+        return;
+      }
       
       if (!fs.existsSync(OUTPUT_DIR)) fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 
@@ -108,13 +130,7 @@ export default function generateHooksPlugin(): Plugin {
 
       const index = files.map(f => `export * from './${f}';`).join('\n');
       fs.writeFileSync(path.join(OUTPUT_DIR, 'index.ts'), index);
-      console.log(`✅ [GenHooks] Generated definitions for ${files.length} actions.`);
+      console.log(`✅ [GenHooks] Generated definitions for ${files.length} actions from ${schemaUrl}`);
     },
-    handleHotUpdate({ file, server }) {
-      if (file === SCHEMA_FILE) {
-        this.buildStart?.call(this as any, {} as any);
-        server.ws.send({ type: 'full-reload' });
-      }
-    }
   };
 }
