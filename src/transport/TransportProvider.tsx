@@ -4,29 +4,25 @@ import React, {
   createContext,
   useContext,
   useEffect,
-  useRef,
-  useState,
   useCallback,
   useMemo,
+  useRef,
 } from 'react';
-import { toast } from 'sonner';
-import type { Operation } from 'fast-json-patch';
 import {
-  FromAgentMessageType,
   type TransportConfig,
   type TransportContextValue,
   type Task,
-  type TaskStatus,
-  type FromAgentMessage,
   type AssignResponse,
   type AssignOptions,
+  type AssignInput,
 } from './types';
-import { useGlobalStateStore } from '../store';
+import { useGlobalStateStore, useTransportStore } from '../store';
+import { WebSocketManager } from './WebSocketManager';
 
 const TransportContext = createContext<TransportContextValue | null>(null);
 
 const DEFAULT_RECONNECT_CONFIG = {
-  maxAttempts: Infinity,
+  maxAttempts: 5,
   initialDelay: 1000,
   maxDelay: 30000,
   backoffMultiplier: 2,
@@ -43,20 +39,17 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
   children,
   config,
 }) => {
-  const [isConnected, setIsConnected] = useState(false);
-  const [isReconnecting, setIsReconnecting] = useState(false);
-  const [reconnectAttempt, setReconnectAttempt] = useState(0);
-  const [tasks, setTasks] = useState<Map<string, Task>>(new Map());
-
-  // Get Zustand store actions
   const globalStateStore = useGlobalStateStore();
+  const transportStore = useTransportStore();
+  
+  // Subscribe to state from Zustand store
+  const isConnected = useTransportStore((s) => s.isConnected);
+  const isReconnecting = useTransportStore((s) => s.isReconnecting);
+  const isUnconnectable = useTransportStore((s) => s.isUnconnectable);
+  const reconnectAttempt = useTransportStore((s) => s.reconnectAttempt);
+  const tasks = useTransportStore((s) => s.tasks);
 
-  const wsRef = useRef<WebSocket | null>(null);
-  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const subscribersRef = useRef<Map<string, Set<(task: Task) => void>>>(new Map());
-  const shouldReconnectRef = useRef(true);
-  const mountedRef = useRef(true);
+  const managerRef = useRef<WebSocketManager | null>(null);
 
   const reconnectConfig = useMemo(
     () => ({ ...DEFAULT_RECONNECT_CONFIG, ...config.reconnect }),
@@ -76,323 +69,32 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
     return url.toString();
   }, [config.apiEndpoint, config.wsEndpoint]);
 
-  // Update a task and notify subscribers
-  const updateTask = useCallback((taskId: string, updates: Partial<Task>) => {
-    setTasks((prevTasks) => {
-      const existing = prevTasks.get(taskId);
-      if (!existing) return prevTasks;
-
-      const updated: Task = {
-        ...existing,
-        ...updates,
-        updatedAt: new Date(),
-      };
-
-      const newTasks = new Map(prevTasks);
-      newTasks.set(taskId, updated);
-
-      // Notify subscribers
-      const subs = subscribersRef.current.get(taskId);
-      if (subs) {
-        subs.forEach((callback) => callback(updated));
-      }
-
-      return newTasks;
+  // Initialize and manage WebSocket manager
+  useEffect(() => {
+    const manager = new WebSocketManager({
+      wsUrl,
+      pingInterval,
+      reconnect: reconnectConfig,
     });
-  }, []);
-
-  // Add a new task to the registry
-  const addTask = useCallback(<TArgs, TReturn>(
-    taskId: string,
-    action: string,
-    args: TArgs,
-    status: TaskStatus = 'pending',
-    options?: AssignOptions
-  ): Task<TArgs, TReturn> => {
-    const task: Task<TArgs, TReturn> = {
-      id: taskId,
-      action,
-      args,
-      status,
-      notify: options?.notify,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-
-    setTasks((prev) => {
-      const newTasks = new Map(prev);
-      newTasks.set(taskId, task as Task);
-      return newTasks;
-    });
-
-    return task;
-  }, []);
-
-  // Handle incoming WebSocket messages
-  const handleMessage = useCallback((event: MessageEvent) => {
-    try {
-        console.log('[Transport] Message received:', event.data);
-      const message: FromAgentMessage = JSON.parse(event.data);
-        
-      
-      switch (message.type) {
-        case FromAgentMessageType.PROGRESS: {
-          updateTask(message.assignation, {
-            status: 'running',
-            progress: message.progress,
-            progressMessage: message.message,
-          });
-          break;
-        }
-
-        case FromAgentMessageType.YIELD: {
-          updateTask(message.assignation, {
-            status: 'running',
-            result: message.returns,
-          });
-          break;
-        }
-
-        case FromAgentMessageType.DONE: {
-          // Check if task has notify enabled before updating
-          toast(`Message received: ${message.type}`, { duration: 1000 });
-
-          setTasks((prevTasks) => {
-            const existing = prevTasks.get(message.assignation);
-            if (existing?.notify) {
-              toast.success(`Task completed: ${existing.action}`, {
-                description: `Task ${message.assignation} finished successfully`,
-              });
-            }
-            return prevTasks;
-          });
-          updateTask(message.assignation, {
-            status: 'completed',
-          });
-          break;
-        }
-
-        case FromAgentMessageType.ERROR: {
-          updateTask(message.assignation, {
-            status: 'failed',
-            error: message.error,
-          });
-          break;
-        }
-
-        case FromAgentMessageType.CRITICAL: {
-          updateTask(message.assignation, {
-            status: 'failed',
-            error: message.error,
-          });
-          console.error('[Transport] Critical error:', message.error);
-          break;
-        }
-
-        case FromAgentMessageType.PAUSED: {
-          updateTask(message.assignation, {
-            status: 'paused',
-          });
-          break;
-        }
-
-        case FromAgentMessageType.RESUMED: {
-          updateTask(message.assignation, {
-            status: 'running',
-          });
-          break;
-        }
-
-        case FromAgentMessageType.CANCELLED: {
-          updateTask(message.assignation, {
-            status: 'cancelled',
-          });
-          break;
-        }
-
-        case FromAgentMessageType.INTERRUPTED: {
-          updateTask(message.assignation, {
-            status: 'interrupted',
-          });
-          break;
-        }
-
-        case FromAgentMessageType.STEPPED: {
-          // Stepped event doesn't have assignation in the model
-          console.log('[Transport] Stepped event received');
-          break;
-        }
-
-        case FromAgentMessageType.LOG: {
-          // Handle log messages from the agent
-          const logMethod = message.level === 'ERROR' || message.level === 'CRITICAL' 
-            ? console.error 
-            : message.level === 'WARN' 
-              ? console.warn 
-              : console.log;
-          logMethod(`[Agent Log] [${message.level}] ${message.message}`);
-          break;
-        }
-
-        case FromAgentMessageType.HEARTBEAT_ANSWER: {
-          // Heartbeat response received
-          break;
-        }
-
-        case FromAgentMessageType.REGISTER: {
-          console.log('[Transport] Agent registered:', message.instance_id);
-          break;
-        }
-
-        case FromAgentMessageType.STATE_UPDATE: {
-          // Update state in Zustand store
-          globalStateStore.setState(message.state, message.value);
-          break;
-        }
-
-        case FromAgentMessageType.STATE_PATCH: {
-          // Apply JSON patch to existing state using Zustand store
-          const stateName = message.interface;
-          const patchOperations: Operation[] = JSON.parse(message.patch);
-          
-          globalStateStore.applyJsonPatch(stateName, patchOperations);
-          console.log(`[Transport] Applied patch to state ${stateName}`);
-          break;
-        }
-
-        default: {
-          // Type guard for exhaustiveness
-          const _exhaustiveCheck: never = message;
-          console.warn('[Transport] Unknown message type:', (_exhaustiveCheck as FromAgentMessage).type);
-        }
-      }
-    } catch (error) {
-      console.error('[Transport] Failed to parse message:', error);
-    }
-  }, [updateTask]);
-
-  // Calculate reconnect delay with exponential backoff
-  const getReconnectDelay = useCallback((attempt: number) => {
-    const delay =
-      reconnectConfig.initialDelay *
-      Math.pow(reconnectConfig.backoffMultiplier, attempt);
-    // Add jitter (±20%)
-    const jitter = delay * 0.2 * (Math.random() - 0.5);
-    return Math.min(delay + jitter, reconnectConfig.maxDelay);
-  }, [reconnectConfig]);
-
-  // Connect to WebSocket
-  const connect = useCallback(() => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      return;
-    }
-
-    // Cleanup existing connection
-    if (wsRef.current) {
-      wsRef.current.close();
-      wsRef.current = null;
-    }
-
-    try {
-      const ws = new WebSocket(wsUrl);
-      wsRef.current = ws;
-
-      ws.onopen = () => {
-        if (!mountedRef.current) return;
-        console.log('[Transport] WebSocket connected');
-        setIsConnected(true);
-        setIsReconnecting(false);
-        setReconnectAttempt(0);
-
-        // Start ping interval
-        if (pingIntervalRef.current) {
-          clearInterval(pingIntervalRef.current);
-        }
-        pingIntervalRef.current = setInterval(() => {
-          if (ws.readyState === WebSocket.OPEN) {
-            ws.send(JSON.stringify({ type: 'ping' }));
-          }
-        }, pingInterval);
-      };
-
-      ws.onmessage = handleMessage;
-
-      ws.onclose = (event) => {
-        if (!mountedRef.current) return;
-        console.log('[Transport] WebSocket closed:', event.code, event.reason);
-        setIsConnected(false);
-
-        // Clear ping interval
-        if (pingIntervalRef.current) {
-          clearInterval(pingIntervalRef.current);
-          pingIntervalRef.current = null;
-        }
-
-        // Attempt reconnection if not intentionally disconnected
-        if (shouldReconnectRef.current) {
-          setIsReconnecting(true);
-          setReconnectAttempt((prev) => {
-            const nextAttempt = prev + 1;
-            if (nextAttempt <= reconnectConfig.maxAttempts) {
-              const delay = getReconnectDelay(prev);
-              console.log(
-                `[Transport] Reconnecting in ${Math.round(delay)}ms (attempt ${nextAttempt})`
-              );
-              reconnectTimeoutRef.current = setTimeout(() => {
-                if (mountedRef.current && shouldReconnectRef.current) {
-                  connect();
-                }
-              }, delay);
-            } else {
-              console.error('[Transport] Max reconnection attempts reached');
-              setIsReconnecting(false);
-            }
-            return nextAttempt;
-          });
-        }
-      };
-
-      ws.onerror = (error) => {
-        console.error('[Transport] WebSocket error:', error);
-      };
-    } catch (error) {
-      console.error('[Transport] Failed to create WebSocket:', error);
-    }
-  }, [wsUrl, handleMessage, pingInterval, getReconnectDelay, reconnectConfig.maxAttempts]);
-
-  // Disconnect from WebSocket
-  const disconnect = useCallback(() => {
-    shouldReconnectRef.current = false;
     
-    if (reconnectTimeoutRef.current) {
-      clearTimeout(reconnectTimeoutRef.current);
-      reconnectTimeoutRef.current = null;
-    }
+    managerRef.current = manager;
+    manager.connect();
 
-    if (pingIntervalRef.current) {
-      clearInterval(pingIntervalRef.current);
-      pingIntervalRef.current = null;
-    }
+    return () => {
+      manager.disconnect();
+      managerRef.current = null;
+    };
+  }, [wsUrl, pingInterval, reconnectConfig]);
 
-    if (wsRef.current) {
-      wsRef.current.close(1000, 'Client disconnected');
-      wsRef.current = null;
-    }
-
-    setIsConnected(false);
-    setIsReconnecting(false);
+  // Reconnect function
+  const reconnect = useCallback(() => {
+    managerRef.current?.reconnect();
   }, []);
 
-  // Manual reconnect
-  const reconnect = useCallback(() => {
-    shouldReconnectRef.current = true;
-    setReconnectAttempt(0);
-    disconnect();
-    setTimeout(() => {
-      shouldReconnectRef.current = true;
-      connect();
-    }, 100);
-  }, [connect, disconnect]);
+  // Disconnect function
+  const disconnect = useCallback(() => {
+    managerRef.current?.disconnect();
+  }, []);
 
   // Assign an action (create a task)
   const assign = useCallback(async <TArgs, TReturn>(
@@ -402,10 +104,28 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
   ): Promise<Task<TArgs, TReturn>> => {
     const url = `${config.apiEndpoint.replace(/\/$/, '')}/${actionName}`;
 
+    // Build the full AssignInput request
+    const assignInput: AssignInput<TArgs> = {
+      args,
+      instanceId: config.instanceId,
+      action: actionName,
+      policy: options?.policy,
+      agent: options?.agent,
+      reservation: options?.reservation,
+      reference: options?.reference,
+      parent: options?.parent,
+      cached: options?.cached ?? false,
+      log: options?.log ?? true,
+      capture: options?.capture ?? false,
+      ephemeral: options?.ephemeral ?? false,
+      hooks: options?.hooks,
+      step: options?.step,
+    };
+
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(args),
+      body: JSON.stringify(assignInput),
     });
 
     if (!response.ok) {
@@ -414,10 +134,16 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
     }
 
     const data: AssignResponse = await response.json();
-    const task = addTask<TArgs, TReturn>(data.task_id, actionName, args, data.status, options);
+    const task = transportStore.addTask<TArgs, TReturn>(
+      data.task_id,
+      actionName,
+      args,
+      data.status,
+      options?.notify
+    );
 
     return task;
-  }, [config.apiEndpoint, addTask]);
+  }, [config.apiEndpoint, config.instanceId, transportStore]);
 
   // Get task from server
   const getTask = useCallback(async <TArgs = unknown, TReturn = unknown>(
@@ -445,22 +171,17 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
       updatedAt: new Date(data.updated_at ?? data.updatedAt ?? Date.now()),
     };
 
-    // Update local cache
-    setTasks((prev) => {
-      const newTasks = new Map(prev);
-      newTasks.set(taskId, task as Task);
-      return newTasks;
-    });
+    transportStore.updateTask(taskId, task);
 
     return task;
-  }, [config.apiEndpoint]);
+  }, [config.apiEndpoint, transportStore]);
 
   // Get cached task
   const getCachedTask = useCallback(<TArgs = unknown, TReturn = unknown>(
     taskId: string
   ): Task<TArgs, TReturn> | undefined => {
-    return tasks.get(taskId) as Task<TArgs, TReturn> | undefined;
-  }, [tasks]);
+    return transportStore.getTask<TArgs, TReturn>(taskId);
+  }, [transportStore]);
 
   // Cancel a task
   const cancelTask = useCallback(async (taskId: string): Promise<void> => {
@@ -473,30 +194,16 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
       throw new Error(`Failed to cancel task: ${response.status} ${errorText}`);
     }
 
-    updateTask(taskId, { status: 'cancelled' });
-  }, [config.apiEndpoint, updateTask]);
+    transportStore.updateTask(taskId, { status: 'cancelled' });
+  }, [config.apiEndpoint, transportStore]);
 
   // Subscribe to task updates
   const subscribeToTask = useCallback((
     taskId: string,
     callback: (task: Task) => void
   ): (() => void) => {
-    if (!subscribersRef.current.has(taskId)) {
-      subscribersRef.current.set(taskId, new Set());
-    }
-    subscribersRef.current.get(taskId)!.add(callback);
-
-    // Return unsubscribe function
-    return () => {
-      const subs = subscribersRef.current.get(taskId);
-      if (subs) {
-        subs.delete(callback);
-        if (subs.size === 0) {
-          subscribersRef.current.delete(taskId);
-        }
-      }
-    };
-  }, []);
+    return transportStore.subscribeToTask(taskId, callback);
+  }, [transportStore]);
 
   // Fetch state from server
   const fetchState = useCallback(async <T = unknown>(stateName: string): Promise<T> => {
@@ -510,36 +217,31 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
     }
 
     const data = await response.json() as T;
-
-    // Update Zustand store
     globalStateStore.setState(stateName, data);
 
     return data;
   }, [config.apiEndpoint, globalStateStore]);
 
-  // Get cached state from Zustand store
+  // Get cached state
   const getCachedState = useCallback(<T = unknown>(stateName: string): T | undefined => {
     return globalStateStore.getState<T>(stateName);
   }, [globalStateStore]);
 
-  // Connect on mount
-  useEffect(() => {
-    mountedRef.current = true;
-    shouldReconnectRef.current = true;
-    connect();
-
-    return () => {
-      mountedRef.current = false;
-      disconnect();
-    };
-  }, [connect, disconnect]);
+  // Convert tasks record to Map for backward compatibility
+  const tasksMap = useMemo(() => {
+    const map = new Map<string, Task>();
+    for (const [id, task] of Object.entries(tasks)) {
+      map.set(id, task);
+    }
+    return map;
+  }, [tasks]);
 
   const contextValue = useMemo<TransportContextValue>(
     () => ({
       isConnected,
       isReconnecting,
       reconnectAttempt,
-      tasks,
+      tasks: tasksMap,
       assign,
       getTask,
       getCachedTask,
@@ -554,7 +256,7 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
       isConnected,
       isReconnecting,
       reconnectAttempt,
-      tasks,
+      tasksMap,
       assign,
       getTask,
       getCachedTask,
@@ -566,6 +268,88 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
       disconnect,
     ]
   );
+
+  // Fallback UI for when connection fails after max retries
+  if (isUnconnectable) {
+    return (
+      <TransportContext.Provider value={contextValue}>
+        <div className="flex min-h-screen items-center justify-center bg-background">
+          <div className="flex flex-col items-center gap-6 p-8 text-center">
+            <div className="rounded-full bg-destructive/10 p-4">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-12 w-12 text-destructive"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M18.364 5.636a9 9 0 010 12.728M5.636 18.364a9 9 0 010-12.728M12 9v2m0 4h.01"
+                />
+              </svg>
+            </div>
+            <div className="space-y-2">
+              <h2 className="text-2xl font-semibold text-foreground">
+                Unable to Connect
+              </h2>
+              <p className="max-w-md text-muted-foreground">
+                Could not establish a connection to the microscope server after {reconnectConfig.maxAttempts} attempts.
+                Please check that the server is running and try again.
+              </p>
+            </div>
+            <button
+              onClick={reconnect}
+              className="inline-flex items-center gap-2 rounded-md bg-primary px-6 py-3 text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-4 w-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                />
+              </svg>
+              Retry Connection
+            </button>
+          </div>
+        </div>
+      </TransportContext.Provider>
+    );
+  }
+
+  // Loading UI while connecting
+  if (!isConnected) {
+    return (
+      <TransportContext.Provider value={contextValue}>
+        <div className="flex min-h-screen items-center justify-center bg-background">
+          <div className="flex flex-col items-center gap-6 p-8 text-center">
+            <div className="relative">
+              <div className="h-16 w-16 animate-spin rounded-full border-4 border-muted border-t-primary" />
+            </div>
+            <div className="space-y-2">
+              <h2 className="text-2xl font-semibold text-foreground">
+                {isReconnecting ? 'Reconnecting...' : 'Connecting...'}
+              </h2>
+              <p className="max-w-md text-muted-foreground">
+                {isReconnecting
+                  ? `Attempt ${reconnectAttempt} of ${reconnectConfig.maxAttempts}`
+                  : 'Establishing connection to the microscope server...'}
+              </p>
+            </div>
+          </div>
+        </div>
+      </TransportContext.Provider>
+    );
+  }
 
   return (
     <TransportContext.Provider value={contextValue}>

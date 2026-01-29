@@ -4,6 +4,7 @@ export type TaskStatus =
   | 'pending' 
   | 'running' 
   | 'completed' 
+  | 'submitted'
   | 'failed' 
   | 'cancelled'
   | 'paused'
@@ -23,9 +24,101 @@ export interface Task<TArgs = unknown, TReturn = unknown> {
   updatedAt: Date;
 }
 
+/** Policy for how an assignment should be handled */
+export interface AssignPolicy {
+  /** Maximum number of retries */
+  maxRetries?: number;
+  /** Timeout in milliseconds */
+  timeout?: number;
+  /** Priority level */
+  priority?: number;
+}
+
+/** Hook input for assignment */
+export interface HookInput {
+  /** Hook kind/type */
+  kind: string;
+  /** Hook hash identifier */
+  hash: string;
+}
+
+/** 
+ * Full assign input matching the backend AssignInput model.
+ * All fields except args are optional with sensible defaults.
+ */
+export interface AssignInput<TArgs = unknown> {
+  /** The arguments for the action */
+  args: TArgs;
+  /** The policy for the assignation */
+  policy?: AssignPolicy;
+  /** Instance ID (required by backend, will be set by transport) */
+  instanceId?: string;
+  /** Action identifier */
+  action?: string;
+  /** Dependency identifier */
+  dependency?: string;
+  /** Resolution identifier */
+  resolution?: string;
+  /** Implementation identifier */
+  implementation?: string;
+  /** Agent identifier */
+  agent?: string;
+  /** Action hash */
+  actionHash?: string;
+  /** Method name */
+  method?: string;
+  /** Reservation identifier */
+  reservation?: string;
+  /** Interface name */
+  interface?: string;
+  /** Hooks to attach to this assignment */
+  hooks?: HookInput[];
+  /** Reference string */
+  reference?: string;
+  /** Parent task ID */
+  parent?: string;
+  /** Whether to use cached results */
+  cached?: boolean;
+  /** Whether to log this assignment */
+  log?: boolean;
+  /** Whether to capture output */
+  capture?: boolean;
+  /** Whether this is an ephemeral assignment */
+  ephemeral?: boolean;
+  /** Dependencies args */
+  dependencies?: Record<string, unknown>;
+  /** Whether this is a hook assignment */
+  isHook?: boolean;
+  /** Whether to step through execution */
+  step?: boolean;
+}
+
+/** Options passed from the hook to customize assignment */
 export interface AssignOptions {
   /** Show a toast notification when the task completes */
   notify?: boolean;
+  /** The policy for the assignation */
+  policy?: AssignPolicy;
+  /** Agent identifier */
+  agent?: string;
+  /** Reservation identifier */
+  reservation?: string;
+  /** Reference string */
+  reference?: string;
+  /** Parent task ID */
+  parent?: string;
+  /** Whether to use cached results */
+  cached?: boolean;
+  /** Whether to log this assignment */
+  log?: boolean;
+  /** Whether to capture output */
+  capture?: boolean;
+  /** Whether this is an ephemeral assignment */
+  ephemeral?: boolean;
+  /** Hooks to attach to this assignment */
+  hooks?: HookInput[];
+  /** Whether to step through execution */
+  step?: boolean;
 }
 
 export interface TaskUpdate {
@@ -300,6 +393,8 @@ export interface TransportConfig {
   apiEndpoint: string;
   /** WebSocket endpoint (optional, defaults to ws version of apiEndpoint + /ws) */
   wsEndpoint?: string;
+  /** Instance ID for this client (required for assignments) */
+  instanceId: string;
   /** Reconnect settings */
   reconnect?: {
     /** Maximum number of reconnect attempts (default: Infinity) */

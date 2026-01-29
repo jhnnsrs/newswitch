@@ -1,8 +1,9 @@
 // src/transport/useTransportAction.ts
 
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { z, ZodType } from 'zod';
 import { useTransport } from './TransportProvider';
+import { useTransportStore, selectTask } from '../store';
 import type { Task, TaskStatus, AssignOptions } from './types';
 
 export interface ActionDefinition<TArgs, TReturn> {
@@ -52,6 +53,9 @@ export interface UseTransportActionResult<TArgs, TReturn> {
   clear: () => void;
 }
 
+// Stable selector for when there's no task
+const noTaskSelector = () => undefined;
+
 export const useTransportAction = <TArgs, TReturn>(
   definition: ActionDefinition<TArgs, TReturn>,
   options: UseTransportActionOptions = {}
@@ -78,14 +82,17 @@ export const useTransportAction = <TArgs, TReturn>(
     callbacksRef.current = { onStatusChange, onComplete, onError, onProgress };
   }, [onStatusChange, onComplete, onError, onProgress]);
 
-  // Get current task from transport cache
-  const task = currentTaskId
-    ? (transport.getCachedTask<TArgs, TReturn>(currentTaskId) ?? null)
-    : null;
+  // Subscribe to current task from Zustand store with stable selector
+  const taskSelector = useMemo(
+    () => currentTaskId ? selectTask<TArgs, TReturn>(currentTaskId) : noTaskSelector,
+    [currentTaskId]
+  );
+  const task = useTransportStore(taskSelector) ?? null;
 
-  // Get all tasks for this action
+  // Get all tasks for this action from Zustand store
+  const allTasks = useTransportStore((store) => store.tasks);
   const tasks = allTaskIds
-    .map((id) => transport.getCachedTask<TArgs, TReturn>(id))
+    .map((id) => allTasks[id] as Task<TArgs, TReturn> | undefined)
     .filter((t): t is Task<TArgs, TReturn> => t !== undefined);
 
   // Derived state from current task
@@ -95,7 +102,7 @@ export const useTransportAction = <TArgs, TReturn>(
   const progress = task?.progress ?? null;
   const isLoading = status === 'pending' || status === 'running';
 
-  // Handle task updates
+  // Handle task updates via callbacks
   const handleTaskUpdate = useCallback((updatedTask: Task) => {
     const cbs = callbacksRef.current;
     
@@ -116,17 +123,17 @@ export const useTransportAction = <TArgs, TReturn>(
     }
   }, []);
 
-  // Subscribe to current task updates
+  // Subscribe to current task updates using callback-based subscription for side effects
   useEffect(() => {
     if (!autoSubscribe || !currentTaskId) return;
 
-    unsubscribeRef.current = transport.subscribeToTask(currentTaskId, handleTaskUpdate);
+    unsubscribeRef.current = useTransportStore.getState().subscribeToTask(currentTaskId, handleTaskUpdate);
 
     return () => {
       unsubscribeRef.current?.();
       unsubscribeRef.current = null;
     };
-  }, [currentTaskId, autoSubscribe, transport, handleTaskUpdate]);
+  }, [currentTaskId, autoSubscribe, handleTaskUpdate]);
 
   // Assign action
   const assign = useCallback(async (args: TArgs, options?: AssignOptions): Promise<Task<TArgs, TReturn>> => {

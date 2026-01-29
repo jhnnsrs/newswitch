@@ -1,40 +1,30 @@
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { ActionButton } from '@/components/ActionButton';
+import { SyncKeyDebug } from '@/components/SyncKeyDebug';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { useMoveStage, useMoveHome } from '@/hooks/generated';
+import { MoveStageDefinition, MoveHomeDefinition } from '@/hooks/generated';
 import { useStageState } from '@/hooks/states';
+import { useSyncKeyStore } from '@/store';
 import { ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, Move } from 'lucide-react';
 
 const STEP_SIZES = [1, 10, 100, 1000];
+const SYNC_KEY = 'stage-movement';
 
 export function StageControl() {
   const { data: stageState, loading: stateLoading } = useStageState({ subscribe: true });
-  const { assign: moveStage, isLoading: isMoving } = useMoveStage();
-  const { assign: moveHome, isLoading: isHomeing } = useMoveHome();
+  const isSyncKeyActive = useSyncKeyStore((state) => state.syncKeys[SYNC_KEY] !== undefined);
   
-  const [stepSize, setStepSize] = useState(100);
+  const [stepSize, setStepSize] = useState(10);
   const [zStep, setZStep] = useState(10);
   const [targetX, setTargetX] = useState('');
   const [targetY, setTargetY] = useState('');
   const [targetZ, setTargetZ] = useState('');
 
-  const handleRelativeMove = (axis: 'x' | 'y' | 'z', direction: 1 | -1) => {
-    const step = axis === 'z' ? zStep : stepSize;
-    moveStage({ [axis]: step * direction, is_absolute: false }, { notify: true });
-  };
-
-  const handleAbsoluteMove = () => {
-    const args: { x?: number; y?: number; z?: number; is_absolute: boolean } = { is_absolute: true };
-    if (targetX) args.x = parseFloat(targetX);
-    if (targetY) args.y = parseFloat(targetY);
-    if (targetZ) args.z = parseFloat(targetZ);
-    moveStage(args, { notify: true });
-  };
-
-  const isLoading = isMoving || isHomeing;
+  const isLoading = isSyncKeyActive;
 
   return (
     <Card className="w-full">
@@ -105,53 +95,63 @@ export function StageControl() {
           <div className="flex justify-center">
             <div className="grid grid-cols-3 gap-1">
               <div />
-              <Button
+              <ActionButton
+                action={MoveStageDefinition}
+                args={{ y: stepSize, is_absolute: false }}
+                assignOptions={{ notify: true }}
+                syncKey={SYNC_KEY}
                 variant="outline"
                 size="icon"
                 className="h-12 w-12"
-                disabled={isLoading}
-                onClick={() => handleRelativeMove('y', 1)}
               >
                 <ArrowUp className="h-6 w-6" />
-              </Button>
+              </ActionButton>
               <div />
-              <Button
+              <ActionButton
+                action={MoveStageDefinition}
+                args={{ x: -stepSize, is_absolute: false }}
+                assignOptions={{ notify: true }}
+                syncKey={SYNC_KEY}
                 variant="outline"
                 size="icon"
                 className="h-12 w-12"
-                disabled={isLoading}
-                onClick={() => handleRelativeMove('x', -1)}
               >
                 <ArrowLeft className="h-6 w-6" />
-              </Button>
-              <Button
+              </ActionButton>
+              <ActionButton
+                action={MoveHomeDefinition}
+                args={{}}
+                assignOptions={{ notify: true }}
+                syncKey={SYNC_KEY}
                 variant="secondary"
                 size="icon"
                 className="h-12 w-12"
-                disabled={isLoading}
-                onClick={() => moveHome({}, { notify: true })}
               >
                 <Home className="h-5 w-5" />
-              </Button>
-              <Button
+              </ActionButton>
+              <ActionButton
+                action={MoveStageDefinition}
+                args={{ x: stepSize, is_absolute: false }}
+                assignOptions={{ notify: true }}
+                syncKey={SYNC_KEY}
                 variant="outline"
                 size="icon"
                 className="h-12 w-12"
-                disabled={isLoading}
-                onClick={() => handleRelativeMove('x', 1)}
               >
                 <ArrowRight className="h-6 w-6" />
-              </Button>
+              </ActionButton>
               <div />
-              <Button
+              <ActionButton
+                action={MoveStageDefinition}
+                args={{ y: -stepSize, is_absolute: false }}
+                assignOptions={{ notify: true }}
+                syncKey={SYNC_KEY}
                 variant="outline"
                 size="icon"
                 className="h-12 w-12"
-                disabled={isLoading}
-                onClick={() => handleRelativeMove('y', -1)}
               >
                 <ArrowDown className="h-6 w-6" />
-              </Button>
+              </ActionButton>
               <div />
             </div>
           </div>
@@ -172,24 +172,28 @@ export function StageControl() {
             </div>
           </div>
           <div className="flex justify-center gap-4">
-            <Button
+            <ActionButton
+              action={MoveStageDefinition}
+              args={{ z: zStep, is_absolute: false }}
+              assignOptions={{ notify: true }}
+              syncKey={SYNC_KEY}
               variant="outline"
               className="flex-1 h-12"
-              disabled={isLoading}
-              onClick={() => handleRelativeMove('z', 1)}
             >
               <ArrowUp className="h-4 w-4 mr-2" />
               Focus Up
-            </Button>
-            <Button
+            </ActionButton>
+            <ActionButton
+              action={MoveStageDefinition}
+              args={{ z: -zStep, is_absolute: false }}
+              assignOptions={{ notify: true }}
+              syncKey={SYNC_KEY}
               variant="outline"
               className="flex-1 h-12"
-              disabled={isLoading}
-              onClick={() => handleRelativeMove('z', -1)}
             >
               <ArrowDown className="h-4 w-4 mr-2" />
               Focus Down
-            </Button>
+            </ActionButton>
           </div>
         </div>
 
@@ -224,15 +228,26 @@ export function StageControl() {
                 onChange={(e) => setTargetZ(e.target.value)}
               />
             </div>
-          </div>
-          <Button 
-            onClick={handleAbsoluteMove} 
-            disabled={isLoading || (!targetX && !targetY && !targetZ)}
+          <ActionButton
+            action={MoveStageDefinition}
+            args={{
+              x: targetX ? parseFloat(targetX) : undefined,
+              y: targetY ? parseFloat(targetY) : undefined,
+              z: targetZ ? parseFloat(targetZ) : undefined,
+              is_absolute: true
+            }}
+            assignOptions={{ notify: true }}
+            syncKey={SYNC_KEY}
+            disabled={!targetX && !targetY && !targetZ}
             className="w-full"
           >
             <Move className="h-4 w-4 mr-2" />
             Move to Position
-          </Button>
+          </ActionButton>
+        </div>
+        
+        {/* Debug Widget */}
+        <SyncKeyDebug syncKey={SYNC_KEY} />
         </div>
       </CardContent>
     </Card>
