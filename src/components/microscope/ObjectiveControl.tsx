@@ -32,11 +32,11 @@ export function ObjectiveControl() {
 
   const handleSelectObjective = (slot: number) => {
     setSelectedSlot(slot);
-    switchObjective({ slot }, { notify: true });
+    switchObjective({ slot });
   };
 
   const handleToggle = () => {
-    toggleObjective({}, { notify: true });
+    toggleObjective({});
   };
 
   const currentObjective = OBJECTIVES.find(o => o.slot === objectiveState?.slot) ?? OBJECTIVES.find(o => o.slot === selectedSlot);

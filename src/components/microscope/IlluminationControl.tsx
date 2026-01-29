@@ -79,7 +79,7 @@ export function IlluminationControl() {
       setIllumination({ intensity: intensity || 50, wavelength, channel: selectedChannel });
       setIsOn(true);
     } else {
-      turnOffIllumination({}, { notify: true });
+      turnOffIllumination({});
       setIsOn(false);
     }
   };
@@ -220,7 +220,7 @@ export function IlluminationControl() {
           variant="destructive"
           className="w-full"
           onClick={() => {
-            turnOffIllumination({}, { notify: true });
+            turnOffIllumination({});
             setIsOn(false);
           }}
           disabled={isLoading || !isOn}

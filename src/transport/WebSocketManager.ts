@@ -215,7 +215,6 @@ export class WebSocketManager {
         }
 
         case FromAgentMessageType.DONE: {
-          toast(`Message received: ${message.type}`, { duration: 1000 });
 
           const existingTask = transportStore.getTask(message.assignation);
           if (existingTask?.notify) {

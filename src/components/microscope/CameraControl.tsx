@@ -49,16 +49,16 @@ export function CameraControl() {
 
   const handleToggleLiveView = () => {
     if (isLiveViewActive) {
-      stopLiveView({}, { notify: true });
+      stopLiveView({});
       setIsLiveViewActive(false);
     } else {
-      startLiveView({}, { notify: true });
+      startLiveView({});
       setIsLiveViewActive(true);
     }
   };
 
   const handleCapture = () => {
-    captureImage({}, { notify: true });
+    captureImage({});
   };
 
   return (
