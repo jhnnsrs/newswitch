@@ -100,6 +100,7 @@ function MicroscopeControlPanel() {
 function App() {
   return (
     <TransportProvider config={{ 
+      instanceId: 'microscope-control-panel',
       apiEndpoint: import.meta.env.VITE_BACKEND_URL, 
       wsEndpoint: import.meta.env.VITE_WEBSOCKET_URL 
     }}>

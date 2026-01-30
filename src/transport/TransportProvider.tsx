@@ -100,12 +100,13 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
           return;
         }
 
-        const locks: Record<string, string> = await response.json();
+        const locks: {locks: Record<string, { task_id: string }>} = await response.json();
         
         // Update global state store with all locks
         const globalState = useGlobalStateStore.getState();
-        Object.entries(locks).forEach(([key, taskId]) => {
-          globalState.setLock(key, taskId);
+        Object.entries(locks.locks).forEach(([key, lock]) => {
+          console.log(`[TransportProvider] Setting lock ${key} to task ${lock.task_id}`);
+          globalState.setLock(key, lock.task_id);
         });
 
         console.log('[TransportProvider] Fetched locks:', locks);

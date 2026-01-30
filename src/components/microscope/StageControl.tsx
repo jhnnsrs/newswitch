@@ -11,7 +11,7 @@ import { useStageState } from '@/hooks/states';
 import { useTransportStore } from '@/store';
 import useCancelTask from '@/transport/useCancelTask';
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Home, Move } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import {  useState } from 'react';
 
 const STEP_SIZES = [1, 10, 100, 1000];
 
@@ -23,9 +23,9 @@ export const ProgressDisplay = () => {
   const cancel = useCancelTask();
 
 
-  if (!task) return null;
+  if (!task && !activeTaskId) return null;
 
-
+  if (!task && activeTaskId) return <> Unknown task controlling this</>;
 
   return (
     <div className="space-y-2 pt-4 border-t">
