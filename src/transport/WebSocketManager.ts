@@ -257,6 +257,8 @@ export class WebSocketManager {
             status: 'failed',
             error: message.error,
           });
+          toast.error(`Critical error in task: ${message.error}`);
+
           console.error('[WebSocketManager] Critical error:', message.error);
           
           break;

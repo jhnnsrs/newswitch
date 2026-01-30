@@ -25,7 +25,7 @@ export const ProgressDisplay = () => {
 
   if (!task && !activeTaskId) return null;
 
-  if (!task && activeTaskId) return <> Unknown task controlling this</>;
+  if (!task && activeTaskId) return <div className='flex items justify-between text-muted-foreground'> Another App is currently controlling the stage <Button variant="outline" size="sm" onClick={() => cancel(activeTaskId!)}>Cancel</Button></div>;
 
   return (
     <div className="space-y-2 pt-4 border-t">

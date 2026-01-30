@@ -70,8 +70,6 @@ export default function generateLocksPlugin(options: GenerateStatesPluginOptions
         console.error(`❌ [GenLocks] Error fetching schema from ${schemaUrl}:`, error);
         return;
       }
-
-      console.log(schema)
       
       if (!fs.existsSync(OUTPUT_DIR)) fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 

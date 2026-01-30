@@ -11,7 +11,20 @@ import {
 } from './components/microscope'
 import { TransportProvider } from './transport'
 import { Microscope, Camera, Layers, Activity } from 'lucide-react'
+import { ActionButton } from './components/ActionButton'
+import { FailingCameraDefinition } from './hooks/generated'
 
+
+function FailingItem() {
+
+  return <ActionButton 
+    action={FailingCameraDefinition}
+    args={{intensity: 50}}
+    variant="destructive"
+    >
+      Trigger Failing Action
+    </ActionButton>
+}
 
 function MicroscopeControlPanel() {
   return (
@@ -57,6 +70,7 @@ function MicroscopeControlPanel() {
               <div className="space-y-6">
                 <StageControl />
                 <ObjectiveControl />
+                <FailingItem/>
               </div>
               
               {/* Right Column */}
