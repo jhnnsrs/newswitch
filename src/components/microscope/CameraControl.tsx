@@ -5,11 +5,11 @@ import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { useSetExposure, useSetGain, useCaptureImage, useAcquireLive } from '@/hooks/generated';
+import { useSetExposure, useSetGain, useCaptureImage, useStartLiveView, useStopLiveView } from '@/hooks/generated';
 import { useCameraState } from '@/hooks/states';
 import { Camera, Play, Square, Image, Settings2 } from 'lucide-react';
 import { LatestImage } from './LatestImage';
-import LiveView from '../liveview/LiveView';
+import LiveView from '../liveview/StreamingView';
 import useCancelTask from '@/transport/useCancelTask';
 
 export function CameraControl() {
@@ -17,7 +17,8 @@ export function CameraControl() {
   const { assign: setExposure, isLoading: isSettingExposure } = useSetExposure();
   const { assign: setGain, isLoading: isSettingGain } = useSetGain();
   const { assign: captureImage, isLoading: isCapturing, isLocked: isCapturingLocked } = useCaptureImage();
-  const { assign: startLiveView, isLoading: isStartingLive } = useAcquireLive();
+  const { assign: startLiveView, isLoading: isStartingLive } = useStartLiveView();
+  const { assign: stopLiveView, isLoading: isStoppingLive } = useStopLiveView();
   const { cancel} = useCancelTask();
 
   const [exposure, setExposureLocal] = useState(100);

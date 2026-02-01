@@ -1,7 +1,6 @@
 import { ActionButton } from '@/components/ActionButton';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
@@ -56,20 +55,18 @@ export function StageControl() {
 
   const isLoading = !!activeTaskId;
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle className="flex items-center gap-2">
-              <Move className="h-5 w-5" />
-              Stage Control
-            </CardTitle>
-            <CardDescription>Control microscope stage position</CardDescription>
-          </div>
-          {isLoading && <Badge variant="secondary">Moving...</Badge>}
+    <div className="w-full space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-sm font-semibold flex items-center gap-2">
+            <Move className="h-4 w-4" />
+            Stage Control
+          </h3>
+          <p className="text-xs text-muted-foreground">Control microscope stage position</p>
         </div>
-      </CardHeader>
-      <CardContent className="space-y-6">
+      </div>
+      
+      <div className="space-y-6">
         {/* Current Position Display */}
         <div className="grid grid-cols-4 gap-4 p-4 bg-muted rounded-lg">
           <div className="text-center">
@@ -255,13 +252,13 @@ export function StageControl() {
             className="w-full"
           >
             <Move className="h-4 w-4 mr-2" />
-            Move to Position
+            Move
           </ActionButton>
         </div>
         
           <ProgressDisplay />
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

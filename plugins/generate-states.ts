@@ -29,6 +29,7 @@ const mapToZod = (port: Port): string => {
     case 'INT': base = 'z.number()'; break;
     case 'BOOL': base = 'z.boolean()'; break;
     case 'STRING': base = 'z.string()'; break;
+    case 'LIST': base = 'z.array(z.any())'; break;
     // Add logic for nested structures if needed (LIST, MEMORY_STRUCTURE)
   }
   
@@ -113,7 +114,8 @@ export default function generateStatesPlugin(options: GenerateStatesPluginOption
       }
       
       if (!fs.existsSync(OUTPUT_DIR)) fs.mkdirSync(OUTPUT_DIR, { recursive: true });
-
+      fs.rmSync(OUTPUT_DIR, { recursive: true, force: true });
+      fs.mkdirSync(OUTPUT_DIR, { recursive: true });
       const files: string[] = [];
       
       // Iterate over the "states" object in your schema

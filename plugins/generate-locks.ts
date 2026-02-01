@@ -71,10 +71,12 @@ export default function generateLocksPlugin(options: GenerateStatesPluginOptions
         return;
       }
       
-      if (!fs.existsSync(OUTPUT_DIR)) fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 
       const files: string[] = [];
 
+      if (!fs.existsSync(OUTPUT_DIR)) fs.mkdirSync(OUTPUT_DIR, { recursive: true });
+      fs.rmSync(OUTPUT_DIR, { recursive: true, force: true });
+      fs.mkdirSync(OUTPUT_DIR, { recursive: true });
       
       // Iterate over the "states" object in your schema
       for (const [key, stateDef] of Object.entries(schema.locks)) {

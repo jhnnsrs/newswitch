@@ -119,6 +119,8 @@ export default function generateHooksPlugin(options: GenerateHooksPluginOptions 
       }
       
       if (!fs.existsSync(OUTPUT_DIR)) fs.mkdirSync(OUTPUT_DIR, { recursive: true });
+      fs.rmSync(OUTPUT_DIR, { recursive: true, force: true });
+      fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 
       const files: string[] = [];
       for (const [key, impl] of Object.entries(schema.implementations)) {

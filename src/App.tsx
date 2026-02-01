@@ -1,111 +1,57 @@
 import './App.css'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs'
 import { Toaster } from './components/ui/sonner'
 import {
   StageControl,
-  CameraControl,
-  IlluminationControl,
-  ObjectiveControl,
-  AcquisitionControl,
   StatusPanel,
+  SettingsPanel,
+  LiveView,
 } from './components/microscope'
 import { TransportProvider } from './transport'
-import { Microscope, Camera, Layers, Activity } from 'lucide-react'
-import { ActionButton } from './components/ActionButton'
-import { FailingCameraDefinition } from './hooks/generated'
+import { Microscope } from 'lucide-react'
+import {
+  ResizablePanelGroup,
+  ResizablePanel,
+  ResizableHandle,
+} from './components/ui/resizable'
 
-
-function FailingItem() {
-
-  return <ActionButton 
-    action={FailingCameraDefinition}
-    args={{intensity: 50}}
-    variant="destructive"
-    >
-      Trigger Failing Action
-    </ActionButton>
-}
 
 function MicroscopeControlPanel() {
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      {/* Header */}
-      <header className="border-b bg-card">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Microscope className="h-8 w-8 text-primary" />
-              <div>
-                <h1 className="text-2xl font-bold">Microscope Control</h1>
-                <p className="text-sm text-muted-foreground">Real-time instrument control</p>
-              </div>
-            </div>
-            <StatusPanel />
-          </div>
+    <div className="h-screen flex flex-col bg-background text-foreground dark">
+      {/* Compact Header */}
+      <header className="h-12 border-b bg-card flex items-center justify-between px-4 shrink-0">
+        <div className="flex items-center gap-2">
+          <Microscope className="h-5 w-5 text-primary" />
+          <h1 className="text-lg font-semibold">Mikroskope</h1>
         </div>
+        <StatusPanel />
       </header>
 
-      {/* Main Content */}
-      <main className="container mx-auto px-4 py-6">
-        <Tabs defaultValue="control" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-grid">
-            <TabsTrigger value="control" className="gap-2">
-              <Camera className="h-4 w-4" />
-              Control
-            </TabsTrigger>
-            <TabsTrigger value="acquisition" className="gap-2">
-              <Layers className="h-4 w-4" />
-              Acquisition
-            </TabsTrigger>
-            <TabsTrigger value="status" className="gap-2">
-              <Activity className="h-4 w-4" />
-              Status
-            </TabsTrigger>
-          </TabsList>
+      {/* Main Layout: Resizable Left Panel + Center View + Right Panel */}
+      <ResizablePanelGroup direction="horizontal" className="flex-1">
+        {/* Left Settings Panel */}
+        <ResizablePanel defaultSize={15} minSize={10} maxSize={30}>
+          <SettingsPanel />
+        </ResizablePanel>
 
-          {/* Control Tab */}
-          <TabsContent value="control" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Left Column */}
-              <div className="space-y-6">
-                <StageControl />
-                <ObjectiveControl />
-                <FailingItem/>
-              </div>
-              
-              {/* Right Column */}
-              <div className="space-y-6">
-                <CameraControl />
-                <IlluminationControl />
-              </div>
-            </div>
-          </TabsContent>
+        <ResizableHandle withHandle />
 
-          {/* Acquisition Tab */}
-          <TabsContent value="acquisition" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <AcquisitionControl />
-              <div className="space-y-6">
-                <CameraControl />
-                <IlluminationControl />
-              </div>
-            </div>
-          </TabsContent>
+        {/* Center Live View */}
+        <ResizablePanel defaultSize={55}>
+          <div className="h-full flex flex-col overflow-hidden bg-muted/30">
+            <LiveView />
+          </div>
+        </ResizablePanel>
 
-          {/* Status Tab */}
-          <TabsContent value="status" className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <div className="lg:col-span-2">
-                <StatusPanel />ss
-              </div>
-            </div>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <StageControl />
-              <CameraControl />
-            </div>
-          </TabsContent>
-        </Tabs>
-      </main>
+        <ResizableHandle withHandle />
+
+        {/* Right Stage Control Panel */}
+        <ResizablePanel defaultSize={30} minSize={15} maxSize={40}>
+          <div className="h-full overflow-y-auto p-4">
+            <StageControl />
+          </div>
+        </ResizablePanel>
+      </ResizablePanelGroup>
     </div>
   )
 }

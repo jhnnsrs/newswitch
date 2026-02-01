@@ -5,3 +5,5 @@ export { ObjectiveControl } from './ObjectiveControl';
 export { AcquisitionControl } from './AcquisitionControl';
 export { StatusPanel } from './StatusPanel';
 export { LatestImage } from './LatestImage';
+export { SettingsPanel } from './SettingsPanel';
+export { LiveView } from './LiveView';
