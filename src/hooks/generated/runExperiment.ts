@@ -6,6 +6,7 @@ import {
 
 // --- Schemas ---
 export const RunExperimentArgsSchema = z.object({
+  num_z_stacks: z.number().optional(),
   num_frames: z.number().optional(),
   exposure_time: z.number().optional(),
   intensity: z.number().optional(),
@@ -26,7 +27,7 @@ export const RunExperimentDefinition: ActionDefinition<
   description: "",
   argsSchema: RunExperimentArgsSchema,
   returnSchema: RunExperimentReturnSchema,
-  lockKeys: [],
+  lockKeys: ["stage_position"],
 };
 
 /**

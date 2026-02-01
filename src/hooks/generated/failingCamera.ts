@@ -23,22 +23,7 @@ export const FailingCameraDefinition: ActionDefinition<
   description: "",
   argsSchema: FailingCameraArgsSchema,
   returnSchema: FailingCameraReturnSchema,
-  lockKeys: [
-    "s",
-    "t",
-    "a",
-    "g",
-    "e",
-    "_",
-    "p",
-    "o",
-    "s",
-    "i",
-    "t",
-    "i",
-    "o",
-    "n",
-  ],
+  lockKeys: ["stage_position"],
 };
 
 /**

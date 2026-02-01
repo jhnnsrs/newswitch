@@ -104,7 +104,7 @@ export const useTransportAction = <TArgs, TReturn>(
 
   // Check lock status
   const locks = useGlobalStateStore((state) => state.locks);
-  const blockingLockKey = definition.lockKeys?.find(key => locks[key] !== undefined);
+  const blockingLockKey = definition.lockKeys?.find(key => (locks[key] !== undefined) && (locks[key] !== null));
   const isLocked = !!blockingLockKey;
   const lockedBy = blockingLockKey ? locks[blockingLockKey] ?? null : null;
 
@@ -154,7 +154,7 @@ export const useTransportAction = <TArgs, TReturn>(
 
     // Check if locked
     const currentLocks = useGlobalStateStore.getState().locks;
-    const blockingKey = definition.lockKeys?.find(key => currentLocks[key] !== undefined);
+    const blockingKey = definition.lockKeys?.find(key => (currentLocks[key] !== undefined) && (currentLocks[key] !== null));
     if (blockingKey) {
       const blockingTaskId = currentLocks[blockingKey];
       const error = new Error(`Action is locked by task ${blockingTaskId} (lock: ${blockingKey})`);

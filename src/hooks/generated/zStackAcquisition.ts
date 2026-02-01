@@ -31,7 +31,7 @@ export const ZStackAcquisitionDefinition: ActionDefinition<
   description: "",
   argsSchema: ZStackAcquisitionArgsSchema,
   returnSchema: ZStackAcquisitionReturnSchema,
-  lockKeys: [],
+  lockKeys: ["stage_position"],
 };
 
 /**

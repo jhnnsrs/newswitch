@@ -23,7 +23,7 @@ export const SetExposureDefinition: ActionDefinition<
   description: "",
   argsSchema: SetExposureArgsSchema,
   returnSchema: SetExposureReturnSchema,
-  lockKeys: [],
+  lockKeys: ["camera_parameters"],
 };
 
 /**

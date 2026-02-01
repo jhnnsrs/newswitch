@@ -432,6 +432,8 @@ export interface TransportContextValue {
   isReconnecting: boolean;
   /** Current reconnect attempt number */
   reconnectAttempt: number;
+  /** The API endpoint URL */
+  apiEndpoint: string;
   /** All tracked tasks */
   tasks: Map<string, Task>;
   /** Assign an action with args, returns task_id */

@@ -21,7 +21,7 @@ export const CaptureImageDefinition: ActionDefinition<
   description: "",
   argsSchema: CaptureImageArgsSchema,
   returnSchema: CaptureImageReturnSchema,
-  lockKeys: [],
+  lockKeys: ["camera_parameters", "io"],
 };
 
 /**

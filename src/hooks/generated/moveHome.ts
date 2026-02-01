@@ -6,7 +6,7 @@ import {
 
 // --- Schemas ---
 export const MoveHomeArgsSchema = z.object({});
-export const MoveHomeReturnSchema = z.record(z.string(), z.any());
+export const MoveHomeReturnSchema = z.void();
 
 // --- Types ---
 export type MoveHomeArgs = z.infer<typeof MoveHomeArgsSchema>;

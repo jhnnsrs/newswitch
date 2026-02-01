@@ -8,12 +8,13 @@ import { Separator } from '@/components/ui/separator';
 import { useSetExposure, useSetGain, useCaptureImage, useStartLiveView, useStopLiveView } from '@/hooks/generated';
 import { useCameraState } from '@/hooks/states';
 import { Camera, Play, Square, Image, Settings2 } from 'lucide-react';
+import { LatestImage } from './LatestImage';
 
 export function CameraControl() {
   const { data: cameraState, loading: stateLoading } = useCameraState({ subscribe: true });
   const { assign: setExposure, isLoading: isSettingExposure } = useSetExposure();
   const { assign: setGain, isLoading: isSettingGain } = useSetGain();
-  const { assign: captureImage, isLoading: isCapturing } = useCaptureImage();
+  const { assign: captureImage, isLoading: isCapturing, isLocked: isCapturingLocked } = useCaptureImage();
   const { assign: startLiveView, isLoading: isStartingLive } = useStartLiveView();
   const { assign: stopLiveView, isLoading: isStoppingLive } = useStopLiveView();
 
@@ -70,7 +71,7 @@ export function CameraControl() {
               <Camera className="h-5 w-5" />
               Camera
             </CardTitle>
-            <CardDescription>Camera settings and capture controls</CardDescription>
+            <CardDescription>Camera settings and capture contrsols</CardDescription>
           </div>
           <div className="flex items-center gap-2">
             {stateLoading && <Badge variant="outline">Loading...</Badge>}
@@ -84,6 +85,7 @@ export function CameraControl() {
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Exposure Control */}
+        <LatestImage/>
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <Label className="flex items-center gap-2">
@@ -219,10 +221,10 @@ export function CameraControl() {
               variant="secondary"
               className="h-14"
               onClick={handleCapture}
-              disabled={isCapturing}
+              disabled={isCapturing || isCapturingLocked}
             >
               <Image className="h-5 w-5 mr-2" />
-              Capture
+              Capture {isCapturingLocked ? ' (Queued)' : ''}
             </Button>
           </div>
         </div>

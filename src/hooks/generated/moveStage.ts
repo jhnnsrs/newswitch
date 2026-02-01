@@ -13,7 +13,7 @@ export const MoveStageArgsSchema = z.object({
   is_absolute: z.boolean().optional(),
   step_size: z.number().optional(),
 });
-export const MoveStageReturnSchema = z.record(z.string(), z.any());
+export const MoveStageReturnSchema = z.void();
 
 // --- Types ---
 export type MoveStageArgs = z.infer<typeof MoveStageArgsSchema>;

@@ -10,7 +10,7 @@ export const MoveToStagePositionArgsSchema = z.object({
   position_y: z.number(),
   position_z: z.number(),
 });
-export const MoveToStagePositionReturnSchema = z.record(z.string(), z.any());
+export const MoveToStagePositionReturnSchema = z.void();
 
 // --- Types ---
 export type MoveToStagePositionArgs = z.infer<

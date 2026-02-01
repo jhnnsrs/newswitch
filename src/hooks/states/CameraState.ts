@@ -9,7 +9,9 @@ import {
 export const CameraStateSchema = z.object({
   exposure_time: z.number(),
   gain: z.number(),
+  is_acquiring: z.boolean(),
   frame_number: z.number(),
+  last_frame: z.any().nullable(),
 });
 
 // --- Type ---
