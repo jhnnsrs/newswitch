@@ -1,27 +1,26 @@
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
+import { useEffect, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { useSwitchObjective, useToggleObjective } from '@/hooks/generated';
 import { useObjectiveState } from '@/hooks/states';
-import { CircleDot, RefreshCw, Target } from 'lucide-react';
-
-const OBJECTIVES = [
-  { slot: 1, magnification: 4, name: '4× Plan', na: 0.1 },
-  { slot: 2, magnification: 10, name: '10× Plan', na: 0.25 },
-  { slot: 3, magnification: 20, name: '20× Plan', na: 0.4 },
-  { slot: 4, magnification: 40, name: '40× Plan', na: 0.65 },
-  { slot: 5, magnification: 60, name: '60× Oil', na: 1.4 },
-  { slot: 6, magnification: 100, name: '100× Oil', na: 1.45 },
-];
+import { ChevronLeft, ChevronRight, Target } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export function ObjectiveControl() {
-  const { data: objectiveState, loading: stateLoading } = useObjectiveState({ subscribe: true });
-  const { assign: switchObjective, isLoading: isSwitching } = useSwitchObjective();
-  const { assign: toggleObjective, isLoading: isToggling } = useToggleObjective();
+  const { data: objectiveState, loading: stateLoading } = useObjectiveState({
+    subscribe: true,
+  });
+  const { assign: switchObjective, isLoading: isSwitching } =
+    useSwitchObjective();
+  const { assign: toggleObjective, isLoading: isToggling } =
+    useToggleObjective();
 
-  const [selectedSlot, setSelectedSlot] = useState(1);
+  const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
 
   // Sync with server state
   useEffect(() => {
@@ -35,138 +34,143 @@ export function ObjectiveControl() {
     switchObjective({ slot });
   };
 
-  const handleToggle = () => {
-    toggleObjective({});
+  const handlePrevious = () => {
+    if (!objectiveState?.mounted_lenses?.length) return;
+    const currentIndex = objectiveState.mounted_lenses.findIndex(
+      (l) => l.slot === objectiveState.slot
+    );
+    const prevIndex =
+      currentIndex <= 0
+        ? objectiveState.mounted_lenses.length - 1
+        : currentIndex - 1;
+    switchObjective({ slot: objectiveState.mounted_lenses[prevIndex].slot });
   };
 
-  const currentObjective = OBJECTIVES.find(o => o.slot === objectiveState?.slot) ?? OBJECTIVES.find(o => o.slot === selectedSlot);
+  const handleNext = () => {
+    if (!objectiveState?.mounted_lenses?.length) return;
+    const currentIndex = objectiveState.mounted_lenses.findIndex(
+      (l) => l.slot === objectiveState.slot
+    );
+    const nextIndex =
+      currentIndex >= objectiveState.mounted_lenses.length - 1
+        ? 0
+        : currentIndex + 1;
+    switchObjective({ slot: objectiveState.mounted_lenses[nextIndex].slot });
+  };
+
+  const currentLens = objectiveState?.mounted_lenses?.find(
+    (l) => l.slot === objectiveState?.slot
+  );
+
   const isLoading = isSwitching || isToggling;
 
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle className="flex items-center gap-2">
-              <Target className="h-5 w-5" />
-              Objective
-            </CardTitle>
-            <CardDescription>Select and configure objective lens</CardDescription>
-          </div>
-          <div className="flex items-center gap-2">
-            {stateLoading && <Badge variant="outline">Loading...</Badge>}
-            {isLoading && <Badge variant="secondary">Switching...</Badge>}
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        {/* Current Objective Display */}
-        {currentObjective && (
-          <div className="p-4 bg-gradient-to-r from-primary/10 to-primary/5 rounded-lg border border-primary/20">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="h-16 w-16 rounded-full bg-primary/20 flex items-center justify-center">
-                  <span className="text-2xl font-bold text-primary">
-                    {objectiveState?.magnification ?? currentObjective.magnification}×
-                  </span>
+    <div className="space-y-4">
+
+      {/* Current Objective Display */}
+      {currentLens && (
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handlePrevious}
+            disabled={
+              isLoading || (objectiveState?.mounted_lenses?.length ?? 0) <= 1
+            }
+            className="p-2 rounded-lg bg-muted/50 hover:bg-muted transition-colors disabled:opacity-50"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+
+          <div className="flex-1 p-4 bg-gradient-to-r from-primary/10 to-primary/5 rounded-lg border border-primary/20">
+            <div className="flex items-center gap-4">
+              <div className="h-14 w-14 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
+                <span className="text-xl font-bold text-primary">
+                  {currentLens.magnification}×
+                </span>
+              </div>
+              <div className="min-w-0 flex-1">
+                <h3 className="text-base font-semibold truncate">
+                  {currentLens.name}
+                </h3>
+                <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                  <span>NA {currentLens.numerical_aperture.toFixed(2)}</span>
+                  <span>WD {currentLens.working_distance}mm</span>
+                  <span>Bin {currentLens.binning_factor}×</span>
                 </div>
-                <div>
-                  <h3 className="text-lg font-semibold">
-                    {objectiveState?.name ?? currentObjective.name}
-                  </h3>
-                  <div className="flex gap-4 text-sm text-muted-foreground">
-                    <span>Slot {objectiveState?.slot ?? currentObjective.slot}</span>
-                    <span>NA {currentObjective.na}</span>
-                  </div>
-                </div>
-              </div>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={handleToggle}
-                disabled={isLoading}
-                title="Toggle to next objective"
-              >
-                <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* Objective Grid */}
-        <div className="space-y-3">
-          <Label>Objective Turret</Label>
-          <div className="grid grid-cols-3 gap-3">
-            {OBJECTIVES.map((objective) => {
-              const isActive = objectiveState?.slot === objective.slot;
-              const isSelected = selectedSlot === objective.slot;
-              
-              return (
-                <Button
-                  key={objective.slot}
-                  variant={isActive ? 'default' : isSelected ? 'secondary' : 'outline'}
-                  className={`flex flex-col h-auto py-4 relative ${isActive ? 'ring-2 ring-primary ring-offset-2' : ''}`}
-                  onClick={() => handleSelectObjective(objective.slot)}
-                  disabled={isLoading}
-                >
-                  {isActive && (
-                    <span className="absolute top-2 right-2 w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                  )}
-                  <CircleDot className="h-6 w-6 mb-2" />
-                  <span className="text-lg font-bold">{objective.magnification}×</span>
-                  <span className="text-xs text-muted-foreground">{objective.name}</span>
-                  <span className="text-xs text-muted-foreground mt-1">NA {objective.na}</span>
-                </Button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Quick Switch Buttons */}
-        <div className="space-y-3 pt-4 border-t">
-          <Label>Quick Switch</Label>
-          <div className="flex gap-2">
-            {[4, 10, 20, 40].map((mag) => {
-              const obj = OBJECTIVES.find(o => o.magnification === mag);
-              if (!obj) return null;
-              
-              const isActive = objectiveState?.slot === obj.slot;
-              
-              return (
-                <Button
-                  key={mag}
-                  variant={isActive ? 'default' : 'outline'}
-                  className="flex-1"
-                  onClick={() => handleSelectObjective(obj.slot)}
-                  disabled={isLoading}
-                >
-                  {mag}×
-                </Button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Objective Info */}
-        {objectiveState && (
-          <div className="p-3 bg-muted rounded-lg">
-            <div className="grid grid-cols-3 gap-4 text-center text-sm">
-              <div>
-                <div className="text-muted-foreground">Slot</div>
-                <div className="font-mono font-medium">{objectiveState.slot}</div>
-              </div>
-              <div>
-                <div className="text-muted-foreground">Magnification</div>
-                <div className="font-mono font-medium">{objectiveState.magnification}×</div>
-              </div>
-              <div>
-                <div className="text-muted-foreground">Name</div>
-                <div className="font-mono font-medium">{objectiveState.name}</div>
               </div>
             </div>
           </div>
-        )}
-      </CardContent>
-    </Card>
+
+          <button
+            onClick={handleNext}
+            disabled={
+              isLoading || (objectiveState?.mounted_lenses?.length ?? 0) <= 1
+            }
+            className="p-2 rounded-lg bg-muted/50 hover:bg-muted transition-colors disabled:opacity-50"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
+      {/* Objective Carousel/Grid */}
+      <div className="space-y-2">
+        <span className="text-xs text-muted-foreground">Available Lenses</span>
+        <div className="flex gap-2 overflow-x-auto pb-2">
+          {objectiveState?.mounted_lenses?.map((lens) => {
+            const isActive = objectiveState?.slot === lens.slot;
+            const isSelected = selectedSlot === lens.slot;
+
+            return (
+              <TooltipProvider key={lens.slot}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={() => handleSelectObjective(lens.slot)}
+                      disabled={isLoading}
+                      className={cn(
+                        'flex flex-col items-center justify-center min-w-[4rem] p-3 rounded-lg border transition-all',
+                        isActive
+                          ? 'bg-primary text-primary-foreground border-primary'
+                          : isSelected
+                            ? 'bg-secondary border-secondary'
+                            : 'bg-muted/30 border-transparent hover:bg-muted/50',
+                        isLoading && 'opacity-50 cursor-not-allowed'
+                      )}
+                    >
+                      {isActive && (
+                        <span className="absolute top-1 right-1 w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                      )}
+                      <span className="text-lg font-bold">
+                        {lens.magnification}×
+                      </span>
+                      <span className="text-xs opacity-80 truncate max-w-full">
+                        {lens.name.split(' ')[0]}
+                      </span>
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">
+                    <div className="text-xs space-y-1">
+                      <p className="font-medium">{lens.name}</p>
+                      <p>NA: {lens.numerical_aperture}</p>
+                      <p>Working Distance: {lens.working_distance}mm</p>
+                      <p>Binning: {lens.binning_factor}×</p>
+                      <p>Slot: {lens.slot}</p>
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            );
+          })}
+
+          {(!objectiveState?.mounted_lenses ||
+            objectiveState.mounted_lenses.length === 0) &&
+            !stateLoading && (
+              <div className="text-center py-4 text-sm text-muted-foreground w-full">
+                No objectives mounted
+              </div>
+            )}
+        </div>
+      </div>
+    </div>
   );
 }

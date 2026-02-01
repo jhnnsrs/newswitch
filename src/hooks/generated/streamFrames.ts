@@ -6,6 +6,7 @@ import {
 
 // --- Schemas ---
 export const StreamFramesArgsSchema = z.object({
+  slot: z.number(),
   num_frames: z.number().optional(),
   fps: z.number().optional(),
 });

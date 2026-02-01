@@ -10,7 +10,16 @@ export const ObjectiveStateSchema = z.object({
   slot: z.number(),
   magnification: z.number(),
   name: z.string(),
-  mounted_lenses: z.any(),
+  mounted_lenses: z.array(
+    z.object({
+      slot: z.number(),
+      name: z.string(),
+      magnification: z.number(),
+      numerical_aperture: z.number(),
+      working_distance: z.number(),
+      binning_factor: z.number(),
+    }),
+  ),
 });
 
 // --- Type ---

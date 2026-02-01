@@ -1,256 +1,246 @@
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
-import { useSetIllumination, useTurnOffIllumination } from '@/hooks/generated';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import {
+  useSetIlluminationIntensity,
+  useTurnOffIlluminationChannel,
+  useTurnOnIllumination,
+} from '@/hooks/generated';
 import { useIlluminationState } from '@/hooks/states';
-import { Lightbulb, Power, Sun, Zap } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Power, Waves } from 'lucide-react';
+import { useState } from 'react';
 
-const CHANNELS = [
-  { id: 0, name: 'Brightfield', color: 'bg-yellow-400' },
-  { id: 1, name: 'DAPI', color: 'bg-blue-500' },
-  { id: 2, name: 'FITC', color: 'bg-green-500' },
-  { id: 3, name: 'TRITC', color: 'bg-red-500' },
-  { id: 4, name: 'Cy5', color: 'bg-purple-500' },
-];
+// Color mapping for wavelengths
+const getWavelengthColor = (wavelength: number): string => {
+  if (wavelength < 420) return 'bg-violet-500';
+  if (wavelength < 500) return 'bg-blue-500';
+  if (wavelength < 570) return 'bg-green-500';
+  if (wavelength < 600) return 'bg-yellow-500';
+  if (wavelength < 650) return 'bg-orange-500';
+  return 'bg-red-500';
+};
 
-const WAVELENGTHS = [
-  { value: 405, label: '405nm', color: 'text-violet-400' },
-  { value: 488, label: '488nm', color: 'text-blue-400' },
-  { value: 561, label: '561nm', color: 'text-green-400' },
-  { value: 640, label: '640nm', color: 'text-red-400' },
-];
+const getWavelengthTextColor = (wavelength: number): string => {
+  if (wavelength < 420) return 'text-violet-400';
+  if (wavelength < 500) return 'text-blue-400';
+  if (wavelength < 570) return 'text-green-400';
+  if (wavelength < 600) return 'text-yellow-400';
+  if (wavelength < 650) return 'text-orange-400';
+  return 'text-red-400';
+};
+
+const getKindLabel = (kind: string): string => {
+  switch (kind) {
+    case 'LED':
+      return 'LED';
+    case 'LASER':
+      return 'Laser';
+    case 'HALOGEN':
+      return 'Halogen';
+    case 'ARC':
+      return 'Arc Lamp';
+    default:
+      return kind;
+  }
+};
 
 export function IlluminationControl() {
-  const { data: illuminationState, loading: stateLoading } = useIlluminationState({ subscribe: true });
-  const { assign: setIllumination, isLoading: isSetting } = useSetIllumination();
-  const { assign: turnOffIllumination, isLoading: isTurningOff } = useTurnOffIllumination();
+  const { data: illuminationState, loading: stateLoading } =
+    useIlluminationState({ subscribe: true });
+  const { assign: turnOnIllumination, isLoading: isTurningOn } =
+    useTurnOnIllumination();
+  const { assign: turnOffChannel, isLoading: isTurningOff } =
+    useTurnOffIlluminationChannel();
+  const { assign: setIntensity, isLoading: isSettingIntensity } =
+    useSetIlluminationIntensity();
 
-  const [intensity, setIntensityLocal] = useState(50);
-  const [wavelength, setWavelengthLocal] = useState(488);
-  const [selectedChannel, setSelectedChannel] = useState(0);
-  const [isOn, setIsOn] = useState(false);
+  const [localIntensities, setLocalIntensities] = useState<
+    Record<number, number>
+  >({});
 
-  // Sync with server state
-  useEffect(() => {
-    if (illuminationState?.intensity !== undefined) {
-      setIntensityLocal(illuminationState.intensity);
-      setIsOn(illuminationState.intensity > 0);
-    }
-    if (illuminationState?.wavelength !== undefined) {
-      setWavelengthLocal(illuminationState.wavelength);
-    }
-    if (illuminationState?.channel !== undefined) {
-      setSelectedChannel(illuminationState.channel);
-    }
-  }, [illuminationState]);
+  // Get active slot intensities from state
+  const activeSlots = new Set(
+    illuminationState?.active_illuminations?.map((a) => a.slot) ?? []
+  );
 
-  const handleIntensityChange = (value: number[]) => {
-    setIntensityLocal(value[0]);
+  const getActiveIntensity = (slot: number): number => {
+    const active = illuminationState?.active_illuminations?.find(
+      (a) => a.slot === slot
+    );
+    return active?.intensity ?? 0;
   };
 
-  const handleIntensityCommit = () => {
-    if (intensity > 0) {
-      setIllumination({ intensity, wavelength, channel: selectedChannel });
-      setIsOn(true);
-    }
+  const handleIntensityChange = (slot: number, value: number) => {
+    setLocalIntensities((prev) => ({ ...prev, [slot]: value }));
   };
 
-  const handleChannelSelect = (channelId: number) => {
-    setSelectedChannel(channelId);
-    if (isOn) {
-      setIllumination({ intensity, wavelength, channel: channelId });
-    }
-  };
-
-  const handleWavelengthSelect = (wl: number) => {
-    setWavelengthLocal(wl);
-    if (isOn) {
-      setIllumination({ intensity, wavelength: wl, channel: selectedChannel });
+  const handleIntensityCommit = (slot: number, channel: number) => {
+    const intensity = localIntensities[slot];
+    if (intensity !== undefined) {
+      setIntensity({ intensity, channel });
+      setLocalIntensities((prev) => {
+        const next = { ...prev };
+        delete next[slot];
+        return next;
+      });
     }
   };
 
-  const handleToggle = (checked: boolean) => {
-    if (checked) {
-      setIllumination({ intensity: intensity || 50, wavelength, channel: selectedChannel });
-      setIsOn(true);
+  const handleToggleSource = (
+    channel: number,
+    defaultIntensity: number,
+    enabled: boolean
+  ) => {
+    if (enabled) {
+      turnOnIllumination({ channel, intensity: defaultIntensity });
     } else {
-      turnOffIllumination({});
-      setIsOn(false);
+      turnOffChannel({ channel });
     }
   };
 
-  const isLoading = isSetting || isTurningOff;
+  const isLoading = isTurningOn || isTurningOff || isSettingIntensity;
+  const hasActiveSources = activeSlots.size > 0;
 
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle className="flex items-center gap-2">
-              <Lightbulb className={`h-5 w-5 ${isOn ? 'text-yellow-400' : ''}`} />
-              Illumination
-            </CardTitle>
-            <CardDescription>Light source and channel control</CardDescription>
-          </div>
-          <div className="flex items-center gap-3">
-            {stateLoading && <Badge variant="outline">Loading...</Badge>}
-            <div className="flex items-center gap-2">
-              <Label htmlFor="light-switch" className="text-sm">Power</Label>
-              <Switch
-                id="light-switch"
-                checked={isOn}
-                onCheckedChange={handleToggle}
-                disabled={isLoading}
-              />
-            </div>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        {/* Channel Selection */}
-        <div className="space-y-3">
-          <Label className="flex items-center gap-2">
-            <Zap className="h-4 w-4" />
-            Channel
-          </Label>
-          <div className="grid grid-cols-5 gap-2">
-            {CHANNELS.map((channel) => (
-              <Button
-                key={channel.id}
-                variant={selectedChannel === channel.id ? 'default' : 'outline'}
-                className="flex flex-col h-auto py-3 relative"
-                onClick={() => handleChannelSelect(channel.id)}
-                disabled={isLoading}
-              >
-                <div className={`w-3 h-3 rounded-full ${channel.color} mb-1`} />
-                <span className="text-xs">{channel.name}</span>
-                {selectedChannel === channel.id && isOn && (
-                  <span className="absolute top-1 right-1 w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                )}
-              </Button>
-            ))}
-          </div>
-        </div>
+    <div className="space-y-4">
 
-        {/* Wavelength Selection */}
-        <div className="space-y-3">
-          <Label>Wavelength</Label>
-          <div className="grid grid-cols-4 gap-2">
-            {WAVELENGTHS.map((wl) => (
-              <Button
-                key={wl.value}
-                variant={wavelength === wl.value ? 'default' : 'outline'}
-                className="flex flex-col h-auto py-2"
-                onClick={() => handleWavelengthSelect(wl.value)}
-                disabled={isLoading}
-              >
-                <span className={`text-sm font-mono ${wl.color}`}>{wl.label}</span>
-              </Button>
-            ))}
-          </div>
-        </div>
+      {/* Light Sources */}
+      <div className="space-y-3">
+        {illuminationState?.available_sources?.map((source) => {
+          const isActive = activeSlots.has(source.slot);
+          const currentIntensity =
+            localIntensities[source.slot] ??
+            getActiveIntensity(source.slot) ??
+            source.intensity;
 
-        <Separator />
-
-        {/* Intensity Control */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <Label className="flex items-center gap-2">
-              <Sun className="h-4 w-4" />
-              Intensity
-            </Label>
-            <div className="flex items-center gap-2">
-              <span className="font-mono text-lg font-bold w-12 text-right">
-                {intensity}
-              </span>
-              <span className="text-sm text-muted-foreground">%</span>
-            </div>
-          </div>
-          <div className="flex items-center gap-4">
-            <Slider
-              value={[intensity]}
-              onValueChange={handleIntensityChange}
-              onValueCommit={handleIntensityCommit}
-              min={0}
-              max={100}
-              step={1}
-              className="flex-1"
-              disabled={isLoading || !isOn}
-            />
-            <Button 
-              size="sm" 
-              variant="outline"
-              onClick={handleIntensityCommit}
-              disabled={isLoading || !isOn}
+          return (
+            <div
+              key={source.slot}
+              className={cn(
+                'p-3 rounded-lg border transition-all',
+                isActive
+                  ? 'bg-primary/5 border-primary/30'
+                  : 'bg-muted/30 border-transparent'
+              )}
             >
-              Set
-            </Button>
-          </div>
-          <div className="flex gap-2">
-            {[0, 25, 50, 75, 100].map((val) => (
-              <Button
-                key={val}
-                size="sm"
-                variant={intensity === val ? 'default' : 'outline'}
-                onClick={() => {
-                  setIntensityLocal(val);
-                  if (val === 0) {
-                    turnOffIllumination({});
-                    setIsOn(false);
-                  } else if (isOn) {
-                    setIllumination({ intensity: val, wavelength, channel: selectedChannel });
-                  }
-                }}
-                className="flex-1"
-                disabled={isLoading}
-              >
-                {val}%
-              </Button>
-            ))}
-          </div>
-        </div>
-
-        {/* Quick Off Button */}
-        <Button
-          variant="destructive"
-          className="w-full"
-          onClick={() => {
-            turnOffIllumination({});
-            setIsOn(false);
-          }}
-          disabled={isLoading || !isOn}
-        >
-          <Power className="h-4 w-4 mr-2" />
-          Turn Off Illumination
-        </Button>
-
-        {/* Current State Display */}
-        {illuminationState && (
-          <div className="p-3 bg-muted rounded-lg">
-            <div className="grid grid-cols-3 gap-4 text-center text-sm">
-              <div>
-                <div className="text-muted-foreground">Intensity</div>
-                <div className="font-mono font-medium">{illuminationState.intensity}%</div>
-              </div>
-              <div>
-                <div className="text-muted-foreground">Wavelength</div>
-                <div className="font-mono font-medium">{illuminationState.wavelength}nm</div>
-              </div>
-              <div>
-                <div className="text-muted-foreground">Channel</div>
-                <div className="font-mono font-medium">
-                  {CHANNELS.find(c => c.id === illuminationState.channel)?.name ?? illuminationState.channel}
+              {/* Source Header */}
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <div
+                          className={cn(
+                            'w-3 h-3 rounded-full',
+                            getWavelengthColor(source.wavelength),
+                            isActive && 'animate-pulse'
+                          )}
+                        />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{source.wavelength}nm</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  <span className="text-sm font-medium">
+                    {getKindLabel(source.kind)}
+                  </span>
+                  <span
+                    className={cn(
+                      'text-xs font-mono',
+                      getWavelengthTextColor(source.wavelength)
+                    )}
+                  >
+                    {source.wavelength}nm
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground font-mono w-8 text-right">
+                    {isActive ? currentIntensity : 0}%
+                  </span>
+                  <Switch
+                    checked={isActive}
+                    onCheckedChange={(checked) =>
+                      handleToggleSource(
+                        source.slot,
+                        source.intensity || 50,
+                        checked
+                      )
+                    }
+                    disabled={isLoading}
+                  />
                 </div>
               </div>
+
+              {/* Intensity Slider */}
+              <div className="flex items-center gap-3">
+                <Waves className="h-3 w-3 text-muted-foreground" />
+                <Slider
+                  value={[currentIntensity]}
+                  onValueChange={(v) =>
+                    handleIntensityChange(source.slot, v[0])
+                  }
+                  onValueCommit={() =>
+                    handleIntensityCommit(source.slot, source.channel)
+                  }
+                  min={source.min_intensity}
+                  max={source.max_intensity}
+                  step={1}
+                  className="flex-1"
+                  disabled={isLoading || !isActive}
+                />
+              </div>
+
+              {/* Channel indicator */}
+              <div className="flex items-center gap-2 mt-2">
+                <span className="text-xs text-muted-foreground">
+                  Ch {source.channel}
+                </span>
+                <span className="text-xs text-muted-foreground">•</span>
+                <span className="text-xs text-muted-foreground">
+                  Slot {source.slot}
+                </span>
+              </div>
             </div>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+          );
+        })}
+
+        {(!illuminationState?.available_sources ||
+          illuminationState.available_sources.length === 0) &&
+          !stateLoading && (
+            <div className="text-center py-4 text-sm text-muted-foreground">
+              No light sources available
+            </div>
+          )}
+      </div>
+
+      {/* Quick Off All Button */}
+      {hasActiveSources && (
+        <button
+          onClick={() => {
+            // Turn off all active channels
+            illuminationState?.active_illuminations?.forEach((active) => {
+              const source = illuminationState?.available_sources?.find(
+                (s) => s.slot === active.slot
+              );
+              if (source) {
+                turnOffChannel({ channel: source.channel });
+              }
+            });
+          }}
+          disabled={isLoading}
+          className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-destructive/10 hover:bg-destructive/20 text-destructive text-sm font-medium transition-colors disabled:opacity-50"
+        >
+          <Power className="h-4 w-4" />
+          Turn Off All
+        </button>
+      )}
+    </div>
   );
 }

@@ -8,6 +8,7 @@ import {
 export const TimelapseAcquisitionArgsSchema = z.object({
   num_timepoints: z.number(),
   interval_seconds: z.number(),
+  slot: z.number().optional(),
   exposure_time: z.number().optional(),
   intensity: z.number().optional(),
 });

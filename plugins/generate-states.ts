@@ -19,33 +19,73 @@ interface Port {
   kind: string;
   nullable: boolean;
   default?: any;
+  children?: Port[];
+  identifier?: string;
+  description?: string;
 }
 
 // --- ZOD MAPPING ---
 const mapToZod = (port: Port): string => {
   let base = 'z.any()';
+  
   switch (port.kind) {
     case 'FLOAT':
-    case 'INT': base = 'z.number()'; break;
-    case 'BOOL': base = 'z.boolean()'; break;
-    case 'STRING': base = 'z.string()'; break;
-    case 'LIST': base = 'z.array(z.any())'; break;
-    // Add logic for nested structures if needed (LIST, MEMORY_STRUCTURE)
+    case 'INT': 
+      base = 'z.number()'; 
+      break;
+    case 'BOOL': 
+      base = 'z.boolean()'; 
+      break;
+    case 'STRING': 
+      base = 'z.string()'; 
+      break;
+    case 'LIST': 
+      if (port.children && port.children.length > 0) {
+        // Lists have a single child describing the element type
+        const elementType = mapToZod(port.children[0]);
+        base = `z.array(${elementType})`;
+      } else {
+        base = 'z.array(z.any())';
+      }
+      break;
+    case 'DICT':
+      if (port.children && port.children.length > 0) {
+        // Dict has a single child describing the value type (keys are always strings)
+        const valueType = mapToZod(port.children[0]);
+        base = `z.record(z.string(), ${valueType})`;
+      } else {
+        base = 'z.record(z.string(), z.any())';
+      }
+      break;
+    case 'MODEL':
+      if (port.children && port.children.length > 0) {
+        // Model is a nested object with its own fields
+        const fields = port.children.map((child) => 
+          `  ${child.key}: ${mapToZod(child)}`
+        ).join(',\n');
+        base = `z.object({\n${fields}\n})`;
+      } else {
+        base = 'z.object({})';
+      }
+      break;
+    case 'UNION':
+      if (port.children && port.children.length > 0) {
+        const types = port.children.map((child) => mapToZod(child));
+        base = `z.union([${types.join(', ')}])`;
+      } else {
+        base = 'z.any()';
+      }
+      break;
+    default:
+      // Unknown type, fallback to any
+      base = 'z.any()';
   }
   
   if (port.nullable) return `${base}.nullable()`;
   return base;
 };
 
-const mapToTS = (port: Port): string => {
-  switch (port.kind) {
-    case 'FLOAT':
-    case 'INT': return 'number';
-    case 'BOOL': return 'boolean';
-    case 'STRING': return 'string';
-    default: return 'any';
-  }
-};
+
 
 const toCamel = (s: string) => s.replace(/_([a-z])/g, (g) => g[1].toUpperCase());
 const toPascal = (s: string) => { const c = toCamel(s); return c.charAt(0).toUpperCase() + c.slice(1); };

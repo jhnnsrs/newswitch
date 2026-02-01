@@ -11,6 +11,15 @@ export const StageStateSchema = z.object({
   y: z.number(),
   z: z.number(),
   a: z.number(),
+  max_x: z.number(),
+  min_x: z.number(),
+  max_y: z.number(),
+  min_y: z.number(),
+  max_z: z.number(),
+  min_z: z.number(),
+  max_a: z.number(),
+  min_a: z.number(),
+  registered_step_sizes: z.array(z.number()),
 });
 
 // --- Type ---

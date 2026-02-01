@@ -6,6 +6,7 @@ import {
 
 // --- Schemas ---
 export const RunExperimentArgsSchema = z.object({
+  slot: z.number().optional(),
   num_z_stacks: z.number().optional(),
   num_frames: z.number().optional(),
   exposure_time: z.number().optional(),

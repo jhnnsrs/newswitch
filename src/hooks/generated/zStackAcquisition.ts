@@ -9,6 +9,7 @@ export const ZStackAcquisitionArgsSchema = z.object({
   z_start: z.number(),
   z_end: z.number(),
   z_step: z.number(),
+  slot: z.number().optional(),
   exposure_time: z.number().optional(),
   intensity: z.number().optional(),
 });

@@ -5,7 +5,9 @@ import {
 } from "../../transport/useTransportAction";
 
 // --- Schemas ---
-export const CaptureImageArgsSchema = z.object({});
+export const CaptureImageArgsSchema = z.object({
+  slot: z.number().optional(),
+});
 export const CaptureImageReturnSchema = z.string();
 
 // --- Types ---
