@@ -8,7 +8,7 @@ import {
 export const SwitchObjectiveArgsSchema = z.object({
   slot: z.number(),
 });
-export const SwitchObjectiveReturnSchema = z.record(z.string(), z.any());
+export const SwitchObjectiveReturnSchema = z.void();
 
 // --- Types ---
 export type SwitchObjectiveArgs = z.infer<typeof SwitchObjectiveArgsSchema>;
@@ -23,7 +23,7 @@ export const SwitchObjectiveDefinition: ActionDefinition<
   description: "",
   argsSchema: SwitchObjectiveArgsSchema,
   returnSchema: SwitchObjectiveReturnSchema,
-  lockKeys: [],
+  lockKeys: ["objective"],
 };
 
 /**

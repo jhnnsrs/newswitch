@@ -8,7 +8,7 @@ import {
 export const SetGainArgsSchema = z.object({
   gain: z.number(),
 });
-export const SetGainReturnSchema = z.number();
+export const SetGainReturnSchema = z.void();
 
 // --- Types ---
 export type SetGainArgs = z.infer<typeof SetGainArgsSchema>;
@@ -20,7 +20,7 @@ export const SetGainDefinition: ActionDefinition<SetGainArgs, SetGainReturn> = {
   description: "",
   argsSchema: SetGainArgsSchema,
   returnSchema: SetGainReturnSchema,
-  lockKeys: [],
+  lockKeys: ["camera_parameters"],
 };
 
 /**

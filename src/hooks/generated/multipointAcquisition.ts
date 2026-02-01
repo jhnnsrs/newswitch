@@ -6,7 +6,6 @@ import {
 
 // --- Schemas ---
 export const MultipointAcquisitionArgsSchema = z.object({
-  positions: z.array(z.record(z.string(), z.any())),
   exposure_time: z.number().optional(),
   intensity: z.number().optional(),
 });

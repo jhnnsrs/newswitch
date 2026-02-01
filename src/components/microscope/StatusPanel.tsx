@@ -1,22 +1,16 @@
-import { useGetMicroscopeStatus } from '@/hooks/generated';
-import { useCameraState, useStageState, useIlluminationState, useObjectiveState } from '@/hooks/states';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { Activity, RefreshCw, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useCameraState, useIlluminationState, useObjectiveState, useStageState } from '@/hooks/states';
+import { Activity, AlertCircle, CheckCircle2, RefreshCw, XCircle } from 'lucide-react';
 
 export function StatusPanel() {
-  const { assign: getMicroscopeStatus, isLoading: isRefreshing, task } = useGetMicroscopeStatus();
   
   const { data: camera, loading: cameraLoading } = useCameraState({ subscribe: true });
   const { data: stage, loading: stageLoading } = useStageState({ subscribe: true });
   const { data: illumination, loading: illuminationLoading } = useIlluminationState({ subscribe: true });
   const { data: objective, loading: objectiveLoading } = useObjectiveState({ subscribe: true });
 
-  const handleRefresh = () => {
-    getMicroscopeStatus({}, { notify: false });
-  };
+
 
   const isAnyLoading = cameraLoading || stageLoading || illuminationLoading || objectiveLoading;
 
@@ -58,14 +52,6 @@ export function StatusPanel() {
                connectionStatus === 'partial' ? 'Partial' :
                connectionStatus === 'loading' ? 'Loading' : 'Disconnected'}
             </Badge>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleRefresh}
-              disabled={isRefreshing}
-            >
-              <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-            </Button>
           </div>
         </div>
       </CardHeader>
@@ -152,23 +138,6 @@ export function StatusPanel() {
             )}
           </div>
         </div>
-
-        {/* Last Status Check */}
-        {task && (
-          <>
-            <Separator />
-            <div className="text-xs text-muted-foreground">
-              <span>Last status check: </span>
-              {task.done ? (
-                <Badge variant="outline" className="text-xs">Complete</Badge>
-              ) : task.error ? (
-                <Badge variant="destructive" className="text-xs">Error</Badge>
-              ) : (
-                <Badge variant="secondary" className="text-xs">Pending</Badge>
-              )}
-            </div>
-          </>
-        )}
       </CardContent>
     </Card>
   );

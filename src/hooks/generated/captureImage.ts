@@ -6,7 +6,7 @@ import {
 
 // --- Schemas ---
 export const CaptureImageArgsSchema = z.object({});
-export const CaptureImageReturnSchema = z.record(z.string(), z.any());
+export const CaptureImageReturnSchema = z.string();
 
 // --- Types ---
 export type CaptureImageArgs = z.infer<typeof CaptureImageArgsSchema>;

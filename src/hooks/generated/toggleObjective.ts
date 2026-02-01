@@ -6,7 +6,7 @@ import {
 
 // --- Schemas ---
 export const ToggleObjectiveArgsSchema = z.object({});
-export const ToggleObjectiveReturnSchema = z.record(z.string(), z.any());
+export const ToggleObjectiveReturnSchema = z.void();
 
 // --- Types ---
 export type ToggleObjectiveArgs = z.infer<typeof ToggleObjectiveArgsSchema>;
@@ -21,7 +21,7 @@ export const ToggleObjectiveDefinition: ActionDefinition<
   description: "",
   argsSchema: ToggleObjectiveArgsSchema,
   returnSchema: ToggleObjectiveReturnSchema,
-  lockKeys: [],
+  lockKeys: ["objective"],
 };
 
 /**

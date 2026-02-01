@@ -7,7 +7,7 @@ import {
 
 // --- Schema ---
 export const IOStateSchema = z.object({
-  last_saved_file: z.any().nullable(),
+  last_saved_file: z.string().nullable(),
 });
 
 // --- Type ---

@@ -5,18 +5,20 @@ import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { useSetExposure, useSetGain, useCaptureImage, useStartLiveView, useStopLiveView } from '@/hooks/generated';
+import { useSetExposure, useSetGain, useCaptureImage, useAcquireLive } from '@/hooks/generated';
 import { useCameraState } from '@/hooks/states';
 import { Camera, Play, Square, Image, Settings2 } from 'lucide-react';
 import { LatestImage } from './LatestImage';
+import LiveView from '../liveview/LiveView';
+import useCancelTask from '@/transport/useCancelTask';
 
 export function CameraControl() {
   const { data: cameraState, loading: stateLoading } = useCameraState({ subscribe: true });
   const { assign: setExposure, isLoading: isSettingExposure } = useSetExposure();
   const { assign: setGain, isLoading: isSettingGain } = useSetGain();
   const { assign: captureImage, isLoading: isCapturing, isLocked: isCapturingLocked } = useCaptureImage();
-  const { assign: startLiveView, isLoading: isStartingLive } = useStartLiveView();
-  const { assign: stopLiveView, isLoading: isStoppingLive } = useStopLiveView();
+  const { assign: startLiveView, isLoading: isStartingLive } = useAcquireLive();
+  const { cancel} = useCancelTask();
 
   const [exposure, setExposureLocal] = useState(100);
   const [gain, setGainLocal] = useState(1);
@@ -50,7 +52,7 @@ export function CameraControl() {
 
   const handleToggleLiveView = () => {
     if (isLiveViewActive) {
-      stopLiveView({});
+      startLiveView({});
       setIsLiveViewActive(false);
     } else {
       startLiveView({});
@@ -86,6 +88,7 @@ export function CameraControl() {
       <CardContent className="space-y-6">
         {/* Exposure Control */}
         <LatestImage/>
+        <LiveView/>
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <Label className="flex items-center gap-2">
@@ -200,12 +203,12 @@ export function CameraControl() {
           <Label>Capture Controls</Label>
           <div className="grid grid-cols-2 gap-3">
             <Button
-              variant={isLiveViewActive ? 'destructive' : 'default'}
+              variant={isStartingLive ? 'destructive' : 'default'}
               className="h-14"
               onClick={handleToggleLiveView}
-              disabled={isStartingLive || isStoppingLive}
+              disabled={isStartingLive}
             >
-              {isLiveViewActive ? (
+              {isStartingLive ? (
                 <>
                   <Square className="h-5 w-5 mr-2" />
                   Stop Live
