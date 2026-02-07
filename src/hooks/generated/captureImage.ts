@@ -1,12 +1,15 @@
-import { z } from "zod";
+import { z } from 'zod';
 import {
   useTransportAction,
   type ActionDefinition,
-} from "../../transport/useTransportAction";
+} from '../../transport/useTransportAction';
+
+// --- Shared Models ---
 
 // --- Schemas ---
 export const CaptureImageArgsSchema = z.object({
-  slot: z.number().optional(),
+  /** Detector slot number */
+  slot: z.number().describe('Detector slot number').optional(),
 });
 export const CaptureImageReturnSchema = z.string();
 
@@ -19,11 +22,11 @@ export const CaptureImageDefinition: ActionDefinition<
   CaptureImageArgs,
   CaptureImageReturn
 > = {
-  name: "capture_image",
-  description: "",
+  name: 'capture_image',
+  description: '',
   argsSchema: CaptureImageArgsSchema,
   returnSchema: CaptureImageReturnSchema,
-  lockKeys: ["camera_parameters", "io"],
+  lockKeys: ['camera_parameters', 'io'],
 };
 
 /**

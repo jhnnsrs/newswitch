@@ -1,15 +1,26 @@
-import { z } from "zod";
+import { z } from 'zod';
 import {
   useTransportAction,
   type ActionDefinition,
-} from "../../transport/useTransportAction";
+} from '../../transport/useTransportAction';
+
+// --- Shared Models ---
 
 // --- Schemas ---
 export const MultipointAcquisitionArgsSchema = z.object({
-  positions: z.array(z.any()),
-  slot: z.number().optional(),
-  exposure_time: z.number().optional(),
-  intensity: z.number().optional(),
+  /** List of position dicts with 'x', 'y', 'z' keys */
+  positions: z
+    .array(z.record(z.string(), z.number()))
+    .describe("List of position dicts with 'x', 'y', 'z' keys"),
+  /** Detector slot number */
+  slot: z.number().describe('Detector slot number').optional(),
+  /** Exposure time per frame in seconds */
+  exposure_time: z
+    .number()
+    .describe('Exposure time per frame in seconds')
+    .optional(),
+  /** Illumination intensity (0-100) */
+  intensity: z.number().describe('Illumination intensity (0-100)').optional(),
 });
 export const MultipointAcquisitionReturnSchema = z.array(
   z.record(z.string(), z.any()),
@@ -28,11 +39,11 @@ export const MultipointAcquisitionDefinition: ActionDefinition<
   MultipointAcquisitionArgs,
   MultipointAcquisitionReturn
 > = {
-  name: "multipoint_acquisition",
-  description: "",
+  name: 'multipoint_acquisition',
+  description: '',
   argsSchema: MultipointAcquisitionArgsSchema,
   returnSchema: MultipointAcquisitionReturnSchema,
-  lockKeys: [],
+  lockKeys: ['stage_position', 'camera_parameters', 'illumination'],
 };
 
 /**

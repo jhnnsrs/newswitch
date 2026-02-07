@@ -1,15 +1,24 @@
-import { z } from "zod";
+import { z } from 'zod';
 import {
   useTransportAction,
   type ActionDefinition,
-} from "../../transport/useTransportAction";
+} from '../../transport/useTransportAction';
+
+// --- Shared Models ---
 
 // --- Schemas ---
 export const SetIlluminationIntensityArgsSchema = z.object({
-  intensity: z.number(),
-  channel: z.number().optional(),
+  /** Light intensity value */
+  intensity: z.number().describe('Light intensity value'),
+  /** Illumination channel number (default 1) */
+  channel: z
+    .number()
+    .describe('Illumination channel number (default 1)')
+    .optional(),
 });
-export const SetIlluminationIntensityReturnSchema = z.number();
+export const SetIlluminationIntensityReturnSchema = z
+  .number()
+  .describe('The actual clamped intensity value.');
 
 // --- Types ---
 export type SetIlluminationIntensityArgs = z.infer<
@@ -24,8 +33,8 @@ export const SetIlluminationIntensityDefinition: ActionDefinition<
   SetIlluminationIntensityArgs,
   SetIlluminationIntensityReturn
 > = {
-  name: "set_illumination_intensity",
-  description: "",
+  name: 'set_illumination_intensity',
+  description: '',
   argsSchema: SetIlluminationIntensityArgsSchema,
   returnSchema: SetIlluminationIntensityReturnSchema,
   lockKeys: [],

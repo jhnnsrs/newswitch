@@ -1,8 +1,10 @@
-import { z } from "zod";
+import { z } from 'zod';
 import {
   useTransportAction,
   type ActionDefinition,
-} from "../../transport/useTransportAction";
+} from '../../transport/useTransportAction';
+
+// --- Shared Models ---
 
 // --- Schemas ---
 export const StopLiveViewArgsSchema = z.object({});
@@ -17,11 +19,11 @@ export const StopLiveViewDefinition: ActionDefinition<
   StopLiveViewArgs,
   StopLiveViewReturn
 > = {
-  name: "stop_live_view",
-  description: "",
+  name: 'stop_live_view',
+  description: '',
   argsSchema: StopLiveViewArgsSchema,
   returnSchema: StopLiveViewReturnSchema,
-  lockKeys: ["camera_parameters"],
+  lockKeys: ['camera_parameters'],
 };
 
 /**

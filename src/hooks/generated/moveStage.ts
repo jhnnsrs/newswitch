@@ -1,17 +1,31 @@
-import { z } from "zod";
+import { z } from 'zod';
 import {
   useTransportAction,
   type ActionDefinition,
-} from "../../transport/useTransportAction";
+} from '../../transport/useTransportAction';
+
+// --- Shared Models ---
 
 // --- Schemas ---
 export const MoveStageArgsSchema = z.object({
-  x: z.number().optional(),
-  y: z.number().optional(),
-  z: z.number().optional(),
-  a: z.number().optional(),
-  is_absolute: z.boolean().optional(),
-  step_size: z.number().optional(),
+  /** X position (micrometers) */
+  x: z.number().describe('X position (micrometers)').optional(),
+  /** Y position (micrometers) */
+  y: z.number().describe('Y position (micrometers)').optional(),
+  /** Z position (micrometers) */
+  z: z.number().describe('Z position (micrometers)').optional(),
+  /** A (rotation) position */
+  a: z.number().describe('A (rotation) position').optional(),
+  /** If True, move to absolute position; if False, relative move */
+  is_absolute: z
+    .boolean()
+    .describe('If True, move to absolute position; if False, relative move')
+    .optional(),
+  /** Step size in micrometers for movement simulation (default: 1.0) */
+  step_size: z
+    .number()
+    .describe('Step size in micrometers for movement simulation (default: 1.0)')
+    .optional(),
 });
 export const MoveStageReturnSchema = z.void();
 
@@ -24,11 +38,11 @@ export const MoveStageDefinition: ActionDefinition<
   MoveStageArgs,
   MoveStageReturn
 > = {
-  name: "move_stage",
-  description: "",
+  name: 'move_stage',
+  description: '',
   argsSchema: MoveStageArgsSchema,
   returnSchema: MoveStageReturnSchema,
-  lockKeys: ["stage_position"],
+  lockKeys: ['stage_position'],
 };
 
 /**

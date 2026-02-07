@@ -1,8 +1,10 @@
-import { z } from "zod";
+import { z } from 'zod';
 import {
   useTransportAction,
   type ActionDefinition,
-} from "../../transport/useTransportAction";
+} from '../../transport/useTransportAction';
+
+// --- Shared Models ---
 
 // --- Schemas ---
 export const ToggleObjectiveArgsSchema = z.object({});
@@ -17,11 +19,11 @@ export const ToggleObjectiveDefinition: ActionDefinition<
   ToggleObjectiveArgs,
   ToggleObjectiveReturn
 > = {
-  name: "toggle_objective",
-  description: "",
+  name: 'toggle_objective',
+  description: '',
   argsSchema: ToggleObjectiveArgsSchema,
   returnSchema: ToggleObjectiveReturnSchema,
-  lockKeys: ["objective"],
+  lockKeys: ['objective'],
 };
 
 /**

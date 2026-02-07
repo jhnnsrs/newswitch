@@ -1,8 +1,10 @@
-import { z } from "zod";
+import { z } from 'zod';
 import {
   useTransportAction,
   type ActionDefinition,
-} from "../../transport/useTransportAction";
+} from '../../transport/useTransportAction';
+
+// --- Shared Models ---
 
 // --- Schemas ---
 export const MoveToStagePositionArgsSchema = z.object({
@@ -25,11 +27,11 @@ export const MoveToStagePositionDefinition: ActionDefinition<
   MoveToStagePositionArgs,
   MoveToStagePositionReturn
 > = {
-  name: "move_to_stage_position",
-  description: "",
+  name: 'move_to_stage_position',
+  description: '',
   argsSchema: MoveToStagePositionArgsSchema,
   returnSchema: MoveToStagePositionReturnSchema,
-  lockKeys: ["stage_position"],
+  lockKeys: ['stage_position'],
 };
 
 /**

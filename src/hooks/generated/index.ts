@@ -18,3 +18,4 @@ export * from './zStackAcquisition';
 export * from './runExperiment';
 export * from './timelapseAcquisition';
 export * from './multipointAcquisition';
+export * from './acquireMultidimensionalAcquisition';

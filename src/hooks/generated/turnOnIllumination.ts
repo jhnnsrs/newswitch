@@ -1,15 +1,29 @@
-import { z } from "zod";
+import { z } from 'zod';
 import {
   useTransportAction,
   type ActionDefinition,
-} from "../../transport/useTransportAction";
+} from '../../transport/useTransportAction';
+
+// --- Shared Models ---
 
 // --- Schemas ---
 export const TurnOnIlluminationArgsSchema = z.object({
-  channel: z.number().optional(),
-  intensity: z.number().optional(),
+  /** Illumination channel number (default 1) */
+  channel: z
+    .number()
+    .describe('Illumination channel number (default 1)')
+    .optional(),
+  /** Optional intensity to set. Uses current/default if not provided. */
+  intensity: z
+    .number()
+    .describe(
+      'Optional intensity to set. Uses current/default if not provided.',
+    )
+    .optional(),
 });
-export const TurnOnIlluminationReturnSchema = z.string();
+export const TurnOnIlluminationReturnSchema = z
+  .string()
+  .describe('Confirmation message.');
 
 // --- Types ---
 export type TurnOnIlluminationArgs = z.infer<
@@ -24,8 +38,8 @@ export const TurnOnIlluminationDefinition: ActionDefinition<
   TurnOnIlluminationArgs,
   TurnOnIlluminationReturn
 > = {
-  name: "turn_on_illumination",
-  description: "",
+  name: 'turn_on_illumination',
+  description: '',
   argsSchema: TurnOnIlluminationArgsSchema,
   returnSchema: TurnOnIlluminationReturnSchema,
   lockKeys: [],

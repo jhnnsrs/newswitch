@@ -1,12 +1,15 @@
-import { z } from "zod";
+import { z } from 'zod';
 import {
   useTransportAction,
   type ActionDefinition,
-} from "../../transport/useTransportAction";
+} from '../../transport/useTransportAction';
+
+// --- Shared Models ---
 
 // --- Schemas ---
 export const DeactivateDetectorArgsSchema = z.object({
-  slot: z.number(),
+  /** Detector slot number to deactivate */
+  slot: z.number().describe('Detector slot number to deactivate'),
 });
 export const DeactivateDetectorReturnSchema = z.string();
 
@@ -23,11 +26,11 @@ export const DeactivateDetectorDefinition: ActionDefinition<
   DeactivateDetectorArgs,
   DeactivateDetectorReturn
 > = {
-  name: "deactivate_detector",
-  description: "",
+  name: 'deactivate_detector',
+  description: '',
   argsSchema: DeactivateDetectorArgsSchema,
   returnSchema: DeactivateDetectorReturnSchema,
-  lockKeys: ["camera_parameters"],
+  lockKeys: ['camera_parameters'],
 };
 
 /**

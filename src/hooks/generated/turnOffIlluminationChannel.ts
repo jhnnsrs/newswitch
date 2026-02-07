@@ -1,14 +1,19 @@
-import { z } from "zod";
+import { z } from 'zod';
 import {
   useTransportAction,
   type ActionDefinition,
-} from "../../transport/useTransportAction";
+} from '../../transport/useTransportAction';
+
+// --- Shared Models ---
 
 // --- Schemas ---
 export const TurnOffIlluminationChannelArgsSchema = z.object({
-  channel: z.number(),
+  /** Illumination channel number to turn off */
+  channel: z.number().describe('Illumination channel number to turn off'),
 });
-export const TurnOffIlluminationChannelReturnSchema = z.string();
+export const TurnOffIlluminationChannelReturnSchema = z
+  .string()
+  .describe('Confirmation message.');
 
 // --- Types ---
 export type TurnOffIlluminationChannelArgs = z.infer<
@@ -23,8 +28,8 @@ export const TurnOffIlluminationChannelDefinition: ActionDefinition<
   TurnOffIlluminationChannelArgs,
   TurnOffIlluminationChannelReturn
 > = {
-  name: "turn_off_illumination_channel",
-  description: "",
+  name: 'turn_off_illumination_channel',
+  description: '',
   argsSchema: TurnOffIlluminationChannelArgsSchema,
   returnSchema: TurnOffIlluminationChannelReturnSchema,
   lockKeys: [],

@@ -1,14 +1,19 @@
-import { z } from "zod";
+import { z } from 'zod';
 import {
   useTransportAction,
   type ActionDefinition,
-} from "../../transport/useTransportAction";
+} from '../../transport/useTransportAction';
+
+// --- Shared Models ---
 
 // --- Schemas ---
 export const StreamFramesArgsSchema = z.object({
-  slot: z.number(),
-  num_frames: z.number().optional(),
-  fps: z.number().optional(),
+  /** Detector slot number */
+  slot: z.number().describe('Detector slot number'),
+  /** Number of frames to stream */
+  num_frames: z.number().describe('Number of frames to stream').optional(),
+  /** Target frames per second */
+  fps: z.number().describe('Target frames per second').optional(),
 });
 export const StreamFramesReturnSchema = z.string();
 
@@ -21,8 +26,8 @@ export const StreamFramesDefinition: ActionDefinition<
   StreamFramesArgs,
   StreamFramesReturn
 > = {
-  name: "stream_frames",
-  description: "",
+  name: 'stream_frames',
+  description: '',
   argsSchema: StreamFramesArgsSchema,
   returnSchema: StreamFramesReturnSchema,
   lockKeys: [],

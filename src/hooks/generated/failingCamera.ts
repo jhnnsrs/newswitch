@@ -1,8 +1,10 @@
-import { z } from "zod";
+import { z } from 'zod';
 import {
   useTransportAction,
   type ActionDefinition,
-} from "../../transport/useTransportAction";
+} from '../../transport/useTransportAction';
+
+// --- Shared Models ---
 
 // --- Schemas ---
 export const FailingCameraArgsSchema = z.object({
@@ -19,11 +21,11 @@ export const FailingCameraDefinition: ActionDefinition<
   FailingCameraArgs,
   FailingCameraReturn
 > = {
-  name: "failing_camera",
-  description: "",
+  name: 'failing_camera',
+  description: '',
   argsSchema: FailingCameraArgsSchema,
   returnSchema: FailingCameraReturnSchema,
-  lockKeys: ["stage_position"],
+  lockKeys: ['stage_position'],
 };
 
 /**
