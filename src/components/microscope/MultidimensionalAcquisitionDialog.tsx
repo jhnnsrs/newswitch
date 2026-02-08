@@ -1,9 +1,12 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
+import { useForm, useFieldArray } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
 import {
   Dialog,
   DialogContent,
@@ -14,46 +17,138 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import {
   useAcquireMultidimensionalAcquisition,
-  type MultidimensionalAcquisition,
-  type Position,
-  type Stack,
+  AcquireMultidimensionalAcquisitionArgsSchema,
+  type AcquireMultidimensionalAcquisitionArgs,
+  type Illumination,
   type Streams,
+  type Stack,
+  type Position,
+  type Timepoint,
 } from '@/hooks/generated';
-import { Grid3X3, Plus, Trash2, Play, Square } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  useCameraState,
+  useIlluminationState,
+  useStageState,
+} from '@/hooks/states';
+import {
+  Grid3X3,
+  Plus,
+  Trash2,
+  Play,
+  Square,
+  MapPin,
+  Clock,
+  Layers,
+  RotateCcw,
+  ChevronRight,
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
 
-interface PositionFormData {
-  x: number;
-  y: number;
-  z: number;
-  zOffset: number;
-  zStep: number;
-  zSlices: number[];
-  channels: Streams[];
+// ---------------------------------------------------------------------------
+// Helpers – z_slices is number[] in the schema, but we edit as comma string
+// ---------------------------------------------------------------------------
+
+function zSlicesToString(slices: number[]): string {
+  return slices.join(', ');
 }
 
-const defaultChannel: Streams = {
-  detector: 'camera_1',
-  mapping: 'default',
-};
+function stringToZSlices(raw: string): number[] {
+  return raw
+    .split(',')
+    .map((s) => parseFloat(s.trim()))
+    .filter((n) => !isNaN(n));
+}
 
-const defaultPosition: PositionFormData = {
-  x: 0,
-  y: 0,
-  z: 0,
-  zOffset: 0,
-  zStep: 1,
-  zSlices: [-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5],
-  channels: [defaultChannel],
-};
+// ---------------------------------------------------------------------------
+// Default factories from live state
+// ---------------------------------------------------------------------------
+
+function makeDefaultIllumination(): Illumination {
+  return { source: 'LED1', wavelength: 488, intensity: 0.8 };
+}
+
+function makeDefaultStream(): Streams {
+  return {
+    detector: 'camera_1',
+    mapping: 'default',
+    illuminations: [makeDefaultIllumination()],
+  };
+}
+
+function makeDefaultStack(channels?: Streams[]): Stack {
+  return {
+    z_offset: 0,
+    z_step: 1,
+    z_slices: [-5, -3, -1, 0, 1, 3, 5],
+    channels: channels ?? [makeDefaultStream()],
+    z_hooks: [],
+  };
+}
+
+function makeDefaultPosition(
+  x = 0,
+  y = 0,
+  z = 0,
+  channels?: Streams[],
+): Position {
+  return {
+    x,
+    y,
+    z,
+    stacks: [makeDefaultStack(channels)],
+    p_hooks: [],
+  };
+}
+
+function makeDefaultTimepoint(positions?: Position[]): Timepoint {
+  return {
+    time: undefined,
+    position_order: 'sequential',
+    positions: positions ?? [makeDefaultPosition()],
+    t_hooks: [],
+  };
+}
+
+function makeDefaultConfig(
+  positions?: Position[],
+): AcquireMultidimensionalAcquisitionArgs {
+  return {
+    config: {
+      timepoints: [makeDefaultTimepoint(positions)],
+      file_name: 'acquisition_001',
+      file_format: 'tiff',
+      m_hooks: [],
+    },
+  };
+}
+
+// Type alias for the form – it IS the generated args type directly
+type FormValues = AcquireMultidimensionalAcquisitionArgs;
+
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
 
 export function MultidimensionalAcquisitionDialog() {
   const [open, setOpen] = useState(false);
-  const [fileName, setFileName] = useState('acquisition_001');
-  const [fileFormat, setFileFormat] = useState('tiff');
-  const [positions, setPositions] = useState<PositionFormData[]>([{ ...defaultPosition }]);
+  const [selectedTimepoint, setSelectedTimepoint] = useState(0);
+  const [selectedPosition, setSelectedPosition] = useState(0);
 
+  // Live microscope state for "init from state"
+  const { data: cameraState } = useCameraState({ subscribe: true });
+  const { data: illuminationState } = useIlluminationState({ subscribe: true });
+  const { data: stageState } = useStageState({ subscribe: true });
+
+  // Acquisition action
   const {
     assign: startAcquisition,
     isLoading,
@@ -62,89 +157,104 @@ export function MultidimensionalAcquisitionDialog() {
     cancel,
   } = useAcquireMultidimensionalAcquisition();
 
-  const addPosition = () => {
-    setPositions([...positions, { ...defaultPosition }]);
+  // Build defaults from current microscope state
+  const buildDefaultsFromState = useCallback((): FormValues => {
+    const activeDetectors = cameraState?.active_detectors ?? [];
+    const activeIlluminations = illuminationState?.active_illuminations ?? [];
+    const illuminationSources = illuminationState?.available_sources ?? [];
+
+    // Build channels from active detectors + illumination combos
+    const channels: Streams[] =
+      activeDetectors.length > 0
+        ? activeDetectors.map((det) => ({
+            detector: det.name,
+            mapping: det.colormap || 'default',
+            illuminations:
+              activeIlluminations.length > 0
+                ? activeIlluminations.map((ill) => {
+                    const source = illuminationSources.find(
+                      (s) => s.slot === ill.slot,
+                    );
+                    return {
+                      source: source?.kind ?? `slot_${ill.slot}`,
+                      wavelength: source?.wavelength ?? 488,
+                      intensity:
+                        ill.intensity / (source?.max_intensity || 100),
+                    };
+                  })
+                : [makeDefaultIllumination()],
+          }))
+        : [makeDefaultStream()];
+
+    const pos = makeDefaultPosition(
+      stageState?.x ?? 0,
+      stageState?.y ?? 0,
+      stageState?.z ?? 0,
+      channels,
+    );
+
+    return makeDefaultConfig([pos]);
+  }, [cameraState, illuminationState, stageState]);
+
+  const form = useForm<FormValues>({
+    resolver: zodResolver(AcquireMultidimensionalAcquisitionArgsSchema),
+    defaultValues: buildDefaultsFromState(),
+  });
+
+  const timepointsField = useFieldArray({
+    control: form.control,
+    name: 'config.timepoints',
+  });
+
+  // Ensure indices stay valid
+  const safeTP = Math.min(
+    selectedTimepoint,
+    Math.max(0, timepointsField.fields.length - 1),
+  );
+  const positions =
+    form.watch(`config.timepoints.${safeTP}.positions`) ?? [];
+  const safePos = Math.min(
+    selectedPosition,
+    Math.max(0, positions.length - 1),
+  );
+
+  // ---------------------------------------------------------------------------
+  // Actions
+  // ---------------------------------------------------------------------------
+
+  const addTimepoint = () => {
+    const defaults = buildDefaultsFromState();
+    timepointsField.append(defaults.config.timepoints[0]);
+    setSelectedTimepoint(timepointsField.fields.length);
+    setSelectedPosition(0);
   };
 
-  const removePosition = (index: number) => {
-    if (positions.length > 1) {
-      setPositions(positions.filter((_, i) => i !== index));
+  const removeTimepoint = (index: number) => {
+    if (timepointsField.fields.length <= 1) return;
+    timepointsField.remove(index);
+    if (selectedTimepoint >= timepointsField.fields.length - 1) {
+      setSelectedTimepoint(Math.max(0, timepointsField.fields.length - 2));
     }
+    setSelectedPosition(0);
   };
 
-  const updatePosition = (index: number, field: keyof PositionFormData, value: number | number[] | Streams[]) => {
-    const updated = [...positions];
-    updated[index] = { ...updated[index], [field]: value };
-    setPositions(updated);
+  const handleInitFromState = () => {
+    form.reset(buildDefaultsFromState());
+    setSelectedTimepoint(0);
+    setSelectedPosition(0);
   };
 
-  const addChannel = (posIndex: number) => {
-    const updated = [...positions];
-    updated[posIndex].channels = [...updated[posIndex].channels, { ...defaultChannel }];
-    setPositions(updated);
-  };
-
-  const removeChannel = (posIndex: number, channelIndex: number) => {
-    const updated = [...positions];
-    if (updated[posIndex].channels.length > 1) {
-      updated[posIndex].channels = updated[posIndex].channels.filter((_, i) => i !== channelIndex);
-      setPositions(updated);
-    }
-  };
-
-  const updateChannel = (posIndex: number, channelIndex: number, field: keyof Streams, value: string) => {
-    const updated = [...positions];
-    updated[posIndex].channels[channelIndex] = {
-      ...updated[posIndex].channels[channelIndex],
-      [field]: value,
-    };
-    setPositions(updated);
-  };
-
-  const buildConfig = (): MultidimensionalAcquisition => {
-    const builtPositions: Position[] = positions.map((pos) => {
-      const stack: Stack = {
-        z_offset: pos.zOffset,
-        z_step: pos.zStep,
-        z_slices: pos.zSlices,
-        channels: pos.channels,
-      };
-      return {
-        x: pos.x,
-        y: pos.y,
-        z: pos.z,
-        stacks: [stack],
-      };
-    });
-
-    return {
-      timepoints: {
-        time: new Date().toISOString(),
-        positions: builtPositions,
-        position_order: 'sequential',
-      },
-      file_name: fileName,
-      file_format: fileFormat,
-    };
-  };
-
-  const handleStart = () => {
-    const config = buildConfig();
-    startAcquisition({ config }, { notify: true });
+  const onSubmit = (data: FormValues) => {
+    startAcquisition(data, { notify: true });
   };
 
   const handleCancel = () => {
-    if (task?.id) {
-      cancel();
-    }
+    if (task?.id) cancel();
   };
 
-  const parseZSlices = (value: string): number[] => {
-    return value
-      .split(',')
-      .map((s) => parseFloat(s.trim()))
-      .filter((n) => !isNaN(n));
-  };
+  // ---------------------------------------------------------------------------
+  // Render
+  // ---------------------------------------------------------------------------
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -153,215 +263,742 @@ export function MultidimensionalAcquisitionDialog() {
           <Grid3X3 className="h-5 w-5 mr-3" />
           <div className="flex-1 text-left">
             <div className="font-medium">Multidimensional Acquisition</div>
-            <div className="text-xs text-muted-foreground">Configure XYZ + channels + time</div>
+            <div className="text-xs text-muted-foreground">
+              Configure XYZ + channels + time
+            </div>
           </div>
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
+
+      <DialogContent className="max-w-7xl h-[80vh] flex flex-col p-0 gap-0">
+        <DialogHeader className="px-6 pt-6 pb-4">
           <DialogTitle className="flex items-center gap-2">
             <Grid3X3 className="h-5 w-5" />
             Multidimensional Acquisition
           </DialogTitle>
           <DialogDescription>
-            Configure positions, z-stacks, and channels for acquisition
+            Configure timepoints, positions, z-stacks, and channels
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
-          {/* File Settings */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="fileName">File Name</Label>
-              <Input
-                id="fileName"
-                value={fileName}
-                onChange={(e) => setFileName(e.target.value)}
-                placeholder="acquisition_001"
+        <Form {...form}>
+          <form
+            onSubmit={form.handleSubmit(onSubmit)}
+            className="flex flex-col flex-1 min-h-0"
+          >
+            {/* Top bar: file settings + init-from-state */}
+            <div className="px-6 pb-3 flex items-end gap-4">
+              <FormField
+                control={form.control}
+                name="config.file_name"
+                render={({ field }) => (
+                  <FormItem className="flex-1">
+                    <FormLabel className="text-xs">File Name</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="acquisition_001" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="fileFormat">File Format</Label>
-              <Input
-                id="fileFormat"
-                value={fileFormat}
-                onChange={(e) => setFileFormat(e.target.value)}
-                placeholder="tiff"
+              <FormField
+                control={form.control}
+                name="config.file_format"
+                render={({ field }) => (
+                  <FormItem className="w-28">
+                    <FormLabel className="text-xs">Format</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="tiff" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-          </div>
-
-          {/* Positions */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Label className="text-base font-semibold">Positions</Label>
-              <Button variant="outline" size="sm" onClick={addPosition}>
-                <Plus className="h-4 w-4 mr-1" />
-                Add Position
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="gap-1.5 shrink-0"
+                onClick={handleInitFromState}
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+                Init from State
               </Button>
             </div>
 
-            {positions.map((pos, posIndex) => (
-              <Card key={posIndex} className="relative">
-                <CardHeader className="pb-2">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-sm">Position {posIndex + 1}</CardTitle>
-                    {positions.length > 1 && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6"
-                        onClick={() => removePosition(posIndex)}
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    )}
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {/* XYZ Coordinates */}
-                  <div className="grid grid-cols-3 gap-3">
-                    <div className="space-y-1">
-                      <Label className="text-xs">X (µm)</Label>
-                      <Input
-                        type="number"
-                        value={pos.x}
-                        onChange={(e) => updatePosition(posIndex, 'x', parseFloat(e.target.value) || 0)}
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs">Y (µm)</Label>
-                      <Input
-                        type="number"
-                        value={pos.y}
-                        onChange={(e) => updatePosition(posIndex, 'y', parseFloat(e.target.value) || 0)}
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs">Z (µm)</Label>
-                      <Input
-                        type="number"
-                        value={pos.z}
-                        onChange={(e) => updatePosition(posIndex, 'z', parseFloat(e.target.value) || 0)}
-                      />
-                    </div>
-                  </div>
+            <Separator />
 
-                  {/* Z-Stack Settings */}
-                  <div className="grid grid-cols-3 gap-3">
-                    <div className="space-y-1">
-                      <Label className="text-xs">Z Offset</Label>
-                      <Input
-                        type="number"
-                        value={pos.zOffset}
-                        onChange={(e) => updatePosition(posIndex, 'zOffset', parseFloat(e.target.value) || 0)}
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs">Z Step</Label>
-                      <Input
-                        type="number"
-                        step="0.1"
-                        value={pos.zStep}
-                        onChange={(e) => updatePosition(posIndex, 'zStep', parseFloat(e.target.value) || 1)}
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs">Z Slices (comma-sep)</Label>
-                      <Input
-                        value={pos.zSlices.join(', ')}
-                        onChange={(e) => updatePosition(posIndex, 'zSlices', parseZSlices(e.target.value))}
-                        placeholder="-5, -2, 0, 2, 5"
-                      />
-                    </div>
+            {/* ─── Main 3-pane layout ─── */}
+            <div className="flex flex-1 min-h-0">
+              {/* LEFT: Timepoints list */}
+              <div className="w-48 border-r flex flex-col">
+                <div className="px-3 py-2 flex items-center justify-between">
+                  <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                    Timepoints
+                  </span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6"
+                    onClick={addTimepoint}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+                <Separator />
+                <ScrollArea className="flex-1">
+                  <div className="p-1 space-y-0.5">
+                    {timepointsField.fields.map((field, tpIdx) => {
+                      const tpPositions =
+                        form.watch(
+                          `config.timepoints.${tpIdx}.positions`,
+                        ) ?? [];
+                      return (
+                        <button
+                          key={field.id}
+                          type="button"
+                          className={cn(
+                            'group w-full text-left rounded-md px-3 py-2 text-sm transition-colors',
+                            'hover:bg-accent',
+                            tpIdx === safeTP && 'bg-accent font-medium',
+                          )}
+                          onClick={() => {
+                            setSelectedTimepoint(tpIdx);
+                            setSelectedPosition(0);
+                          }}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                              <span>T{tpIdx + 1}</span>
+                            </div>
+                            {timepointsField.fields.length > 1 && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-5 w-5 opacity-0 group-hover:opacity-100"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  removeTimepoint(tpIdx);
+                                }}
+                              >
+                                <Trash2 className="h-3 w-3 text-destructive" />
+                              </Button>
+                            )}
+                          </div>
+                          <div className="text-xs text-muted-foreground mt-0.5">
+                            {tpPositions.length} position
+                            {tpPositions.length !== 1 && 's'}
+                          </div>
+                        </button>
+                      );
+                    })}
                   </div>
+                </ScrollArea>
+              </div>
 
-                  {/* Channels */}
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-xs font-medium">Channels</Label>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 text-xs"
-                        onClick={() => addChannel(posIndex)}
-                      >
-                        <Plus className="h-3 w-3 mr-1" />
-                        Add
-                      </Button>
-                    </div>
-                    {pos.channels.map((channel, channelIndex) => (
-                      <div key={channelIndex} className="flex gap-2 items-end">
-                        <div className="flex-1 space-y-1">
-                          <Label className="text-xs">Detector</Label>
-                          <Input
-                            value={channel.detector}
-                            onChange={(e) => updateChannel(posIndex, channelIndex, 'detector', e.target.value)}
-                            placeholder="camera_1"
-                          />
-                        </div>
-                        <div className="flex-1 space-y-1">
-                          <Label className="text-xs">Mapping</Label>
-                          <Input
-                            value={channel.mapping}
-                            onChange={(e) => updateChannel(posIndex, channelIndex, 'mapping', e.target.value)}
-                            placeholder="default"
-                          />
-                        </div>
-                        {pos.channels.length > 1 && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-9 w-9"
-                            onClick={() => removeChannel(posIndex, channelIndex)}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
+              {/* MIDDLE: Positions list */}
+              <div className="w-44 border-r flex flex-col">
+                <div className="px-3 py-2 flex items-center justify-between">
+                  <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                    Positions
+                  </span>
+                  <PositionAddButton
+                    control={form.control}
+                    timepointIndex={safeTP}
+                    stageState={stageState}
+                    defaultChannels={
+                      buildDefaultsFromState().config.timepoints[0]
+                        .positions[0].stacks[0].channels
+                    }
+                    onAdded={(idx) => setSelectedPosition(idx)}
+                  />
+                </div>
+                <Separator />
+                <ScrollArea className="flex-1">
+                  <div className="p-1 space-y-0.5">
+                    {positions.map((pos, posIdx) => (
+                      <button
+                        key={posIdx}
+                        type="button"
+                        className={cn(
+                          'w-full text-left rounded-md px-3 py-2 text-sm transition-colors',
+                          'hover:bg-accent',
+                          posIdx === safePos && 'bg-accent font-medium',
                         )}
-                      </div>
+                        onClick={() => setSelectedPosition(posIdx)}
+                      >
+                        <div className="flex items-center gap-2">
+                          <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
+                          <span>P{posIdx + 1}</span>
+                          <ChevronRight className="h-3 w-3 text-muted-foreground ml-auto" />
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-0.5 font-mono">
+                          ({pos.x}, {pos.y}, {pos.z})
+                        </div>
+                      </button>
                     ))}
                   </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          {/* Progress */}
-          {isLoading && progress !== null && (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-sm">
-                <span>Acquisition Progress</span>
-                <span>{Math.round(progress)}%</span>
+                </ScrollArea>
               </div>
-              <Progress value={progress} className="h-2" />
-            </div>
-          )}
 
-          {/* Task Status */}
-          {task && (
-            <div className="flex items-center justify-between p-2 bg-muted rounded-lg">
-              <span className="text-sm">Status</span>
-              <Badge variant={task.status === 'completed' ? 'default' : 'secondary'}>
-                {task.status}
-              </Badge>
+              {/* RIGHT: Position detail editor */}
+              <ScrollArea className="flex-1">
+                <div className="p-4 space-y-4">
+                  {positions.length > 0 ? (
+                    <PositionEditor
+                      control={form.control}
+                      timepointIndex={safeTP}
+                      positionIndex={safePos}
+                      onRemove={
+                        positions.length > 1
+                          ? () => {
+                              const arr = form.getValues(
+                                `config.timepoints.${safeTP}.positions`,
+                              );
+                              arr.splice(safePos, 1);
+                              form.setValue(
+                                `config.timepoints.${safeTP}.positions`,
+                                arr,
+                              );
+                              setSelectedPosition(
+                                Math.min(safePos, arr.length - 1),
+                              );
+                            }
+                          : undefined
+                      }
+                    />
+                  ) : (
+                    <div className="flex items-center justify-center h-40 text-muted-foreground text-sm">
+                      Add a position to get started
+                    </div>
+                  )}
+                </div>
+              </ScrollArea>
             </div>
-          )}
-        </div>
 
-        <DialogFooter className="gap-2">
-          {isLoading ? (
-            <Button variant="destructive" onClick={handleCancel}>
-              <Square className="h-4 w-4 mr-2" />
-              Cancel
-            </Button>
-          ) : (
-            <Button onClick={handleStart} disabled={isLoading}>
-              <Play className="h-4 w-4 mr-2" />
-              Start Acquisition
-            </Button>
-          )}
-        </DialogFooter>
+            <Separator />
+
+            {/* Footer */}
+            <div className="px-6 py-4 space-y-3">
+              {isLoading && progress !== null && (
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between text-xs">
+                    <span>Acquisition Progress</span>
+                    <span>{Math.round(progress)}%</span>
+                  </div>
+                  <Progress value={progress} className="h-1.5" />
+                </div>
+              )}
+
+              {task && (
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">Status</span>
+                  <Badge
+                    variant={
+                      task.status === 'completed' ? 'default' : 'secondary'
+                    }
+                  >
+                    {task.status}
+                  </Badge>
+                </div>
+              )}
+
+              <DialogFooter className="gap-2 sm:gap-2">
+                {isLoading ? (
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    onClick={handleCancel}
+                  >
+                    <Square className="h-4 w-4 mr-2" />
+                    Cancel
+                  </Button>
+                ) : (
+                  <Button type="submit" disabled={isLoading}>
+                    <Play className="h-4 w-4 mr-2" />
+                    Start Acquisition
+                  </Button>
+                )}
+              </DialogFooter>
+            </div>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Sub-component: Add position button
+// ---------------------------------------------------------------------------
+
+function PositionAddButton({
+  control,
+  timepointIndex,
+  stageState,
+  defaultChannels,
+  onAdded,
+}: {
+  control: ReturnType<typeof useForm<FormValues>>['control'];
+  timepointIndex: number;
+  stageState: ReturnType<typeof useStageState>['data'];
+  defaultChannels: Streams[];
+  onAdded: (index: number) => void;
+}) {
+  const positionsField = useFieldArray({
+    control,
+    name: `config.timepoints.${timepointIndex}.positions`,
+  });
+
+  const addFromStage = () => {
+    positionsField.append(
+      makeDefaultPosition(
+        stageState?.x ?? 0,
+        stageState?.y ?? 0,
+        stageState?.z ?? 0,
+        defaultChannels,
+      ),
+    );
+    onAdded(positionsField.fields.length);
+  };
+
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon"
+      className="h-6 w-6"
+      title="Add position from current stage"
+      onClick={addFromStage}
+    >
+      <Plus className="h-4 w-4" />
+    </Button>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Sub-component: Position editor (right pane)
+// ---------------------------------------------------------------------------
+
+function PositionEditor({
+  control,
+  timepointIndex,
+  positionIndex,
+  onRemove,
+}: {
+  control: ReturnType<typeof useForm<FormValues>>['control'];
+  timepointIndex: number;
+  positionIndex: number;
+  onRemove?: () => void;
+}) {
+  const stacksField = useFieldArray({
+    control,
+    name: `config.timepoints.${timepointIndex}.positions.${positionIndex}.stacks`,
+  });
+
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold flex items-center gap-2">
+          <MapPin className="h-4 w-4" />
+          Position {positionIndex + 1}
+        </h3>
+        {onRemove && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="text-destructive h-7 text-xs gap-1"
+            onClick={onRemove}
+          >
+            <Trash2 className="h-3 w-3" />
+            Remove
+          </Button>
+        )}
+      </div>
+
+      {/* XYZ */}
+      <div className="grid grid-cols-3 gap-3">
+        {(['x', 'y', 'z'] as const).map((axis) => (
+          <FormField
+            key={axis}
+            control={control}
+            name={`config.timepoints.${timepointIndex}.positions.${positionIndex}.${axis}`}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-xs uppercase">
+                  {axis} (µm)
+                </FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    step="any"
+                    value={field.value}
+                    onChange={(e) =>
+                      field.onChange(parseFloat(e.target.value) || 0)
+                    }
+                    onBlur={field.onBlur}
+                    name={field.name}
+                    ref={field.ref}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        ))}
+      </div>
+
+      <Separator />
+
+      {/* Stacks */}
+      {stacksField.fields.map((stackField, stackIdx) => (
+        <StackEditor
+          key={stackField.id}
+          control={control}
+          timepointIndex={timepointIndex}
+          positionIndex={positionIndex}
+          stackIndex={stackIdx}
+          canRemove={stacksField.fields.length > 1}
+          onRemove={() => stacksField.remove(stackIdx)}
+        />
+      ))}
+
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="w-full gap-1.5"
+        onClick={() => stacksField.append(makeDefaultStack())}
+      >
+        <Plus className="h-3.5 w-3.5" />
+        Add Stack
+      </Button>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Sub-component: Stack editor
+// ---------------------------------------------------------------------------
+
+function StackEditor({
+  control,
+  timepointIndex,
+  positionIndex,
+  stackIndex,
+  canRemove,
+  onRemove,
+}: {
+  control: ReturnType<typeof useForm<FormValues>>['control'];
+  timepointIndex: number;
+  positionIndex: number;
+  stackIndex: number;
+  canRemove: boolean;
+  onRemove: () => void;
+}) {
+  const channelsField = useFieldArray({
+    control,
+    name: `config.timepoints.${timepointIndex}.positions.${positionIndex}.stacks.${stackIndex}.channels`,
+  });
+
+  const stackBase =
+    `config.timepoints.${timepointIndex}.positions.${positionIndex}.stacks.${stackIndex}` as const;
+
+  return (
+    <div className="rounded-lg border p-3 space-y-3">
+      <div className="flex items-center justify-between">
+        <h4 className="text-xs font-semibold flex items-center gap-1.5">
+          <Layers className="h-3.5 w-3.5" />
+          Stack {stackIndex + 1}
+        </h4>
+        {canRemove && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6"
+            onClick={onRemove}
+          >
+            <Trash2 className="h-3 w-3 text-destructive" />
+          </Button>
+        )}
+      </div>
+
+      {/* Z params */}
+      <div className="grid grid-cols-3 gap-2">
+        <FormField
+          control={control}
+          name={`${stackBase}.z_offset`}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="text-xs">Z Offset</FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  step="any"
+                  value={field.value}
+                  onChange={(e) =>
+                    field.onChange(parseFloat(e.target.value) || 0)
+                  }
+                  onBlur={field.onBlur}
+                  name={field.name}
+                  ref={field.ref}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={control}
+          name={`${stackBase}.z_step`}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="text-xs">Z Step</FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  step="0.1"
+                  min="0.01"
+                  value={field.value}
+                  onChange={(e) =>
+                    field.onChange(parseFloat(e.target.value) || 1)
+                  }
+                  onBlur={field.onBlur}
+                  name={field.name}
+                  ref={field.ref}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        {/* z_slices: number[] in schema, edit as comma-separated string */}
+        <FormField
+          control={control}
+          name={`${stackBase}.z_slices`}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="text-xs">Z Slices</FormLabel>
+              <FormControl>
+                <Input
+                  value={zSlicesToString(field.value ?? [])}
+                  onChange={(e) =>
+                    field.onChange(stringToZSlices(e.target.value))
+                  }
+                  onBlur={field.onBlur}
+                  name={field.name}
+                  ref={field.ref}
+                  placeholder="-5, -3, 0, 3, 5"
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      </div>
+
+      {/* Channels */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-medium text-muted-foreground">
+            Channels
+          </span>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-6 text-xs gap-1"
+            onClick={() => channelsField.append(makeDefaultStream())}
+          >
+            <Plus className="h-3 w-3" />
+            Channel
+          </Button>
+        </div>
+
+        {channelsField.fields.map((chField, chIdx) => (
+          <ChannelEditor
+            key={chField.id}
+            control={control}
+            timepointIndex={timepointIndex}
+            positionIndex={positionIndex}
+            stackIndex={stackIndex}
+            channelIndex={chIdx}
+            canRemove={channelsField.fields.length > 1}
+            onRemove={() => channelsField.remove(chIdx)}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Sub-component: Channel (stream) editor
+// ---------------------------------------------------------------------------
+
+function ChannelEditor({
+  control,
+  timepointIndex,
+  positionIndex,
+  stackIndex,
+  channelIndex,
+  canRemove,
+  onRemove,
+}: {
+  control: ReturnType<typeof useForm<FormValues>>['control'];
+  timepointIndex: number;
+  positionIndex: number;
+  stackIndex: number;
+  channelIndex: number;
+  canRemove: boolean;
+  onRemove: () => void;
+}) {
+  const basePath =
+    `config.timepoints.${timepointIndex}.positions.${positionIndex}.stacks.${stackIndex}.channels.${channelIndex}` as const;
+
+  const illuminationsField = useFieldArray({
+    control,
+    name: `config.timepoints.${timepointIndex}.positions.${positionIndex}.stacks.${stackIndex}.channels.${channelIndex}.illuminations`,
+  });
+
+  return (
+    <div className="rounded border p-2 space-y-2 bg-muted/30">
+      <div className="flex gap-2 items-end">
+        <FormField
+          control={control}
+          name={`${basePath}.detector`}
+          render={({ field }) => (
+            <FormItem className="flex-1">
+              <FormLabel className="text-xs">Detector</FormLabel>
+              <FormControl>
+                <Input {...field} placeholder="camera_1" />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={control}
+          name={`${basePath}.mapping`}
+          render={({ field }) => (
+            <FormItem className="flex-1">
+              <FormLabel className="text-xs">Mapping</FormLabel>
+              <FormControl>
+                <Input {...field} placeholder="GFP" />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        {canRemove && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9 shrink-0"
+            onClick={onRemove}
+          >
+            <Trash2 className="h-3.5 w-3.5 text-destructive" />
+          </Button>
+        )}
+      </div>
+
+      {/* Illuminations */}
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between">
+          <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
+            Illuminations
+          </span>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-5 text-[10px] px-1.5 gap-0.5"
+            onClick={() =>
+              illuminationsField.append(makeDefaultIllumination())
+            }
+          >
+            <Plus className="h-2.5 w-2.5" />
+            Add
+          </Button>
+        </div>
+        {illuminationsField.fields.map((illField, illIdx) => (
+          <div key={illField.id} className="flex gap-1.5 items-end">
+            <FormField
+              control={control}
+              name={`${basePath}.illuminations.${illIdx}.source`}
+              render={({ field }) => (
+                <FormItem className="flex-1">
+                  <FormLabel className="text-[10px]">Source</FormLabel>
+                  <FormControl>
+                    <Input {...field} className="h-7 text-xs" />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={control}
+              name={`${basePath}.illuminations.${illIdx}.wavelength`}
+              render={({ field }) => (
+                <FormItem className="w-16">
+                  <FormLabel className="text-[10px]">λ (nm)</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      value={field.value}
+                      onChange={(e) =>
+                        field.onChange(parseFloat(e.target.value) || 0)
+                      }
+                      onBlur={field.onBlur}
+                      name={field.name}
+                      ref={field.ref}
+                      className="h-7 text-xs"
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={control}
+              name={`${basePath}.illuminations.${illIdx}.intensity`}
+              render={({ field }) => (
+                <FormItem className="w-16">
+                  <FormLabel className="text-[10px]">Int.</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      step="0.05"
+                      min="0"
+                      max="1"
+                      value={field.value}
+                      onChange={(e) =>
+                        field.onChange(parseFloat(e.target.value) || 0)
+                      }
+                      onBlur={field.onBlur}
+                      name={field.name}
+                      ref={field.ref}
+                      className="h-7 text-xs"
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            {illuminationsField.fields.length > 1 && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 shrink-0"
+                onClick={() => illuminationsField.remove(illIdx)}
+              >
+                <Trash2 className="h-3 w-3 text-destructive" />
+              </Button>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
