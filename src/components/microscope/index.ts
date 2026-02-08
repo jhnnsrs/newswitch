@@ -7,3 +7,4 @@ export { StatusPanel } from './StatusPanel';
 export { LatestImage } from './LatestImage';
 export { SettingsPanel } from './SettingsPanel';
 export { LiveView } from './LiveView';
+export { MultidimensionalAcquisitionDialog } from './MultidimensionalAcquisitionDialog';

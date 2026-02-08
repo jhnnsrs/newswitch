@@ -13,6 +13,7 @@ import {
     Camera,
     ChevronDown,
     Download,
+    Grid3X3,
     Play,
     Settings2,
     Square,
@@ -22,6 +23,7 @@ import {
 import { useState } from 'react';
 import { CameraControl } from './CameraControl';
 import { IlluminationControl } from './IlluminationControl';
+import { MultidimensionalAcquisitionDialog } from './MultidimensionalAcquisitionDialog';
 import { ObjectiveControl } from './ObjectiveControl';
 
 interface SettingsSectionProps {
@@ -145,6 +147,17 @@ export function SettingsPanel() {
           badge={objectiveState?.slot ? `Slot ${objectiveState.slot}` : undefined}
         >
           <ObjectiveControl />
+        </SettingsSection>
+
+        <Separator />
+
+        {/* Acquisition */}
+        <SettingsSection 
+          title="Acquisition" 
+          icon={<Grid3X3 className="h-4 w-4" />}
+          defaultOpen={false}
+        >
+          <MultidimensionalAcquisitionDialog />
         </SettingsSection>
       </div>
     </div>

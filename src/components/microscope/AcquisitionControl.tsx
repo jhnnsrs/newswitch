@@ -5,6 +5,7 @@ import { Progress } from '@/components/ui/progress';
 import { useZStackAcquisition, useTimelapseAcquisition, useRunExperiment, useMultipointAcquisition } from '@/hooks/generated';
 import { Layers, Clock, Play, FlaskConical, MapPin, Square } from 'lucide-react';
 import type { Task } from '@/transport/types';
+import { MultidimensionalAcquisitionDialog } from './MultidimensionalAcquisitionDialog';
 
 export function AcquisitionControl() {
   const { 
@@ -135,6 +136,11 @@ export function AcquisitionControl() {
           {isMultipointing && multipointProgress !== null && (
             <Progress value={multipointProgress} className="h-2" />
           )}
+        </div>
+
+        {/* Multidimensional Acquisition */}
+        <div className="space-y-2">
+          <MultidimensionalAcquisitionDialog />
         </div>
 
         {/* Run Experiment */}
