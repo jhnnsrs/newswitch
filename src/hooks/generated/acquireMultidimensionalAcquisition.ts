@@ -259,11 +259,11 @@ export const AcquireMultidimensionalAcquisitionDefinition: ActionDefinition<
   argsSchema: AcquireMultidimensionalAcquisitionArgsSchema,
   returnSchema: AcquireMultidimensionalAcquisitionReturnSchema,
   lockKeys: [
+    'camera_parameters',
     'hook_registry',
     'illumination',
-    'stage_position',
     'io',
-    'camera_parameters',
+    'stage_position',
   ],
 };
 

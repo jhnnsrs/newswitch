@@ -190,7 +190,35 @@ const mapToZod = (arg: SchemaArg, ctx: GeneratorContext): string => {
   return base;
 };
 
-const generateContent = (key: string, impl: any) => {
+
+type Optimistic = {
+  state: string;
+  path: string;
+  accessor: string;
+};
+
+type Implementation = {
+  definition: {
+    args?: SchemaArg[];
+    returns?: SchemaArg[];
+  };
+  description?: string;
+  locks?: string[];
+  optimistics? :Optimistic[];
+}; 
+
+
+const generateOptimisticState = (optimistic: Optimistic) => {
+  return `
+  export const Optimistic${toCamel(optimistic.state)} = {
+    selector: (state: never) => ${optimistic.path.split('.').reduce((acc, part) => part && part != "" ? `${acc}.${part}` : acc, 'state')},
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    accessor: (state: any, args: any) => ${optimistic.accessor}
+  };`;
+}
+
+
+const generateContent = (key: string, impl: Implementation) => {
   const ctx: GeneratorContext = { namedTypes: new Map() };
 
   const hookName = `use${toPascal(key)}`;
@@ -249,7 +277,7 @@ export const ${defName}: ActionDefinition<${toPascal(key)}Args, ${toPascal(key)}
   description: "${impl.description || ''}",
   argsSchema: ${argsSchemaName},
   returnSchema: ${returnSchemaName},
-  lockKeys: ${JSON.stringify(impl.locks || [])},
+  lockKeys: ${JSON.stringify((impl.locks || []).sort())},
 };
 
 /**
@@ -257,7 +285,16 @@ export const ${defName}: ActionDefinition<${toPascal(key)}Args, ${toPascal(key)}
  */
 export const ${hookName} = () => {
   return useTransportAction(${defName});
-};`;
+};
+
+${(impl.optimistics || []).length > 0 ? `/** Optimistic state hooks for ${key} */` : ''}
+${(impl.optimistics || []).map(generateOptimisticState).join('\n')}
+
+
+
+
+`;
+
 };
 
 export default function generateHooksPlugin(options: GenerateHooksPluginOptions = {}): Plugin {

@@ -51,3 +51,17 @@ export const MoveStageDefinition: ActionDefinition<
 export const useMoveStage = () => {
   return useTransportAction(MoveStageDefinition);
 };
+
+/** Optimistic state hooks for move_stage */
+
+export const OptimisticStageState = {
+  selector: (state: never) => state,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  accessor: (state: any, args: any) => ({
+    ...state,
+    x: args.x,
+    y: args.y,
+    z: args.z,
+    a: args.a,
+  }),
+};

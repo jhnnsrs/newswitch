@@ -43,7 +43,7 @@ export const MultipointAcquisitionDefinition: ActionDefinition<
   description: '',
   argsSchema: MultipointAcquisitionArgsSchema,
   returnSchema: MultipointAcquisitionReturnSchema,
-  lockKeys: ['stage_position', 'camera_parameters', 'illumination'],
+  lockKeys: ['camera_parameters', 'illumination', 'stage_position'],
 };
 
 /**
