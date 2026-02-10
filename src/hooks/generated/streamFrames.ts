@@ -30,7 +30,7 @@ export const StreamFramesDefinition: ActionDefinition<
   description: '',
   argsSchema: StreamFramesArgsSchema,
   returnSchema: StreamFramesReturnSchema,
-  lockKeys: [],
+  lockKeys: ['camera_parameters'],
 };
 
 /**

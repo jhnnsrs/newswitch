@@ -37,7 +37,7 @@ export const SetIlluminationIntensityDefinition: ActionDefinition<
   description: '',
   argsSchema: SetIlluminationIntensityArgsSchema,
   returnSchema: SetIlluminationIntensityReturnSchema,
-  lockKeys: [],
+  lockKeys: ['illumination'],
 };
 
 /**

@@ -28,7 +28,9 @@ export interface UseTransportActionOptions {
 }
 
 export interface UseTransportActionResult<TArgs, TReturn> {
-  /** Assign (execute) the action with given args */
+  /** Assign and wait for the final result via Promise */
+  call: (args: TArgs, options?: AssignOptions) => Promise<TReturn>;
+  /** Assign (execute) the action and resolve immediately with the Task object */
   assign: (args: TArgs, options?: AssignOptions) => Promise<Task<TArgs, TReturn>>;
   /** Current task (most recently assigned) */
   task: Task<TArgs, TReturn> | null;
@@ -60,7 +62,6 @@ export interface UseTransportActionResult<TArgs, TReturn> {
   clear: () => void;
 }
 
-// Stable selector for when there's no task
 const noTaskSelector = () => undefined;
 
 export const useTransportAction = <TArgs, TReturn>(
@@ -84,116 +85,123 @@ export const useTransportAction = <TArgs, TReturn>(
   const unsubscribeRef = useRef<(() => void) | null>(null);
   const callbacksRef = useRef({ onStatusChange, onComplete, onError, onProgress });
   
-  // Keep callbacks ref updated
   useEffect(() => {
     callbacksRef.current = { onStatusChange, onComplete, onError, onProgress };
   }, [onStatusChange, onComplete, onError, onProgress]);
 
-  // Subscribe to current task from Zustand store with stable selector
+  // --- Selectors ---
   const taskSelector = useMemo(
     () => currentTaskId ? selectTask<TArgs, TReturn>(currentTaskId) : noTaskSelector,
     [currentTaskId]
   );
   const task = useTransportStore(taskSelector) ?? null;
 
-  // Get all tasks for this action from Zustand store
   const allTasks = useTransportStore((store) => store.tasks);
   const tasks = allTaskIds
     .map((id) => allTasks[id] as Task<TArgs, TReturn> | undefined)
     .filter((t): t is Task<TArgs, TReturn> => t !== undefined);
 
-  // Check lock status
   const locks = useGlobalStateStore((state) => state.locks);
-  const blockingLockKey = definition.lockKeys?.find(key => (locks[key] !== undefined) && (locks[key] !== null));
+  const blockingLockKey = definition.lockKeys?.find(key => locks[key] != null);
   const isLocked = !!blockingLockKey;
   const lockedBy = blockingLockKey ? locks[blockingLockKey] ?? null : null;
 
-  // Derived state from current task
+  // --- Derived State ---
   const status = task?.status ?? null;
   const result = (task?.result as TReturn) ?? null;
   const error = task?.error ?? null;
   const progress = task?.progress ?? null;
   const isLoading = status === 'pending' || status === 'running';
 
-  // Handle task updates via callbacks
+  // --- Task Lifecycle Handlers ---
   const handleTaskUpdate = useCallback((updatedTask: Task) => {
     const cbs = callbacksRef.current;
-    
-    if (cbs.onStatusChange && updatedTask.status) {
-      cbs.onStatusChange(updatedTask.status, updatedTask);
-    }
-    
-    if (cbs.onProgress && updatedTask.progress !== undefined) {
-      cbs.onProgress(updatedTask.progress, updatedTask);
-    }
+    if (cbs.onStatusChange) cbs.onStatusChange(updatedTask.status, updatedTask);
+    if (cbs.onProgress && updatedTask.progress !== undefined) cbs.onProgress(updatedTask.progress, updatedTask);
     
     if (updatedTask.status === 'completed' && cbs.onComplete) {
       cbs.onComplete(updatedTask.result, updatedTask);
     }
-    
     if (updatedTask.status === 'failed' && cbs.onError && updatedTask.error) {
       cbs.onError(updatedTask.error, updatedTask);
     }
   }, []);
 
-  // Subscribe to current task updates using callback-based subscription for side effects
   useEffect(() => {
     if (!autoSubscribe || !currentTaskId) return;
-
     unsubscribeRef.current = useTransportStore.getState().subscribeToTask(currentTaskId, handleTaskUpdate);
-
     return () => {
       unsubscribeRef.current?.();
       unsubscribeRef.current = null;
     };
   }, [currentTaskId, autoSubscribe, handleTaskUpdate]);
 
-  // Assign action
-  const assign = useCallback(async (args: TArgs, options?: AssignOptions): Promise<Task<TArgs, TReturn>> => {
+  // --- Core Execution Logic ---
+  const execute = useCallback(async (args: TArgs, opts?: AssignOptions): Promise<Task<TArgs, TReturn>> => {
     setValidationError(null);
 
-    // Check if locked
     const currentLocks = useGlobalStateStore.getState().locks;
-    const blockingKey = definition.lockKeys?.find(key => (currentLocks[key] !== undefined) && (currentLocks[key] !== null));
+    const blockingKey = definition.lockKeys?.find(key => currentLocks[key] != null);
     if (blockingKey) {
-      const blockingTaskId = currentLocks[blockingKey];
-      const error = new Error(`Action is locked by task ${blockingTaskId} (lock: ${blockingKey})`);
-      throw error;
+      throw new Error(`Action is locked by task ${currentLocks[blockingKey]} (lock: ${blockingKey})`);
     }
 
-    // Validate args
     const parsed = definition.argsSchema.safeParse(args);
     if (!parsed.success) {
       setValidationError(parsed.error);
       throw parsed.error;
     }
 
-    // Assign via transport
     const newTask = await transport.assign<TArgs, TReturn>(
       definition.name,
       parsed.data,
-      options
+      opts
     );
 
     setCurrentTaskId(newTask.id);
     setAllTaskIds((prev) => [...prev, newTask.id]);
-
     return newTask;
   }, [definition, transport]);
 
-  // Refresh current task from server
+  // --- Public Methods ---
+  const assign = useCallback(async (args: TArgs, opts?: AssignOptions) => {
+    return await execute(args, opts);
+  }, [execute]);
+
+  const call = useCallback(async (args: TArgs, opts?: AssignOptions): Promise<TReturn> => {
+    const newTask = await execute(args, opts);
+
+    return new Promise((resolve, reject) => {
+      const unsubscribe = useTransportStore.subscribe(
+        (state) => state.tasks[newTask.id],
+        (taskState) => {
+          if (!taskState) return;
+
+          if (taskState.status === 'completed') {
+            unsubscribe();
+            resolve(taskState.result as TReturn);
+          } else if (taskState.status === 'failed') {
+            unsubscribe();
+            reject(new Error(taskState.error || 'Task failed'));
+          } else if (taskState.status === 'cancelled') {
+            unsubscribe();
+            reject(new Error('Task was cancelled'));
+          }
+        }
+      );
+    });
+  }, [execute]);
+
   const refresh = useCallback(async (): Promise<void> => {
     if (!currentTaskId) return;
     await transport.getTask(currentTaskId);
   }, [currentTaskId, transport]);
 
-  // Cancel current task
   const cancel = useCallback(async (): Promise<void> => {
     if (!currentTaskId) return;
     await transport.cancelTask(currentTaskId);
   }, [currentTaskId, transport]);
 
-  // Clear current task reference
   const clear = useCallback((): void => {
     unsubscribeRef.current?.();
     unsubscribeRef.current = null;
@@ -202,6 +210,7 @@ export const useTransportAction = <TArgs, TReturn>(
   }, []);
 
   return {
+    call,
     assign,
     task,
     tasks,

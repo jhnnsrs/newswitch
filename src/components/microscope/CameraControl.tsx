@@ -14,6 +14,7 @@ import {
 import { useCameraState } from '@/hooks/states';
 import { Camera, Play, Square, Image, Timer, Gauge, MonitorUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { OptimisticSlider } from '../ui/optimistic_slider';
 
 export function CameraControl() {
   const { data: cameraState, loading: stateLoading } = useCameraState({
@@ -28,7 +29,7 @@ export function CameraControl() {
   const { assign: stopLiveView, isLoading: isStoppingLive } = useStopLiveView();
   const { assign: activateDetector, isLoading: isActivating } = useActivateDetector();
   const { assign: deactivateDetector, isLoading: isDeactivating } = useDeactivateDetector();
-  const { assign: updateDetector, isLoading: isUpdating } = useUpdateDetector();
+  const { call: updateDetector, isLoading: isUpdating } = useUpdateDetector();
 
   // Local state for slider dragging
   const [localExposures, setLocalExposures] = useState<Record<number, number>>({});
@@ -186,14 +187,11 @@ export function CameraControl() {
                         {currentExposure.toFixed(1)} ms
                       </span>
                     </div>
-                    <Slider
+                    <OptimisticSlider
                       value={[currentExposure]}
-                      onValueChange={(v) =>
-                        handleExposureChange(detector.slot, v[0])
-                      }
-                      onValueCommit={() =>
-                        handleExposureCommit(detector.slot)
-                      }
+                      onSave={(v) => updateDetector(
+                        { slot: detector.slot, exposure_time: v[0] }
+                      )}
                       min={detector.min_exposure_time}
                       max={detector.max_exposure_time}
                       step={0.1}
@@ -235,7 +233,7 @@ export function CameraControl() {
                         {currentGain.toFixed(1)}×
                       </span>
                     </div>
-                    <Slider
+                    <OptimisticSlider
                       value={[currentGain]}
                       onValueChange={(v) =>
                         handleGainChange(detector.slot, v[0])

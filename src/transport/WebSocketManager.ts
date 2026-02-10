@@ -325,10 +325,8 @@ export class WebSocketManager {
         }
 
         case FromAgentMessageType.STATE_PATCH: {
-          const stateName = message.interface;
-          const patchOperations: Operation[] = JSON.parse(message.patch);
-          globalStateStore.applyJsonPatch(stateName, patchOperations);
-          console.log(`[WebSocketManager] Applied patch to state ${stateName}`);
+          globalStateStore.applyEnvelope(message.envelope);
+          console.log(`[WebSocketManager] Applied patch to state ${message.envelope.state_name} with rev ${message.envelope.rev}`);
           break;
         }
 

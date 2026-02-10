@@ -1,5 +1,6 @@
 // src/transport/types.ts
 
+
 export type TaskStatus = 
   | 'pending' 
   | 'running' 
@@ -267,10 +268,24 @@ export interface StateUpdateEvent {
   value: unknown;
 }
 
+export interface EnvelopPatch {
+  op: 'add' | 'remove' | 'replace' | 'move' | 'copy' | 'test';
+  path: string;
+  value?: unknown;
+  old_value?: string;
+}
+
+export interface Envelope {
+  state_name: string;
+  rev: number;
+  base_rev: number;
+  ts: number;
+  patches: EnvelopPatch[];
+}
+
 export interface StatePatchEvent {
   type: typeof FromAgentMessageType.STATE_PATCH;
-  interface: string;
-  patch: string; // JSON string of patch operations
+  envelope: Envelope;
 }
 
 export interface LockEvent {

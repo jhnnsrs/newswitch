@@ -219,8 +219,7 @@ export const MultidimensionalAcquisitionSchema = z
       if (!validatorFn(context)) {
         ctx.addIssue({
           code: 'custom',
-          message:
-            'At least one illumination has an invalid intensity (must be between 0 and 1)',
+          message: 'You need at least one timepoint to perform an acquisition',
           path: ['timepoints'],
         });
       }
@@ -259,7 +258,13 @@ export const AcquireMultidimensionalAcquisitionDefinition: ActionDefinition<
   description: '',
   argsSchema: AcquireMultidimensionalAcquisitionArgsSchema,
   returnSchema: AcquireMultidimensionalAcquisitionReturnSchema,
-  lockKeys: [],
+  lockKeys: [
+    'hook_registry',
+    'illumination',
+    'stage_position',
+    'io',
+    'camera_parameters',
+  ],
 };
 
 /**

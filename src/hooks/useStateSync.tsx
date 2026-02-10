@@ -56,10 +56,11 @@ export const useStateSync = <T extends Record<string, unknown>>(
       setLoading(definition.key, true);
       setError(definition.key, null);
       
-      const rawData = await fetchState<unknown>(definition.key);
+      const rawData = await fetchState<{ state: T; revision: number }>(definition.key);
       
+      const revision = rawData.revision ?? 0;
       // Runtime Validation
-      const parsed = schemaRef.current.safeParse(rawData);
+      const parsed = schemaRef.current.safeParse(rawData.state);
       if (!parsed.success) {
         console.error(`[${definition.key}] Validation Failed:`, parsed.error);
         setError(definition.key, new Error(`Validation failed for ${definition.key}`));

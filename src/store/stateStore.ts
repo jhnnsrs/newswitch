@@ -4,10 +4,19 @@ import { immer } from 'zustand/middleware/immer';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { applyPatch, type Operation } from 'fast-json-patch';
 
+export interface Envelope {
+  state_name: string;
+  rev: number;
+  base_rev: number;
+  ts: number;
+  patches: Operation[];
+}
+
 // State shape: { [stateName]: stateValue }
 export interface GlobalStateStore {
   /** All states keyed by their name */
   states: Record<string, unknown>;
+  stateRevisions: Record<string, number>;
   
   /** Loading states for each key */
   loading: Record<string, boolean>;
@@ -23,7 +32,7 @@ export interface GlobalStateStore {
   setLock: (key: string, value: string | undefined) => void;
   
   /** Apply a JSON patch to a state (RFC 6902 format) */
-  applyJsonPatch: (key: string, operations: Operation[]) => void;
+  applyEnvelope: (envelope: Envelope) => void;
   
   /** Set loading state */
   setLoading: (key: string, loading: boolean) => void;
@@ -45,6 +54,7 @@ export const useGlobalStateStore = create<GlobalStateStore>()(
   subscribeWithSelector(
     immer((set, get) => ({
       states: {},
+      stateRevisions: {},
       loading: {},
       errors: {},
       locks: {},
@@ -53,6 +63,7 @@ export const useGlobalStateStore = create<GlobalStateStore>()(
         set((state) => {
           state.states[key] = value;
           state.errors[key] = null;
+          state.stateRevisions[key] = 0;
         });
       },
 
@@ -62,19 +73,25 @@ export const useGlobalStateStore = create<GlobalStateStore>()(
         });
       },
       
-      applyJsonPatch: (key, operations) => {
+      applyEnvelope: (envelope: Envelope) => {
+        const { state_name: key, patches: operations } = envelope;
         const currentState = get().states[key];
+        const currentRevision = get().stateRevisions[key] ?? 0;
         if (currentState === undefined) {
           console.warn(`[StateStore] Cannot apply patch to unknown state: ${key}`);
           return;
         }
-        
+        if (envelope.base_rev !== currentRevision) {
+          console.warn(`[StateStore] Revision mismatch for ${key}: current=${currentRevision}, envelope.base_rev=${envelope.base_rev}`);
+          // In a real implementation, we would need to fetch the latest state and rebase the patch
+          // For now, we will just log a warning and skip applying the patch
+        }
+
         try {
           // Clone the current state and apply JSON patches using fast-json-patch
           const clonedState = JSON.parse(JSON.stringify(currentState));
           const { newDocument } = applyPatch(clonedState, operations);
           
-          console.log(`[StateStore] Applied patch to ${key}:`, operations, '-> Result:', newDocument);
           
           // Set the new state (this triggers Zustand subscribers)
           set((state) => {

@@ -15,6 +15,7 @@ import { useIlluminationState } from '@/hooks/states';
 import { cn } from '@/lib/utils';
 import { Power, Waves } from 'lucide-react';
 import { useState } from 'react';
+import { OptimisticSlider } from '../ui/optimistic_slider';
 
 // Color mapping for wavelengths
 const getWavelengthColor = (wavelength: number): string => {
@@ -57,7 +58,7 @@ export function IlluminationControl() {
     useTurnOnIllumination();
   const { assign: turnOffChannel, isLoading: isTurningOff } =
     useTurnOffIlluminationChannel();
-  const { assign: setIntensity, isLoading: isSettingIntensity } =
+  const { call: setIntensity, isLoading: isSettingIntensity } =
     useSetIlluminationIntensity();
 
   const [localIntensities, setLocalIntensities] = useState<
@@ -181,14 +182,9 @@ export function IlluminationControl() {
               {/* Intensity Slider */}
               <div className="flex items-center gap-3">
                 <Waves className="h-3 w-3 text-muted-foreground" />
-                <Slider
+                <OptimisticSlider
                   value={[currentIntensity]}
-                  onValueChange={(v) =>
-                    handleIntensityChange(source.slot, v[0])
-                  }
-                  onValueCommit={() =>
-                    handleIntensityCommit(source.slot, source.channel)
-                  }
+                  onSave={(v) => setIntensity({ channel: source.slot, intensity: v[0] })}
                   min={source.min_intensity}
                   max={source.max_intensity}
                   step={1}

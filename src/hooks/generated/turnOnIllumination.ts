@@ -42,7 +42,7 @@ export const TurnOnIlluminationDefinition: ActionDefinition<
   description: '',
   argsSchema: TurnOnIlluminationArgsSchema,
   returnSchema: TurnOnIlluminationReturnSchema,
-  lockKeys: [],
+  lockKeys: ['illumination'],
 };
 
 /**

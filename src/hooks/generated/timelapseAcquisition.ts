@@ -45,7 +45,7 @@ export const TimelapseAcquisitionDefinition: ActionDefinition<
   description: '',
   argsSchema: TimelapseAcquisitionArgsSchema,
   returnSchema: TimelapseAcquisitionReturnSchema,
-  lockKeys: [],
+  lockKeys: ['camera_parameters', 'illumination', 'stage_position'],
 };
 
 /**

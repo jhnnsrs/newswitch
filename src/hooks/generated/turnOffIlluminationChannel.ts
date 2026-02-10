@@ -32,7 +32,7 @@ export const TurnOffIlluminationChannelDefinition: ActionDefinition<
   description: '',
   argsSchema: TurnOffIlluminationChannelArgsSchema,
   returnSchema: TurnOffIlluminationChannelReturnSchema,
-  lockKeys: [],
+  lockKeys: ['illumination'],
 };
 
 /**
