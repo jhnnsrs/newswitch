@@ -11,6 +11,7 @@ import { useSwitchFilter, useToggleFilter } from '@/hooks/generated';
 import { useFilterBankState } from '@/hooks/states';
 import { cn } from '@/lib/utils';
 import { Filter, RotateCw } from 'lucide-react';
+import { ResponsiveGrid } from '../ui/responsive-grid';
 
 // Color mapping for filter wavelengths
 const getWavelengthColor = (wavelength: number): string => {
@@ -58,7 +59,7 @@ export function FilterBankControl() {
     <div className="space-y-4">
 
       {/* Filters */}
-      <div className="space-y-2">
+      <ResponsiveGrid>
         {filters.map((filter) => {
           const isActive = filter.slot === currentSlot;
 
@@ -131,11 +132,11 @@ export function FilterBankControl() {
         })}
 
         {(!filters || filters.length === 0) && !stateLoading && (
-          <div className="text-center py-4 text-sm text-muted-foreground">
+          <div className="text-center py-4 text-sm text-muted-foreground col-span-full">
             No filters available
           </div>
         )}
-      </div>
+      </ResponsiveGrid>
 
       {/* Quick Toggle Button */}
       {filters.length > 1 && (

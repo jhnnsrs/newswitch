@@ -17,6 +17,7 @@ import { Power, Waves } from 'lucide-react';
 import { useOptimistic, useState } from 'react';
 import { OptimisticSlider } from '../ui/optimistic_slider';
 import { useGlobalStateStore } from '@/store';
+import { ResponsiveGrid } from '../ui/responsive-grid';
 
 // Color mapping for wavelengths
 const getWavelengthColor = (wavelength: number): string => {
@@ -109,7 +110,7 @@ export function IlluminationControl() {
     <div className="space-y-4">
 
       {/* Light Sources */}
-      <div className="space-y-3">
+      <ResponsiveGrid>
         {illuminations?.map((source) => {
           const isActive = source.is_active;
           const currentIntensity = source.intensity;
@@ -204,11 +205,11 @@ export function IlluminationControl() {
         {(!illuminations ||
           illuminations.length === 0) &&
           !stateLoading && (
-            <div className="text-center py-4 text-sm text-muted-foreground">
+            <div className="text-center py-4 text-sm text-muted-foreground col-span-full">
               No light sources available
             </div>
           )}
-      </div>
+      </ResponsiveGrid>
 
       {/* Quick Off All Button */}
       {hasActiveSources && (

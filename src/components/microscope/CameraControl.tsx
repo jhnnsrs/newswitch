@@ -15,6 +15,7 @@ import { useCameraState } from '@/hooks/states';
 import { Camera, Play, Square, Image, Timer, Gauge, MonitorUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { OptimisticSlider } from '../ui/optimistic_slider';
+import { ResponsiveGrid } from '../ui/responsive-grid';
 
 export function CameraControl() {
   const { data: cameraState, loading: stateLoading } = useCameraState({
@@ -105,7 +106,7 @@ export function CameraControl() {
     <div className="space-y-4">
 
       {/* Detectors */}
-      <div className="space-y-3">
+      <ResponsiveGrid>
         {detectors?.map((detector) => {
           const isActive = detector.is_active;
           const currentExposure =
@@ -278,11 +279,11 @@ export function CameraControl() {
         {(!detectors ||
           detectors.length === 0) &&
           !stateLoading && (
-            <div className="text-center py-4 text-sm text-muted-foreground">
+            <div className="text-center py-4 text-sm text-muted-foreground col-span-full">
               No detectors available
             </div>
           )}
-      </div>
+      </ResponsiveGrid>
     </div>
   );
 }
