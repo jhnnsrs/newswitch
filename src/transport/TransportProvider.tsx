@@ -209,13 +209,12 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
   }, [config.apiEndpoint, transportStore]);
 
   // Get cached task
-  const getCachedTask = useCallback(<TArgs = unknown, TReturn = unknown>(
+  const getCachedTask = useCallback((
     taskId: string
-  ): Task<TArgs, TReturn> | undefined => {
-    return transportStore.getTask<TArgs, TReturn>(taskId);
+  ): Task | undefined => {
+    return transportStore.getTask(taskId);
   }, [transportStore]);
 
-  // Cancel a task
   const cancelTask = useCallback(async (taskId: string): Promise<void> => {
     const url = `${config.apiEndpoint.replace(/\/$/, '')}/cancel`;
 
@@ -229,6 +228,47 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
     transportStore.updateTask(taskId, { status: 'cancelled' });
   }, [config.apiEndpoint, transportStore]);
 
+
+  const unpauseTask = useCallback(async (taskId: string): Promise<void> => {
+    const url = `${config.apiEndpoint.replace(/\/$/, '')}/resume`;
+
+    const response = await fetch(url, { method: 'POST', body: JSON.stringify({ assignation: taskId }) });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to unpause task: ${response.status} ${errorText}`);
+    }
+
+    transportStore.updateTask(taskId, { status: 'running' });
+  }, [config.apiEndpoint, transportStore]);
+
+
+  const stepTask = useCallback(async (taskId: string): Promise<void> => {
+    const url = `${config.apiEndpoint.replace(/\/$/, '')}/step`;
+
+    const response = await fetch(url, { method: 'POST', body: JSON.stringify({ assignation: taskId }) });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to unpause task: ${response.status} ${errorText}`);
+    }
+
+    transportStore.updateTask(taskId, { status: 'running' });
+  }, [config.apiEndpoint, transportStore]);
+
+  const pauseTask = useCallback(async (taskId: string): Promise<void> => {
+    const url = `${config.apiEndpoint.replace(/\/$/, '')}/pause`;
+
+    const response = await fetch(url, { method: 'POST', body: JSON.stringify({ assignation: taskId }) });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to pause task: ${response.status} ${errorText}`);
+    }
+
+    transportStore.updateTask(taskId, { status: 'paused' });
+  }, [config.apiEndpoint, transportStore]);
+
   // Subscribe to task updates
   const subscribeToTask = useCallback((
     taskId: string,
@@ -238,7 +278,7 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
   }, [transportStore]);
 
   // Fetch state from server
-  const fetchState = useCallback(async <T = unknown>(stateName: string): Promise<T> => {
+  const fetchState = useCallback(async (stateName: string): Promise<unknown> => {
     const url = `${config.apiEndpoint.replace(/\/$/, '')}/states/${stateName}`;
 
     const response = await fetch(url);
@@ -248,7 +288,7 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
       throw new Error(`Failed to fetch state: ${response.status} ${errorText}`);
     }
 
-    const data = await response.json() as T;
+    const data = await response.json();
     globalStateStore.setState(stateName, data);
 
     return data;
@@ -278,7 +318,10 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
       assign,
       getTask,
       getCachedTask,
+      unpauseTask,
+      pauseTask,
       cancelTask,
+      stepTask,
       subscribeToTask,
       fetchState,
       getCachedState,
@@ -296,6 +339,9 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
       getCachedTask,
       cancelTask,
       subscribeToTask,
+      pauseTask,
+      unpauseTask,
+      stepTask,
       fetchState,
       getCachedState,
       reconnect,

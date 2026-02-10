@@ -462,11 +462,14 @@ export interface TransportContextValue {
     taskId: string
   ) => Promise<Task<TArgs, TReturn>>;
   /** Get a task from local cache */
-  getCachedTask: <TArgs = unknown, TReturn = unknown>(
+  getCachedTask: (
     taskId: string
-  ) => Task<TArgs, TReturn> | undefined;
+  ) => Task | undefined;
   /** Cancel a task */
   cancelTask: (taskId: string) => Promise<void>;
+  pauseTask: (taskId: string) => Promise<void>;
+  unpauseTask: (taskId: string) => Promise<void>;
+  stepTask: (taskId: string) => Promise<void>;
   /** Subscribe to updates for a specific task */
   subscribeToTask: (
     taskId: string,

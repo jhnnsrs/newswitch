@@ -17,6 +17,7 @@ function generateReference(): string {
 interface ActionButtonProps<TArgs, TReturn> extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'action' | 'onError'>, VariantProps<typeof buttonVariants> {
   action: ActionDefinition<TArgs, TReturn>;
   args: TArgs;
+  step?: boolean; // Optional prop to indicate if we should step and pause on the first pausepoint
   assignOptions?: AssignOptions;
   children?: React.ReactNode;
 }
@@ -28,6 +29,7 @@ export function ActionButton<TArgs, TReturn>({
   className,
   variant,
   size,
+  step,
   children,
   onClick,
   disabled,
@@ -60,7 +62,7 @@ export function ActionButton<TArgs, TReturn>({
 
     try {
       console.log('Assigning action:', action.name, 'with args:', args, 'reference:', reference);
-      const task = await transport.assign(action.name, args, { ...assignOptions, reference });
+      const task = await transport.assign(action.name, args, { ...assignOptions, reference, step });
       console.log('Assigned task:', task);
     } catch (e) {
       console.error(e);

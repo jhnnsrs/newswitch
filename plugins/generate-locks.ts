@@ -67,7 +67,7 @@ export default function generateLocksPlugin(options: GenerateStatesPluginOptions
         }
         schema = await response.json();
       } catch (error) {
-        console.error(`❌ [GenLocks] Error fetching schema from ${schemaUrl}:`, error);
+        console.error(`❌ [GenLocks] Errosr fetching schema from ${schemaUrl}:`, error);
         return;
       }
       

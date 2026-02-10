@@ -211,6 +211,7 @@ type Implementation = {
 const generateOptimisticState = (optimistic: Optimistic) => {
   return `
   export const Optimistic${toCamel(optimistic.state)} = {
+    key: "${optimistic.state}",
     selector: (state: never) => ${optimistic.path.split('.').reduce((acc, part) => part && part != "" ? `${acc}.${part}` : acc, 'state')},
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     accessor: (state: any, args: any) => ${optimistic.accessor}

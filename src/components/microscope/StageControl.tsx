@@ -25,53 +25,18 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
+import useResumeTask from '@/transport/useResumeTask';
+import { usePauseTask } from '@/transport/usePauseTask';
+import { ProgressDisplay } from '../TaskDisplay';
 
-export const ProgressDisplay = () => {
-  const activeTaskId = useStagePositionLock();
-  const task = useTransportStore(
-    (state) => state.tasks[activeTaskId || ''] || undefined
-  );
-  const cancel = useCancelTask();
 
-  if (!task && !activeTaskId) return null;
-
-  if (!task && activeTaskId)
-    return (
-      <div className="flex items-center justify-between text-muted-foreground text-sm p-3 bg-muted/50 rounded-lg">
-        <span>Another app is controlling the stage</span>
-        <Button variant="outline" size="sm" onClick={() => cancel(activeTaskId!)}>
-          Cancel
-        </Button>
-      </div>
-    );
-
-  return (
-    <div className="space-y-2 p-3 bg-muted/50 rounded-lg">
-      <div className="flex items-center justify-between text-sm">
-        <span className="text-muted-foreground">Moving stage...</span>
-        {task.progress !== null && task.progress !== undefined && (
-          <span className="font-mono font-semibold">
-            {Math.round(task.progress)}%
-          </span>
-        )}
-      </div>
-      <Progress value={task.progress ?? 0} className="h-1.5" />
-      <Button
-        variant="outline"
-        size="sm"
-        className="w-full"
-        onClick={() => cancel(activeTaskId!)}
-      >
-        Cancel
-      </Button>
-    </div>
-  );
-};
 
 export function StageControl() {
   const { data: stageState, loading: stateLoading } = useStageState({
     subscribe: true,
   });
+
+  const activeTaskId = useStagePositionLock();
 
   // Use registered step sizes from state, or fallback
   const stepSizes = stageState?.registered_step_sizes?.length
@@ -352,7 +317,7 @@ export function StageControl() {
         </ActionButton>
       </div>
 
-      <ProgressDisplay />
+      <ProgressDisplay activeTaskId={activeTaskId} />
     </div>
   );
 }

@@ -268,6 +268,7 @@ export class WebSocketManager {
           transportStore.updateTask(message.assignation, {
             status: 'paused',
           });
+          console.log('[WebSocketManager] Task paused:', message.assignation);
           break;
         }
 
@@ -323,6 +324,8 @@ export class WebSocketManager {
           globalStateStore.setState(message.state, message.value);
           break;
         }
+
+        
 
         case FromAgentMessageType.STATE_PATCH: {
           globalStateStore.applyEnvelope(message.envelope);

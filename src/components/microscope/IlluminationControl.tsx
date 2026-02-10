@@ -79,16 +79,14 @@ export function IlluminationControl() {
     Record<number, number>
   >({});
 
-  // Get active slot intensities from state
-  const activeSlots = new Set(
-    illuminationState?.active_illuminations?.map((a) => a.slot) ?? []
-  );
+  // Get illuminations from state
+  const illuminations = illuminationState?.illuminations ?? [];
+  const activeIlluminations = illuminations.filter((i) => i.is_active);
+  const activeSlots = new Set(activeIlluminations.map((i) => i.slot));
 
   const getActiveIntensity = (slot: number): number => {
-    const active = illuminationState?.active_illuminations?.find(
-      (a) => a.slot === slot
-    );
-    return active?.intensity ?? 0;
+    const source = illuminations.find((i) => i.slot === slot);
+    return source?.is_active ? source.intensity : 0;
   };
 
 
@@ -112,11 +110,9 @@ export function IlluminationControl() {
 
       {/* Light Sources */}
       <div className="space-y-3">
-        {illuminationState?.available_sources?.map((source) => {
-          const isActive = activeSlots.has(source.slot);
-          const currentIntensity =
-            getActiveIntensity(source.slot) ??
-            source.intensity;
+        {illuminations?.map((source) => {
+          const isActive = source.is_active;
+          const currentIntensity = source.intensity;
 
           return (
             <div
@@ -205,8 +201,8 @@ export function IlluminationControl() {
           );
         })}
 
-        {(!illuminationState?.available_sources ||
-          illuminationState.available_sources.length === 0) &&
+        {(!illuminations ||
+          illuminations.length === 0) &&
           !stateLoading && (
             <div className="text-center py-4 text-sm text-muted-foreground">
               No light sources available
@@ -219,13 +215,8 @@ export function IlluminationControl() {
         <button
           onClick={() => {
             // Turn off all active channels
-            illuminationState?.active_illuminations?.forEach((active) => {
-              const source = illuminationState?.available_sources?.find(
-                (s) => s.slot === active.slot
-              );
-              if (source) {
-                turnOffChannel({ channel: source.channel });
-              }
+            activeIlluminations?.forEach((source) => {
+              turnOffChannel({ channel: source.channel });
             });
           }}
           disabled={isLoading}

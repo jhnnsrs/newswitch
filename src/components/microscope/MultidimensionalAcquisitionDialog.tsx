@@ -159,27 +159,25 @@ export function MultidimensionalAcquisitionDialog() {
 
   // Build defaults from current microscope state
   const buildDefaultsFromState = useCallback((): FormValues => {
-    const activeDetectors = cameraState?.active_detectors ?? [];
-    const activeIlluminations = illuminationState?.active_illuminations ?? [];
-    const illuminationSources = illuminationState?.available_sources ?? [];
+    const detectors = cameraState?.detectors ?? [];
+    const activeDetectors = detectors.filter((d) => d.is_active);
+    const illuminations = illuminationState?.illuminations ?? [];
+    const activeIlluminations = illuminations.filter((i) => i.is_active);
 
     // Build channels from active detectors + illumination combos
     const channels: Streams[] =
       activeDetectors.length > 0
         ? activeDetectors.map((det) => ({
             detector: det.name,
-            mapping: det.colormap || 'default',
+            mapping: det.current_colormap || 'default',
             illuminations:
               activeIlluminations.length > 0
                 ? activeIlluminations.map((ill) => {
-                    const source = illuminationSources.find(
-                      (s) => s.slot === ill.slot,
-                    );
                     return {
-                      source: source?.kind ?? `slot_${ill.slot}`,
-                      wavelength: source?.wavelength ?? 488,
+                      source: ill.kind ?? `slot_${ill.slot}`,
+                      wavelength: ill.wavelength ?? 488,
                       intensity:
-                        ill.intensity / (source?.max_intensity || 100),
+                        ill.intensity / (ill.max_intensity || 100),
                     };
                   })
                 : [makeDefaultIllumination()],

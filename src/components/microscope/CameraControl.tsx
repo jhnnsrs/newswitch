@@ -37,11 +37,13 @@ export function CameraControl() {
   const [selectedDetectorSlot, setSelectedDetectorSlot] = useState<number | null>(null);
 
   const isLive = cameraState?.is_acquiring ?? false;
-  const activeSlots = new Set(cameraState?.active_detectors?.map((d) => d.slot) ?? []);
+  const detectors = cameraState?.detectors ?? [];
+  const activeDetectors = detectors.filter((d) => d.is_active);
+  const activeSlots = new Set(activeDetectors.map((d) => d.slot));
   const hasActiveDetectors = activeSlots.size > 0;
 
   const getActiveDetector = (slot: number) => {
-    return cameraState?.active_detectors?.find((d) => d.slot === slot);
+    return detectors.find((d) => d.slot === slot && d.is_active);
   };
 
   const handleToggleDetector = (slot: number, enabled: boolean) => {
@@ -104,13 +106,12 @@ export function CameraControl() {
 
       {/* Detectors */}
       <div className="space-y-3">
-        {cameraState?.available_detectors?.map((detector) => {
-          const isActive = activeSlots.has(detector.slot);
-          const activeData = getActiveDetector(detector.slot);
+        {detectors?.map((detector) => {
+          const isActive = detector.is_active;
           const currentExposure =
-            localExposures[detector.slot] ?? activeData?.exposure_time ?? detector.min_exposure_time;
+            localExposures[detector.slot] ?? detector.current_exposure_time ?? detector.min_exposure_time;
           const currentGain =
-            localGains[detector.slot] ?? activeData?.gain ?? detector.min_gain;
+            localGains[detector.slot] ?? detector.current_gain ?? detector.min_gain;
           const isExpanded = selectedDetectorSlot === detector.slot;
 
           return (
@@ -141,9 +142,9 @@ export function CameraControl() {
                     <span className="text-sm font-medium">{detector.name}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    {isActive && activeData && (
+                    {isActive && (
                       <span className="text-xs text-muted-foreground font-mono">
-                        {activeData.exposure_time.toFixed(0)}ms / {activeData.gain.toFixed(1)}×
+                        {detector.current_exposure_time.toFixed(0)}ms / {detector.current_gain.toFixed(1)}×
                       </span>
                     )}
                     <Switch
@@ -205,7 +206,7 @@ export function CameraControl() {
                             key={val}
                             size="sm"
                             variant={
-                              Math.abs((activeData?.exposure_time ?? 0) - val) < 0.5
+                              Math.abs((detector.current_exposure_time ?? 0) - val) < 0.5
                                 ? 'default'
                                 : 'outline'
                             }
@@ -255,7 +256,7 @@ export function CameraControl() {
                             key={val}
                             size="sm"
                             variant={
-                              Math.abs((activeData?.gain ?? 0) - val) < 0.1
+                              Math.abs((detector.current_gain ?? 0) - val) < 0.1
                                 ? 'default'
                                 : 'outline'
                             }
@@ -274,8 +275,8 @@ export function CameraControl() {
           );
         })}
 
-        {(!cameraState?.available_detectors ||
-          cameraState.available_detectors.length === 0) &&
+        {(!detectors ||
+          detectors.length === 0) &&
           !stateLoading && (
             <div className="text-center py-4 text-sm text-muted-foreground">
               No detectors available

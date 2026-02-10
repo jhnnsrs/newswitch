@@ -55,6 +55,7 @@ export const useMoveStage = () => {
 /** Optimistic state hooks for move_stage */
 
 export const OptimisticStageState = {
+  key: 'StageState',
   selector: (state: never) => state,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   accessor: (state: any, args: any) => ({

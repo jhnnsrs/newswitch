@@ -8,21 +8,16 @@ import {
 // --- Schema ---
 export const CameraStateSchema = z.object({
   is_acquiring: z.boolean(),
-  active_detectors: z.array(
-    z.object({
-      slot: z.number(),
-      name: z.string(),
-      exposure_time: z.number(),
-      gain: z.number(),
-      colormap: z.string(),
-    }),
-  ),
-  available_detectors: z.array(
+  detectors: z.array(
     z.object({
       slot: z.number(),
       name: z.string(),
       width: z.number(),
       height: z.number(),
+      is_active: z.boolean(),
+      current_exposure_time: z.number(),
+      current_gain: z.number(),
+      current_colormap: z.string(),
       pixel_size_um: z.number(),
       preset_exposure_times: z.array(z.number()),
       max_exposure_time: z.number(),
