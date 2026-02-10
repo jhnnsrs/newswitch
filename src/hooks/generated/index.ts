@@ -14,4 +14,6 @@ export * from './deactivateDetector';
 export * from './updateDetector';
 export * from './switchObjective';
 export * from './toggleObjective';
+export * from './switchFilter';
+export * from './toggleFilter';
 export * from './acquireMultidimensionalAcquisition';

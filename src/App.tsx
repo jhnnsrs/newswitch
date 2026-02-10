@@ -5,6 +5,7 @@ import {
   StatusPanel,
   SettingsPanel,
   LiveView,
+  MultidimensionalAcquisitionControl,
 } from './components/microscope'
 import { TransportProvider } from './transport'
 import { Microscope } from 'lucide-react'
@@ -47,9 +48,12 @@ function MicroscopeControlPanel() {
 
         {/* Right Stage Control Panel */}
         <ResizablePanel defaultSize={30} minSize={15} maxSize={40}>
-          <div className="h-full overflow-y-auto p-4">
+          <div className="h-full overflow-y-auto p-4 flex flex-col gap-4">
             <StageControl />
+
+            <MultidimensionalAcquisitionControl />
           </div>
+
         </ResizablePanel>
       </ResizablePanelGroup>
     </div>

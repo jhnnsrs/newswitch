@@ -13,6 +13,7 @@ import {
     Camera,
     ChevronDown,
     Download,
+    Filter,
     Grid3X3,
     Play,
     Settings2,
@@ -25,6 +26,8 @@ import { CameraControl } from './CameraControl';
 import { IlluminationControl } from './IlluminationControl';
 import { MultidimensionalAcquisitionDialog } from './MultidimensionalAcquisitionDialog';
 import { ObjectiveControl } from './ObjectiveControl';
+import { MultidimensionalAcquisitionControl } from './MultidimensionalAcquisitionControl';
+import { FilterBankControl } from './FilterBankControl';
 
 interface SettingsSectionProps {
   title: string;
@@ -137,6 +140,13 @@ export function SettingsPanel() {
         >
             <IlluminationControl />
         </SettingsSection>
+        {/* Illumination Settings */}
+        <SettingsSection 
+          title="Filters" 
+          icon={<Filter className="h-4 w-4" />}
+        >
+            <FilterBankControl />
+        </SettingsSection>
 
         <Separator />
 
@@ -151,14 +161,6 @@ export function SettingsPanel() {
 
         <Separator />
 
-        {/* Acquisition */}
-        <SettingsSection 
-          title="Acquisition" 
-          icon={<Grid3X3 className="h-4 w-4" />}
-          defaultOpen={false}
-        >
-          <MultidimensionalAcquisitionDialog />
-        </SettingsSection>
       </div>
     </div>
   );
