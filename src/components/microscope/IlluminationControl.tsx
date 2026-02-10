@@ -11,11 +11,12 @@ import {
   useTurnOffIlluminationChannel,
   useTurnOnIllumination,
 } from '@/hooks/generated';
-import { useIlluminationState } from '@/hooks/states';
+import { IlluminationStateDefinition, useIlluminationState } from '@/hooks/states';
 import { cn } from '@/lib/utils';
 import { Power, Waves } from 'lucide-react';
-import { useState } from 'react';
+import { useOptimistic, useState } from 'react';
 import { OptimisticSlider } from '../ui/optimistic_slider';
+import { useGlobalStateStore } from '@/store';
 
 // Color mapping for wavelengths
 const getWavelengthColor = (wavelength: number): string => {
@@ -51,6 +52,15 @@ const getKindLabel = (kind: string): string => {
   }
 };
 
+
+
+
+
+
+
+
+
+
 export function IlluminationControl() {
   const { data: illuminationState, loading: stateLoading } =
     useIlluminationState({ subscribe: true });
@@ -60,6 +70,10 @@ export function IlluminationControl() {
     useTurnOffIlluminationChannel();
   const { call: setIntensity, isLoading: isSettingIntensity } =
     useSetIlluminationIntensity();
+
+
+
+
 
   const [localIntensities, setLocalIntensities] = useState<
     Record<number, number>
@@ -77,21 +91,6 @@ export function IlluminationControl() {
     return active?.intensity ?? 0;
   };
 
-  const handleIntensityChange = (slot: number, value: number) => {
-    setLocalIntensities((prev) => ({ ...prev, [slot]: value }));
-  };
-
-  const handleIntensityCommit = (slot: number, channel: number) => {
-    const intensity = localIntensities[slot];
-    if (intensity !== undefined) {
-      setIntensity({ intensity, channel });
-      setLocalIntensities((prev) => {
-        const next = { ...prev };
-        delete next[slot];
-        return next;
-      });
-    }
-  };
 
   const handleToggleSource = (
     channel: number,
@@ -116,7 +115,6 @@ export function IlluminationControl() {
         {illuminationState?.available_sources?.map((source) => {
           const isActive = activeSlots.has(source.slot);
           const currentIntensity =
-            localIntensities[source.slot] ??
             getActiveIntensity(source.slot) ??
             source.intensity;
 

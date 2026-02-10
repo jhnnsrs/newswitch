@@ -1,6 +1,6 @@
 import { z } from "zod";
 import {
-  useStateSync,
+  buildUseState,
   type StateDefinition,
   type UseStateSyncOptions,
 } from "../useStateSync";
@@ -34,6 +34,4 @@ export const StageStateDefinition: StateDefinition<StageState> = {
 /**
  * Hook to sync StageState
  */
-export const useStageState = (options?: UseStateSyncOptions) => {
-  return useStateSync<StageState>(StageStateDefinition, options);
-};
+export const useStageState = buildUseState<StageState>(StageStateDefinition);

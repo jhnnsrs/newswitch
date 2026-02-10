@@ -106,7 +106,7 @@ const generateContent = (key: string, stateDef: any) => {
 
   return `
 import { z } from 'zod';
-import { useStateSync, type StateDefinition, type UseStateSyncOptions } from '${IMPORT_PATH_TO_SYNC}';
+import { buildUseState, type StateDefinition, type UseStateSyncOptions } from '${IMPORT_PATH_TO_SYNC}';
 
 // --- Schema ---
 ${schemaCode}
@@ -123,9 +123,7 @@ export const ${defName}: StateDefinition<${typeName}> = {
 /**
  * Hook to sync ${key}
  */
-export const ${hookName} = (options?: UseStateSyncOptions) => {
-  return useStateSync<${typeName}>(${defName}, options);
-};`;
+export const ${hookName} = buildUseState<${typeName}>(${defName})`;
 };
 
 // --- VITE PLUGIN ---

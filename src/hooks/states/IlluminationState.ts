@@ -1,6 +1,6 @@
 import { z } from "zod";
 import {
-  useStateSync,
+  buildUseState,
   type StateDefinition,
   type UseStateSyncOptions,
 } from "../useStateSync";
@@ -38,6 +38,6 @@ export const IlluminationStateDefinition: StateDefinition<IlluminationState> = {
 /**
  * Hook to sync IlluminationState
  */
-export const useIlluminationState = (options?: UseStateSyncOptions) => {
-  return useStateSync<IlluminationState>(IlluminationStateDefinition, options);
-};
+export const useIlluminationState = buildUseState<IlluminationState>(
+  IlluminationStateDefinition,
+);

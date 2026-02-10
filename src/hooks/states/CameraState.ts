@@ -1,6 +1,6 @@
 import { z } from "zod";
 import {
-  useStateSync,
+  buildUseState,
   type StateDefinition,
   type UseStateSyncOptions,
 } from "../useStateSync";
@@ -45,6 +45,4 @@ export const CameraStateDefinition: StateDefinition<CameraState> = {
 /**
  * Hook to sync CameraState
  */
-export const useCameraState = (options?: UseStateSyncOptions) => {
-  return useStateSync<CameraState>(CameraStateDefinition, options);
-};
+export const useCameraState = buildUseState<CameraState>(CameraStateDefinition);
