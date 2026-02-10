@@ -4,4 +4,5 @@ export * from './CameraState';
 export * from './ObjectiveState';
 export * from './FilterBankState';
 export * from './IOState';
+export * from './SerialState';
 export * from './HookState';

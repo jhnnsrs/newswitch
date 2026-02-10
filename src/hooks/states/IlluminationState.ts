@@ -13,6 +13,7 @@ export const IlluminationStateSchema = z.object({
       slot: z.number(),
       intensity: z.number(),
       wavelength: z.number(),
+      fartface: z.number(),
       channel: z.number(),
       max_intensity: z.number(),
       min_intensity: z.number(),

@@ -52,7 +52,7 @@ export const StreamsSchema = z
         ctx.addIssue({
           code: 'custom',
           message:
-            'At least one illumination has an invalid intensity (must be between 0 and 1)',
+            'We need at least one illumination channel to acquire this stream',
           path: ['illuminations'],
         });
       }

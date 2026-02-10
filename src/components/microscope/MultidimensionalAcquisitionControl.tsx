@@ -41,6 +41,8 @@ import {
   useIlluminationState,
   useStageState,
 } from '@/hooks/states';
+import { usePauseTask } from '@/transport/usePauseTask';
+import useResumeTask from '@/transport/useResumeTask';
 import {
   Grid3X3,
   Plus,
@@ -55,6 +57,7 @@ import {
   ChevronRight,
   Copy,
   Crosshair,
+  Pause,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -161,6 +164,10 @@ export function MultidimensionalAcquisitionControl() {
     progress,
     cancel,
   } = useAcquireMultidimensionalAcquisition();
+
+  // Pause/Resume
+  const pause = usePauseTask();
+  const resume = useResumeTask();
 
   // Build channels from current microscope state
   const buildChannelsFromState = useCallback((): Streams[] => {
@@ -604,43 +611,73 @@ export function MultidimensionalAcquisitionControl() {
 
           <Separator />
 
-          {/* Progress */}
-          {isLoading && progress !== null && (
-            <div className="space-y-1">
+          {/* Task Progress & Status */}
+          {(isLoading || task) && (
+            <div className="space-y-2 p-3 bg-muted/50 rounded-lg">
               <div className="flex items-center justify-between text-xs">
-                <span>Progress</span>
-                <span>{Math.round(progress)}%</span>
+                <span className="text-muted-foreground">
+                  {task?.status === 'paused' ? 'Paused' : 'Acquiring...'}
+                </span>
+                <div className="flex items-center gap-2">
+                  {progress !== null && progress !== undefined && (
+                    <span className="font-mono font-semibold">
+                      {Math.round(progress)}%
+                    </span>
+                  )}
+                  {task && (
+                    <Badge
+                      variant={task.status === 'completed' ? 'default' : 'secondary'}
+                      className="text-[10px]"
+                    >
+                      {task.status}
+                    </Badge>
+                  )}
+                </div>
               </div>
-              <Progress value={progress} className="h-1.5" />
-            </div>
-          )}
-
-          {/* Task status */}
-          {task && (
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-muted-foreground">Status</span>
-              <Badge
-                variant={task.status === 'completed' ? 'default' : 'secondary'}
-                className="text-[10px]"
-              >
-                {task.status}
-              </Badge>
+              {progress !== null && (
+                <Progress value={progress} className="h-1.5" />
+              )}
             </div>
           )}
 
           {/* Action buttons */}
           <div className="flex gap-2">
             {isLoading ? (
-              <Button
-                type="button"
-                variant="destructive"
-                size="sm"
-                className="flex-1 h-9"
-                onClick={handleCancel}
-              >
-                <Square className="h-3.5 w-3.5 mr-1.5" />
-                Cancel
-              </Button>
+              <>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="flex-1 h-9"
+                  onClick={handleCancel}
+                >
+                  <Square className="h-3.5 w-3.5 mr-1.5" />
+                  Cancel
+                </Button>
+                {task?.status === 'paused' ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 h-9 animate-pulse"
+                    onClick={() => task?.id && resume(task.id)}
+                  >
+                    <Play className="h-3.5 w-3.5 mr-1.5" />
+                    Resume
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    className="flex-1 h-9"
+                    onClick={() => task?.id && pause(task.id)}
+                  >
+                    <Pause className="h-3.5 w-3.5 mr-1.5" />
+                    Pause
+                  </Button>
+                )}
+              </>
             ) : (
               <Button type="submit" size="sm" className="flex-1 h-9">
                 <Play className="h-3.5 w-3.5 mr-1.5" />

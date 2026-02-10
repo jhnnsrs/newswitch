@@ -13,6 +13,12 @@ export interface GenerateStatesPluginOptions {
   schemaUrl?: string;
 }
 
+interface ChoiceInput {
+  key: string;
+  value: any;
+  description?: string;
+}
+
 // --- HELPER TYPES ---
 interface Port {
   key: string;
@@ -20,6 +26,7 @@ interface Port {
   nullable: boolean;
   default?: any;
   children?: Port[];
+  choices: ChoiceInput[]
   identifier?: string;
   description?: string;
 }
@@ -37,7 +44,20 @@ const mapToZod = (port: Port): string => {
       base = 'z.boolean()'; 
       break;
     case 'STRING': 
-      base = 'z.string()'; 
+      if (port.choices && port.choices.length > 0) {
+        const values = port.choices.map((choice) => JSON.stringify(choice.key)).join(', ');
+        base = `z.enum([${values}])`;
+      } else {
+        base = 'z.string()';
+      }
+      break;
+    case 'ENUM':
+      if (port.choices && port.choices.length > 0) {
+        const values = port.choices.map((choice) => JSON.stringify(choice.key)).join(', ');
+        base = `z.enum([${values}])`;
+      } else {
+        base = 'z.string()';
+      }
       break;
     case 'LIST': 
       if (port.children && port.children.length > 0) {

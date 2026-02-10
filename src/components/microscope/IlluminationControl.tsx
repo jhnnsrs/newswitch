@@ -73,7 +73,7 @@ export function IlluminationControl() {
     useSetIlluminationIntensity();
 
 
-
+  
 
 
   const [localIntensities, setLocalIntensities] = useState<
