@@ -1,12 +1,5 @@
-import { useState, useCallback } from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
+import { Button } from '@/components/ui/button';
 import {
   Collapsible,
   CollapsibleContent,
@@ -20,6 +13,10 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Progress } from '@/components/ui/progress';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
 import {
   Tooltip,
   TooltipContent,
@@ -27,13 +24,13 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import {
-  useAcquireMultidimensionalAcquisition,
   AcquireMultidimensionalAcquisitionArgsSchema,
+  useAcquireMultidimensionalAcquisition,
   type AcquireMultidimensionalAcquisitionArgs,
   type Illumination,
-  type Streams,
-  type Stack,
   type Position,
+  type Stack,
+  type Streams,
   type Timepoint,
 } from '@/hooks/generated';
 import {
@@ -41,25 +38,28 @@ import {
   useIlluminationState,
   useStageState,
 } from '@/hooks/states';
+import { cn } from '@/lib/utils';
 import { usePauseTask } from '@/transport/usePauseTask';
 import useResumeTask from '@/transport/useResumeTask';
+import { zodResolver } from '@hookform/resolvers/zod';
 import {
-  Grid3X3,
-  Plus,
-  Trash2,
-  Play,
-  Square,
-  MapPin,
-  Clock,
-  Layers,
-  RotateCcw,
   ChevronDown,
   ChevronRight,
+  Clock,
   Copy,
   Crosshair,
+  Grid3X3,
+  Layers,
+  MapPin,
   Pause,
+  Play,
+  Plus,
+  RotateCcw,
+  Square,
+  Trash2,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { useCallback, useState } from 'react';
+import { useFieldArray, useForm } from 'react-hook-form';
 
 // ---------------------------------------------------------------------------
 // Helpers – z_slices is number[] in the schema, but we edit as comma string

@@ -6,7 +6,7 @@ import { StreamingView } from '../liveview/StreamingView';
 export function LiveView() {
   const { data: cameraState } = useCameraState({ subscribe: true });
   const { data: stageState } = useStageState({ subscribe: true });
-  
+
   // Use camera state to determine if live view is active
   const isLive = cameraState?.is_acquiring ?? false;
 

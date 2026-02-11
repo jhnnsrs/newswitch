@@ -1,8 +1,8 @@
 // src/store/stateStore.ts
-import { create } from 'zustand';
-import { immer } from 'zustand/middleware/immer';
-import { subscribeWithSelector } from 'zustand/middleware';
 import { applyPatch, type Operation } from 'fast-json-patch';
+import { create } from 'zustand';
+import { subscribeWithSelector } from 'zustand/middleware';
+import { immer } from 'zustand/middleware/immer';
 
 export interface Envelope {
   state_name: string;

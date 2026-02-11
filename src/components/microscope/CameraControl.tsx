@@ -1,19 +1,17 @@
-import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Slider } from '@/components/ui/slider';
-import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import {
+  useActivateDetector,
   useCaptureImage,
+  useDeactivateDetector,
   useStartLiveView,
   useStopLiveView,
-  useActivateDetector,
-  useDeactivateDetector,
   useUpdateDetector,
 } from '@/hooks/generated';
 import { useCameraState } from '@/hooks/states';
-import { Camera, Play, Square, Image, Timer, Gauge, MonitorUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Gauge, MonitorUp, Timer } from 'lucide-react';
+import { useState } from 'react';
 import { OptimisticSlider } from '../ui/optimistic_slider';
 import { ResponsiveGrid } from '../ui/responsive-grid';
 

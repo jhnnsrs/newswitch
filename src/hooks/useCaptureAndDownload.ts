@@ -1,6 +1,6 @@
+import { useTransport } from '@/transport/TransportProvider';
 import { useCallback, useState } from 'react';
 import { useCaptureImage } from './generated';
-import { useTransport } from '@/transport/TransportProvider';
 
 interface UseCaptureAndDownloadOptions {
   /** Custom filename for the download (without extension) */

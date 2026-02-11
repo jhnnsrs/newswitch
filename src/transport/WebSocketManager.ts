@@ -1,9 +1,8 @@
 // src/transport/WebSocketManager.ts
-import type { Operation } from 'fast-json-patch';
+import { toast } from 'sonner';
 import { useGlobalStateStore } from '../store/stateStore';
 import { useTransportStore } from '../store/transportStore';
 import { FromAgentMessageType, type FromAgentMessage } from './types';
-import { toast } from 'sonner';
 
 export interface WebSocketConfig {
   wsUrl: string;

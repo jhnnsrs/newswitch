@@ -1,11 +1,11 @@
-export { StageControl } from './StageControl';
 export { CameraControl } from './CameraControl';
-export { IlluminationControl } from './IlluminationControl';
 export { FilterBankControl } from './FilterBankControl';
-export { ObjectiveControl } from './ObjectiveControl';
-export { StatusPanel } from './StatusPanel';
+export { IlluminationControl } from './IlluminationControl';
 export { LatestImage } from './LatestImage';
-export { SettingsPanel } from './SettingsPanel';
 export { LiveView } from './LiveView';
-export { MultidimensionalAcquisitionDialog } from './MultidimensionalAcquisitionDialog';
 export { MultidimensionalAcquisitionControl } from './MultidimensionalAcquisitionControl';
+export { MultidimensionalAcquisitionDialog } from './MultidimensionalAcquisitionDialog';
+export { ObjectiveControl } from './ObjectiveControl';
+export { SettingsPanel } from './SettingsPanel';
+export { StageControl } from './StageControl';
+export { StatusPanel } from './StatusPanel';

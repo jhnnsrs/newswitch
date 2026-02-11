@@ -5,7 +5,7 @@ import { useResumeTask } from "@/transport/useResumeTask";
 import { Button } from "./ui/button";
 import { Progress } from "./ui/progress";
 
-export const ProgressDisplay = (props: {activeTaskId: string | null | undefined}) => {
+export const ProgressDisplay = (props: { activeTaskId: string | null | undefined }) => {
   const activeTaskId = props.activeTaskId;
   const task = useTransportStore(
     (state) => state.tasks[activeTaskId || ''] || undefined
@@ -38,34 +38,34 @@ export const ProgressDisplay = (props: {activeTaskId: string | null | undefined}
       </div>
       <Progress value={task.progress ?? 0} className="h-1.5" />
       <div className='flex flex-row w-full gap-2'>
-      <Button
-        variant="outline"
-        size="sm"
-        className="flex-1"
-        onClick={() => cancel(activeTaskId!)}
-      >
-        Cancel
-      </Button>
-      {task.status === "paused" ? (
-        
         <Button
-        variant="outline"
-        size="sm"
-        className="flex-1 animate-pulse "
-        onClick={() => resume(activeTaskId!)}
-      >
-        Resume
-      </Button>
-      ):(
-        <Button
-        variant="destructive"
-        size="sm"
-        className="flex-1"
-        onClick={() => pause(activeTaskId!)}
-      >
-        Pause
-      </Button>
-      )}
+          variant="outline"
+          size="sm"
+          className="flex-1"
+          onClick={() => cancel(activeTaskId!)}
+        >
+          Cancel
+        </Button>
+        {task.status === "paused" ? (
+
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex-1 animate-pulse "
+            onClick={() => resume(activeTaskId!)}
+          >
+            Resume
+          </Button>
+        ) : (
+          <Button
+            variant="destructive"
+            size="sm"
+            className="flex-1"
+            onClick={() => pause(activeTaskId!)}
+          >
+            Pause
+          </Button>
+        )}
       </div>
     </div>
   );

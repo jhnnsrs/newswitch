@@ -1,4 +1,3 @@
-import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 import {
   Tooltip,
@@ -11,12 +10,11 @@ import {
   useTurnOffIlluminationChannel,
   useTurnOnIllumination,
 } from '@/hooks/generated';
-import { IlluminationStateDefinition, useIlluminationState } from '@/hooks/states';
+import { useIlluminationState } from '@/hooks/states';
 import { cn } from '@/lib/utils';
 import { Power, Waves } from 'lucide-react';
-import { useOptimistic, useState } from 'react';
+import { useState } from 'react';
 import { OptimisticSlider } from '../ui/optimistic_slider';
-import { useGlobalStateStore } from '@/store';
 import { ResponsiveGrid } from '../ui/responsive-grid';
 
 // Color mapping for wavelengths
@@ -73,7 +71,7 @@ export function IlluminationControl() {
     useSetIlluminationIntensity();
 
 
-  
+
 
 
   const [localIntensities, setLocalIntensities] = useState<

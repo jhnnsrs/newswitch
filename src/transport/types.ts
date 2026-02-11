@@ -1,15 +1,14 @@
 // src/transport/types.ts
 
-
-export type TaskStatus = 
-  | 'pending' 
-  | 'running' 
-  | 'completed' 
-  | 'submitted'
-  | 'failed' 
-  | 'cancelled'
-  | 'paused'
-  | 'interrupted';
+export type TaskStatus =
+  | "pending"
+  | "running"
+  | "completed"
+  | "submitted"
+  | "failed"
+  | "cancelled"
+  | "paused"
+  | "interrupted";
 
 export interface Task<TArgs = unknown, TReturn = unknown> {
   id: string;
@@ -43,7 +42,7 @@ export interface HookInput {
   hash: string;
 }
 
-/** 
+/**
  * Full assign input matching the backend AssignInput model.
  * All fields except args are optional with sensible defaults.
  */
@@ -136,52 +135,54 @@ export interface AssignResponse {
 }
 
 // Log levels from the backend
-export type LogLevel = 'DEBUG' | 'INFO' | 'ERROR' | 'WARN' | 'CRITICAL';
+export type LogLevel = "DEBUG" | "INFO" | "ERROR" | "WARN" | "CRITICAL";
 
 // Message types sent FROM the agent (backend) TO the frontend
 export const FromAgentMessageType = {
-  REGISTER: 'REGISTER',
-  LOG: 'LOG',
-  PROGRESS: 'PROGRESS',
-  DONE: 'DONE',
-  YIELD: 'YIELD',
-  ERROR: 'ERROR',
-  PAUSED: 'PAUSED',
-  CRITICAL: 'CRITICAL',
-  STEPPED: 'STEPPED',
-  RESUMED: 'RESUMED',
-  CANCELLED: 'CANCELLED',
-  APP_CANCELLED: 'APP_CANCELLED',
-  ASSIGNED: 'ASSIGNED',
-  INTERRUPTED: 'INTERRUPTED',
-  HEARTBEAT_ANSWER: 'HEARTBEAT_ANSWER',
-  STATE_UPDATE: 'STATE_UPDATE',
-  STATE_PATCH: 'STATE_PATCH',
-  LOCK: 'LOCK',
-  UNLOCK: 'UNLOCK',
+  REGISTER: "REGISTER",
+  LOG: "LOG",
+  PROGRESS: "PROGRESS",
+  DONE: "DONE",
+  YIELD: "YIELD",
+  ERROR: "ERROR",
+  PAUSED: "PAUSED",
+  CRITICAL: "CRITICAL",
+  STEPPED: "STEPPED",
+  RESUMED: "RESUMED",
+  CANCELLED: "CANCELLED",
+  APP_CANCELLED: "APP_CANCELLED",
+  ASSIGNED: "ASSIGNED",
+  INTERRUPTED: "INTERRUPTED",
+  HEARTBEAT_ANSWER: "HEARTBEAT_ANSWER",
+  STATE_UPDATE: "STATE_UPDATE",
+  STATE_PATCH: "STATE_PATCH",
+  LOCK: "LOCK",
+  UNLOCK: "UNLOCK",
 } as const;
 
-export type FromAgentMessageType = typeof FromAgentMessageType[keyof typeof FromAgentMessageType];
+export type FromAgentMessageType =
+  (typeof FromAgentMessageType)[keyof typeof FromAgentMessageType];
 
 // Message types sent TO the agent (backend) FROM the frontend
 export const ToAgentMessageType = {
-  ASSIGN: 'ASSIGN',
-  CANCEL: 'CANCEL',
-  STEP: 'STEP',
-  COLLECT: 'COLLECT',
-  RESUME: 'RESUME',
-  PAUSE: 'PAUSE',
-  INTERRUPT: 'INTERRUPT',
-  PROVIDE: 'PROVIDE',
-  UNPROVIDE: 'UNPROVIDE',
-  INIT: 'INIT',
-  HEARTBEAT: 'HEARTBEAT',
-  BOUNCE: 'BOUNCE',
-  KICK: 'KICK',
-  PROTOCOL_ERROR: 'PROTOCOL_ERROR',
+  ASSIGN: "ASSIGN",
+  CANCEL: "CANCEL",
+  STEP: "STEP",
+  COLLECT: "COLLECT",
+  RESUME: "RESUME",
+  PAUSE: "PAUSE",
+  INTERRUPT: "INTERRUPT",
+  PROVIDE: "PROVIDE",
+  UNPROVIDE: "UNPROVIDE",
+  INIT: "INIT",
+  HEARTBEAT: "HEARTBEAT",
+  BOUNCE: "BOUNCE",
+  KICK: "KICK",
+  PROTOCOL_ERROR: "PROTOCOL_ERROR",
 } as const;
 
-export type ToAgentMessageType = typeof ToAgentMessageType[keyof typeof ToAgentMessageType];
+export type ToAgentMessageType =
+  (typeof ToAgentMessageType)[keyof typeof ToAgentMessageType];
 
 // Base message interface
 export interface BaseMessage {
@@ -269,7 +270,7 @@ export interface StateUpdateEvent {
 }
 
 export interface EnvelopPatch {
-  op: 'add' | 'remove' | 'replace' | 'move' | 'copy' | 'test';
+  op: "add" | "remove" | "replace" | "move" | "copy" | "test";
   path: string;
   value?: unknown;
   old_value?: string;
@@ -455,16 +456,14 @@ export interface TransportContextValue {
   assign: <TArgs, TReturn>(
     actionName: string,
     args: TArgs,
-    options?: AssignOptions
+    options?: AssignOptions,
   ) => Promise<Task<TArgs, TReturn>>;
   /** Get current state of a task by ID (fetches from server) */
   getTask: <TArgs = unknown, TReturn = unknown>(
-    taskId: string
+    taskId: string,
   ) => Promise<Task<TArgs, TReturn>>;
   /** Get a task from local cache */
-  getCachedTask: (
-    taskId: string
-  ) => Task | undefined;
+  getCachedTask: (taskId: string) => Task | undefined;
   /** Cancel a task */
   cancelTask: (taskId: string) => Promise<void>;
   pauseTask: (taskId: string) => Promise<void>;
@@ -473,7 +472,7 @@ export interface TransportContextValue {
   /** Subscribe to updates for a specific task */
   subscribeToTask: (
     taskId: string,
-    callback: (task: Task) => void
+    callback: (task: Task) => void,
   ) => () => void;
   /** Fetch a state from the server */
   fetchState: <T = unknown>(stateName: string) => Promise<T>;

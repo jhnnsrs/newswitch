@@ -1,8 +1,8 @@
 // src/hooks/useStateSync.ts
-import { useEffect, useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { ZodType } from 'zod';
+import { selectError, selectLoading, selectState, useGlobalStateStore } from '../store';
 import { useTransport } from '../transport/TransportProvider';
-import { useGlobalStateStore, selectState, selectLoading, selectError } from '../store';
 
 // --- Interfaces ---
 

@@ -1,1 +1,1 @@
-declare module 'jmuxer';
+declare module "jmuxer";

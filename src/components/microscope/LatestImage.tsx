@@ -1,16 +1,16 @@
-import { useState, useEffect, useRef } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useIOState } from '@/hooks/states';
 import { useTransport } from '@/transport/TransportProvider';
-import { ImageIcon, Download, RefreshCw } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Download, ImageIcon, RefreshCw } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 
 export function LatestImage() {
   const { data: ioState, loading: stateLoading } = useIOState({ subscribe: true });
   const { apiEndpoint } = useTransport();
-  
+
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [isLoadingImage, setIsLoadingImage] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -20,9 +20,9 @@ export function LatestImage() {
   // Fetch image when last_saved_file changes
   useEffect(() => {
     const filePath = ioState?.last_saved_file;
-    
+
     if (!filePath || filePath === lastFile) return;
-    
+
     setLastFile(filePath);
     setIsLoadingImage(true);
     setError(null);
@@ -34,18 +34,18 @@ export function LatestImage() {
         const url = `${baseUrl}/files/${encodeURIComponent(filePath)}`;
 
         const response = await fetch(url);
-        
+
         if (!response.ok) {
           throw new Error(`Failed to fetch image: ${response.status}`);
         }
 
         const blob = await response.blob();
-        
+
         // Revoke old URL to prevent memory leaks
         if (imageUrlRef.current) {
           URL.revokeObjectURL(imageUrlRef.current);
         }
-        
+
         const newUrl = URL.createObjectURL(blob);
         imageUrlRef.current = newUrl;
         setImageUrl(newUrl);
@@ -72,7 +72,7 @@ export function LatestImage() {
 
   const handleDownload = () => {
     if (!imageUrl || !lastFile) return;
-    
+
     const link = document.createElement('a');
     link.href = imageUrl;
     link.download = lastFile.split('/').pop() || 'image.png';
@@ -132,27 +132,27 @@ export function LatestImage() {
               {lastFile}
             </div>
           )}
-          
+
           {/* Image display area */}
           <div className="relative aspect-video bg-muted rounded-lg overflow-hidden flex items-center justify-center">
             {isLoadingImage && (
               <Skeleton className="absolute inset-0" />
             )}
-            
+
             {error && !isLoadingImage && (
               <div className="text-center p-4">
                 <ImageIcon className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
                 <p className="text-sm text-muted-foreground">{error}</p>
               </div>
             )}
-            
+
             {!imageUrl && !isLoadingImage && !error && (
               <div className="text-center p-4">
                 <ImageIcon className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
                 <p className="text-sm text-muted-foreground">No image captured yet</p>
               </div>
             )}
-            
+
             {imageUrl && !isLoadingImage && (
               <img
                 src={imageUrl}

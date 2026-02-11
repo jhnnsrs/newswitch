@@ -1,12 +1,10 @@
 // src/hooks/useStateSync.ts
-import { useCallback, useEffect, useRef } from 'react';
-import { selectError, selectLoading, selectState, useGlobalStateStore } from '../store';
-import { useTransport } from '../transport/TransportProvider';
 import { selectLock } from '@/store/stateStore';
+import { useGlobalStateStore } from '../store';
 
 // --- The Definition Interface ---
 export interface LockDefinition<T extends string> {
-  key: T;          
+  key: T;
 }
 
 export interface UseLockSyncOptions {
@@ -25,11 +23,11 @@ export const useLockSync = <T extends string>(
   definition: LockDefinition<T>,
   options: UseLockSyncOptions = {}
 ): string | undefined => {
-  
+
   // Use Zustand selectors for state subscription
   // Direct selector without useShallow - Zustand will properly detect changes
   const lockingTaskId = useGlobalStateStore(selectLock<T>(definition.key)) ?? undefined;
-  
+
 
   return lockingTaskId;
 };

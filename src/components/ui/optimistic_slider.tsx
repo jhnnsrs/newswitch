@@ -1,8 +1,8 @@
 "use client"
 
-import * as React from "react"
-import * as SliderPrimitive from "@radix-ui/react-slider"
 import { cn } from "@/lib/utils"
+import * as SliderPrimitive from "@radix-ui/react-slider"
+import * as React from "react"
 
 interface OptimisticSliderProps extends React.ComponentProps<typeof SliderPrimitive.Root> {
   onSave?: (value: number[]) => Promise<unknown>

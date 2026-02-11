@@ -1,5 +1,3 @@
-import { useEffect, useState } from 'react';
-import { Badge } from '@/components/ui/badge';
 import {
   Tooltip,
   TooltipContent,
@@ -8,8 +6,9 @@ import {
 } from '@/components/ui/tooltip';
 import { useSwitchObjective, useToggleObjective } from '@/hooks/generated';
 import { useObjectiveState } from '@/hooks/states';
-import { ChevronLeft, ChevronRight, Target } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 export function ObjectiveControl() {
   const { data: objectiveState, loading: stateLoading } = useObjectiveState({

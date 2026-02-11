@@ -1,19 +1,19 @@
+import { Microscope } from 'lucide-react'
 import './App.css'
-import { Toaster } from './components/ui/sonner'
 import {
-  StageControl,
-  StatusPanel,
-  SettingsPanel,
   LiveView,
   MultidimensionalAcquisitionControl,
+  SettingsPanel,
+  StageControl,
+  StatusPanel,
 } from './components/microscope'
-import { TransportProvider } from './transport'
-import { Microscope } from 'lucide-react'
 import {
-  ResizablePanelGroup,
-  ResizablePanel,
   ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
 } from './components/ui/resizable'
+import { Toaster } from './components/ui/sonner'
+import { TransportProvider } from './transport'
 
 
 function MicroscopeControlPanel() {

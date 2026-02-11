@@ -2,7 +2,6 @@ import { ActionButton } from '@/components/ActionButton';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Progress } from '@/components/ui/progress';
 import {
   Tooltip,
   TooltipContent,
@@ -12,8 +11,7 @@ import {
 import { MoveHomeDefinition, MoveStageDefinition } from '@/hooks/generated';
 import { useStagePositionLock } from '@/hooks/locks';
 import { useStageState } from '@/hooks/states';
-import { useTransportStore } from '@/store';
-import useCancelTask from '@/transport/useCancelTask';
+import { cn } from '@/lib/utils';
 import {
   ArrowDown,
   ArrowLeft,
@@ -24,9 +22,6 @@ import {
   RotateCcw,
 } from 'lucide-react';
 import { useState } from 'react';
-import { cn } from '@/lib/utils';
-import useResumeTask from '@/transport/useResumeTask';
-import { usePauseTask } from '@/transport/usePauseTask';
 import { ProgressDisplay } from '../TaskDisplay';
 
 

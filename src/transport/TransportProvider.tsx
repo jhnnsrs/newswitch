@@ -2,21 +2,21 @@
 
 import React, {
   createContext,
+  useCallback,
   useContext,
   useEffect,
-  useCallback,
   useMemo,
   useRef,
 } from 'react';
+import { useGlobalStateStore, useTransportStore } from '../store';
 import {
+  type AssignInput,
+  type AssignOptions,
+  type AssignResponse,
+  type Task,
   type TransportConfig,
   type TransportContextValue,
-  type Task,
-  type AssignResponse,
-  type AssignOptions,
-  type AssignInput,
 } from './types';
-import { useGlobalStateStore, useTransportStore } from '../store';
 import { WebSocketManager } from './WebSocketManager';
 
 const TransportContext = createContext<TransportContextValue | null>(null);

@@ -2,13 +2,13 @@ import { Badge } from '@/components/ui/badge';
 import { useCameraState, useIlluminationState, useObjectiveState, useStageState } from '@/hooks/states';
 import { CheckCircle2, RefreshCw, XCircle } from 'lucide-react';
 
-function StatusBadge({ 
-  label, 
-  isLoading, 
-  isConnected 
-}: { 
-  label: string; 
-  isLoading: boolean; 
+function StatusBadge({
+  label,
+  isLoading,
+  isConnected
+}: {
+  label: string;
+  isLoading: boolean;
   isConnected: boolean;
 }) {
   return (
@@ -29,7 +29,7 @@ function StatusBadge({
 }
 
 export function StatusPanel() {
-  
+
   const { data: camera, loading: cameraLoading } = useCameraState({ subscribe: true });
   const { data: stage, loading: stageLoading } = useStageState({ subscribe: true });
   const { data: illumination, loading: illuminationLoading } = useIlluminationState({ subscribe: true });

@@ -3,31 +3,28 @@ import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Separator } from '@/components/ui/separator';
 import {
-    useStartLiveView,
-    useStopLiveView
+  useStartLiveView,
+  useStopLiveView
 } from '@/hooks/generated';
 import { useCameraState, useObjectiveState } from '@/hooks/states';
 import { useCaptureAndDownload } from '@/hooks/useCaptureAndDownload';
 import { cn } from '@/lib/utils';
 import {
-    Camera,
-    ChevronDown,
-    Download,
-    Filter,
-    Grid3X3,
-    Play,
-    Settings2,
-    Square,
-    Sun,
-    Target
+  Camera,
+  ChevronDown,
+  Download,
+  Filter,
+  Play,
+  Settings2,
+  Square,
+  Sun,
+  Target
 } from 'lucide-react';
 import { useState } from 'react';
 import { CameraControl } from './CameraControl';
-import { IlluminationControl } from './IlluminationControl';
-import { MultidimensionalAcquisitionDialog } from './MultidimensionalAcquisitionDialog';
-import { ObjectiveControl } from './ObjectiveControl';
-import { MultidimensionalAcquisitionControl } from './MultidimensionalAcquisitionControl';
 import { FilterBankControl } from './FilterBankControl';
+import { IlluminationControl } from './IlluminationControl';
+import { ObjectiveControl } from './ObjectiveControl';
 
 interface SettingsSectionProps {
   title: string;
@@ -39,7 +36,7 @@ interface SettingsSectionProps {
 
 function SettingsSection({ title, icon, children, defaultOpen = true, badge }: SettingsSectionProps) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
-  
+
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
       <CollapsibleTrigger className="flex items-center justify-between w-full py-2 px-3 hover:bg-accent rounded-md">
@@ -60,15 +57,15 @@ function SettingsSection({ title, icon, children, defaultOpen = true, badge }: S
 export function SettingsPanel() {
   const { data: cameraState } = useCameraState({ subscribe: true });
   const { data: objectiveState } = useObjectiveState({ subscribe: true });
-  
-  
+
+
   // Live view and capture controls
   const { assign: startLiveView, isLoading: isStarting, isLocked: isStartLocked } = useStartLiveView();
   const { assign: stopLiveView, isLoading: isStopping, isLocked: isStopLocked } = useStopLiveView();
   const { capture, isCapturing, isDownloading, isLocked: isCaptureLocked } = useCaptureAndDownload();
-  
+
   const isLive = cameraState?.is_acquiring ?? false;
-  
+
 
   return (
     <div className="h-full flex flex-col">
@@ -77,7 +74,7 @@ export function SettingsPanel() {
           <Settings2 className="h-4 w-4" />
           Settings
         </h2>
-        
+
         {/* Acquisition Controls */}
         <div className="flex gap-1.5">
           <Button
@@ -121,38 +118,38 @@ export function SettingsPanel() {
           </Button>
         </div>
       </div>
-      
+
       <div className="flex-1 overflow-y-auto">
         {/* Camera Settings */}
-        <SettingsSection 
-          title="Camera" 
+        <SettingsSection
+          title="Camera"
           icon={<Camera className="h-4 w-4" />}
         >
-            <CameraControl/>
+          <CameraControl />
         </SettingsSection>
 
         <Separator />
 
         {/* Illumination Settings */}
-        <SettingsSection 
-          title="Illumination" 
+        <SettingsSection
+          title="Illumination"
           icon={<Sun className="h-4 w-4" />}
         >
-            <IlluminationControl />
+          <IlluminationControl />
         </SettingsSection>
         {/* Illumination Settings */}
-        <SettingsSection 
-          title="Filters" 
+        <SettingsSection
+          title="Filters"
           icon={<Filter className="h-4 w-4" />}
         >
-            <FilterBankControl />
+          <FilterBankControl />
         </SettingsSection>
 
         <Separator />
 
         {/* Objective Settings */}
-        <SettingsSection 
-          title="Objective" 
+        <SettingsSection
+          title="Objective"
           icon={<Target className="h-4 w-4" />}
           badge={objectiveState?.slot ? `Slot ${objectiveState.slot}` : undefined}
         >

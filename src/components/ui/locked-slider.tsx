@@ -1,9 +1,9 @@
-import * as React from 'react';
 import { Slider } from '@/components/ui/slider';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { useGlobalStateStore } from '@/store';
 import { cn } from '@/lib/utils';
+import { useGlobalStateStore } from '@/store';
 import { Lock } from 'lucide-react';
+import * as React from 'react';
 
 interface LockedSliderProps extends React.ComponentProps<typeof Slider> {
   lockKeys?: string[];

@@ -1,3 +1,4 @@
+import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import {
   Tooltip,
@@ -5,12 +6,10 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { useSwitchFilter, useToggleFilter } from '@/hooks/generated';
 import { useFilterBankState } from '@/hooks/states';
 import { cn } from '@/lib/utils';
-import { Filter, RotateCw } from 'lucide-react';
+import { RotateCw } from 'lucide-react';
 import { ResponsiveGrid } from '../ui/responsive-grid';
 
 // Color mapping for filter wavelengths

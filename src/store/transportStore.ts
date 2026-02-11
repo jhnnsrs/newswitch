@@ -1,7 +1,7 @@
 // src/store/transportStore.ts
 import { create } from 'zustand';
-import { immer } from 'zustand/middleware/immer';
 import { subscribeWithSelector } from 'zustand/middleware';
+import { immer } from 'zustand/middleware/immer';
 import type { Task, TaskStatus } from '../transport/types';
 
 export interface TransportStore {
@@ -31,25 +31,25 @@ export interface TransportStore {
     action: string,
     args: TArgs,
     status?: TaskStatus,
-    notify?: boolean
+    notify?: boolean,
   ) => Task<TArgs, TReturn>;
-  
+
   updateTask: (taskId: string, updates: Partial<Task>) => void;
-  
+
   getTask: <TArgs = unknown, TReturn = unknown>(
-    taskId: string
+    taskId: string,
   ) => Task<TArgs, TReturn> | undefined;
-  
+
   removeTask: (taskId: string) => void;
-  
+
   clearTasks: () => void;
 
   // Subscription actions (for callback-based subscriptions)
   subscribeToTask: (
     taskId: string,
-    callback: (task: Task) => void
+    callback: (task: Task) => void,
   ) => () => void;
-  
+
   notifyTaskSubscribers: (taskId: string, task: Task) => void;
 }
 
@@ -117,8 +117,8 @@ export const useTransportStore = create<TransportStore>()(
         taskId: string,
         action: string,
         args: TArgs,
-        status: TaskStatus = 'pending',
-        notify?: boolean
+        status: TaskStatus = "pending",
+        notify?: boolean,
       ): Task<TArgs, TReturn> => {
         const now = new Date();
         const task: Task<TArgs, TReturn> = {
@@ -157,7 +157,7 @@ export const useTransportStore = create<TransportStore>()(
       },
 
       getTask: <TArgs = unknown, TReturn = unknown>(
-        taskId: string
+        taskId: string,
       ): Task<TArgs, TReturn> | undefined => {
         return get().tasks[taskId] as Task<TArgs, TReturn> | undefined;
       },
@@ -206,24 +206,29 @@ export const useTransportStore = create<TransportStore>()(
           subs.forEach((callback) => callback(task));
         }
       },
-    }))
-  )
+    })),
+  ),
 );
 
 // Selectors
-export const selectTask = <TArgs = unknown, TReturn = unknown>(taskId: string) =>
-  (store: TransportStore) => store.tasks[taskId] as Task<TArgs, TReturn> | undefined;
+export const selectTask =
+  <TArgs = unknown, TReturn = unknown>(taskId: string) =>
+  (store: TransportStore) =>
+    store.tasks[taskId] as Task<TArgs, TReturn> | undefined;
 
 export const selectTasks = (store: TransportStore) => store.tasks;
 
-export const selectTasksByAction = (actionName: string) =>
-  (store: TransportStore) => 
+export const selectTasksByAction =
+  (actionName: string) => (store: TransportStore) =>
     Object.values(store.tasks).filter((task) => task.action === actionName);
 
 export const selectIsConnected = (store: TransportStore) => store.isConnected;
-export const selectIsReconnecting = (store: TransportStore) => store.isReconnecting;
-export const selectIsUnconnectable = (store: TransportStore) => store.isUnconnectable;
-export const selectReconnectAttempt = (store: TransportStore) => store.reconnectAttempt;
+export const selectIsReconnecting = (store: TransportStore) =>
+  store.isReconnecting;
+export const selectIsUnconnectable = (store: TransportStore) =>
+  store.isUnconnectable;
+export const selectReconnectAttempt = (store: TransportStore) =>
+  store.reconnectAttempt;
 
 // Convenience hook for accessing the store outside of React
 export const transportStore = {
