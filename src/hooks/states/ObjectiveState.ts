@@ -41,7 +41,7 @@ export const useObjectiveState = buildUseState<ObjectiveState>(
 
 
 
-export const expanded = expandWithSchema(
+export const expanded = await expandWithSchema(
   {
     slot: 1,
     magnification: 10,
@@ -59,6 +59,8 @@ export const expanded = expandWithSchema(
   },
   ObjectiveStateSchema,
   {
-    little_boy: (val) => ({ val }), // Example expander for the branded 'name' field
+    little_boy: async (val) => ({ val, fuck: "example" }), // Example expander for the branded 'name' field
   }
 );
+
+console.log(expanded);

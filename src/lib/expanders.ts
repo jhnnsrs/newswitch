@@ -26,7 +26,7 @@ type ExtractBrands<T> = BrandEntry<T> extends { brand: infer B }
   ? Extract<B, BrandKey>
   : never;
 
-type AnyExpander = ((value: unknown) => unknown) | undefined;
+type AnyExpander = ((value: unknown) => unknown | Promise<unknown>) | undefined;
 
 export type ExpandedValue<T, E> =
   [BrandOf<T>] extends [never]
@@ -37,12 +37,12 @@ export type ExpandedValue<T, E> =
         : T
     : BrandOf<T> extends keyof E
       ? E[BrandOf<T>] extends (...args: never[]) => infer R
-        ? R
+        ? Awaited<R>
         : Unbrand<T>
       : Unbrand<T>;
 
 type ExpanderMapForSchema<S extends z.ZodTypeAny> = {
-  [B in ExtractBrands<z.infer<S>>]?: (value: InputForBrand<z.infer<S>, B>) => unknown;
+  [B in ExtractBrands<z.infer<S>>]?: (value: InputForBrand<z.infer<S>, B>) => unknown | Promise<unknown>;
 };
 
 const getMeta = (schema: z.ZodTypeAny): Record<string, unknown> | undefined => {
@@ -62,11 +62,11 @@ const getBrandKey = (schema: z.ZodTypeAny): BrandKey | undefined => {
   return undefined;
 };
 
-const expandWithSchemaInternal = (
+const expandWithSchemaInternal = async (
   data: unknown,
   schema: z.ZodTypeAny,
-  expanders: Record<BrandKey, ((value: unknown) => unknown) | undefined>,
-): unknown => {
+  expanders: Record<BrandKey, AnyExpander>,
+): Promise<unknown> => {
   if (data === null || data === undefined) {
     return data;
   }
@@ -75,47 +75,47 @@ const expandWithSchemaInternal = (
   if (brandKey !== undefined) {
     const expander = expanders[brandKey];
     if (typeof expander === "function") {
-      return expander(data);
+      return await expander(data);
     }
   }
 
   if (schema instanceof z.ZodArray && Array.isArray(data)) {
-    return data.map((item) =>
-      expandWithSchemaInternal(item, schema.element as unknown as z.ZodTypeAny, expanders),
+    return await Promise.all(
+      data.map((item) =>
+        expandWithSchemaInternal(item, schema.element as unknown as z.ZodTypeAny, expanders),
+      ),
     );
   }
 
   if (schema instanceof z.ZodRecord && typeof data === "object" && data !== null && !Array.isArray(data)) {
     const input = data as Record<string, unknown>;
-    const result: Record<string, unknown> = {};
     const valueSchema = schema.valueType as unknown as z.ZodTypeAny;
-
-    for (const [key, value] of Object.entries(input)) {
-      result[key] = expandWithSchemaInternal(value, valueSchema, expanders);
-    }
-
-    return result;
+    const entries = await Promise.all(
+      Object.entries(input).map(async ([key, value]) => [
+        key,
+        await expandWithSchemaInternal(value, valueSchema, expanders),
+      ] as const),
+    );
+    return Object.fromEntries(entries);
   }
 
   if (schema instanceof z.ZodObject && typeof data === "object" && data !== null && !Array.isArray(data)) {
     const input = data as Record<string, unknown>;
-    const result: Record<string, unknown> = {};
     const shape = schema.shape;
-
-    for (const [key, value] of Object.entries(input)) {
-      if (key in shape) {
-        const childSchema = shape[key as keyof typeof shape] as z.ZodTypeAny;
-        result[key] = expandWithSchemaInternal(value, childSchema, expanders);
-      } else {
-        result[key] = value;
-      }
-    }
-
-    return result;
+    const entries = await Promise.all(
+      Object.entries(input).map(async ([key, value]) => {
+        if (key in shape) {
+          const childSchema = shape[key as keyof typeof shape] as z.ZodTypeAny;
+          return [key, await expandWithSchemaInternal(value, childSchema, expanders)] as const;
+        }
+        return [key, value] as const;
+      }),
+    );
+    return Object.fromEntries(entries);
   }
 
   if (schema instanceof z.ZodOptional || schema instanceof z.ZodNullable) {
-    return expandWithSchemaInternal(data, schema.unwrap() as unknown as z.ZodTypeAny, expanders);
+    return await expandWithSchemaInternal(data, schema.unwrap() as unknown as z.ZodTypeAny, expanders);
   }
 
   return data;
@@ -127,12 +127,12 @@ const expandWithSchemaInternal = (
  * Zod v4 brands are type-only; to apply runtime expansion for a branded field,
  * annotate that field with matching metadata: `.meta({ brand: "your_brand" })`.
  */
-export function expandWithSchema<S extends z.ZodTypeAny, E extends ExpanderMapForSchema<S>>(
+export async function expandWithSchema<S extends z.ZodTypeAny, E extends ExpanderMapForSchema<S>>(
   data: z.input<S>,
   schema: S,
   expanders: E,
-): ExpandedValue<z.infer<S>, E> {
-  return expandWithSchemaInternal(
+): Promise<ExpandedValue<z.infer<S>, E>> {
+  return await expandWithSchemaInternal(
     data,
     schema,
     expanders as Record<keyof E & BrandKey, AnyExpander>,
