@@ -8,14 +8,16 @@ import {
 // --- Schema ---
 export const FilterBankStateSchema = z.object({
   filters: z.array(
-    z.object({
-      slot: z.number(),
-      name: z.string(),
-      center_wavelength: z.number(),
-      bandwidth: z.number(),
-      transmission: z.number(),
-      is_active: z.boolean(),
-    }),
+    z
+      .object({
+        slot: z.number(),
+        name: z.string(),
+        center_wavelength: z.number(),
+        bandwidth: z.number(),
+        transmission: z.number(),
+        is_active: z.boolean(),
+      })
+      .brand("filter"),
   ),
   current_slot: z.number(),
 });

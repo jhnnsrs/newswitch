@@ -8,17 +8,19 @@ import {
 // --- Schema ---
 export const IlluminationStateSchema = z.object({
   illuminations: z.array(
-    z.object({
-      kind: z.string(),
-      slot: z.number(),
-      intensity: z.number(),
-      wavelength: z.number(),
-      fartface: z.number(),
-      channel: z.number(),
-      max_intensity: z.number(),
-      min_intensity: z.number(),
-      is_active: z.boolean(),
-    }),
+    z
+      .object({
+        kind: z.string(),
+        slot: z.number(),
+        intensity: z.number(),
+        wavelength: z.number(),
+        fartface: z.number(),
+        channel: z.number(),
+        max_intensity: z.number(),
+        min_intensity: z.number(),
+        is_active: z.boolean(),
+      })
+      .brand("illumination"),
   ),
 });
 

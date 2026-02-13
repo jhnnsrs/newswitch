@@ -123,6 +123,9 @@ const mapToZod = (arg: SchemaArg, ctx: GeneratorContext): string => {
       case 'MEMORY_STRUCTURE':
         base = 'z.record(z.string(), z.any())';
         break;
+      case 'SRUCTURE':
+        base = `z.string().brand('${arg.identifier}')`;
+        break;
       case 'LIST':
         if (arg.children?.[0]) {
           base = `z.array(${mapToZod(arg.children[0], ctx)})`;
@@ -149,7 +152,7 @@ const mapToZod = (arg: SchemaArg, ctx: GeneratorContext): string => {
           .join(',\n');
 
         // 2. Create Base Object
-        let schemaCode = `z.object({\n${fields}\n})`;
+        let schemaCode = `z.object({\n${fields}\n}).brand('${arg.identifier}')`;
 
         // 3. Append Validators (Refactored)
         schemaCode = appendValidators(schemaCode, children);

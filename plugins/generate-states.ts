@@ -43,6 +43,9 @@ const mapToZod = (port: Port): string => {
     case 'BOOL': 
       base = 'z.boolean()'; 
       break;
+    case "STRUCTURE":
+      base = `z.string().brand('${port.identifier}').meta({ brand: '${port.identifier}' })`;
+      break;
     case 'STRING': 
       if (port.choices && port.choices.length > 0) {
         const values = port.choices.map((choice) => JSON.stringify(choice.key)).join(', ');
@@ -54,9 +57,9 @@ const mapToZod = (port: Port): string => {
     case 'ENUM':
       if (port.choices && port.choices.length > 0) {
         const values = port.choices.map((choice) => JSON.stringify(choice.key)).join(', ');
-        base = `z.enum([${values}])`;
+        base = `z.enum([${values}]).brand('${port.identifier}').meta({ brand: '${port.identifier}' })`;
       } else {
-        base = 'z.string()';
+        base = `z.string().brand('${port.identifier}').meta({ brand: '${port.identifier}' })`;
       }
       break;
     case 'LIST': 
@@ -83,9 +86,9 @@ const mapToZod = (port: Port): string => {
         const fields = port.children.map((child) => 
           `  ${child.key}: ${mapToZod(child)}`
         ).join(',\n');
-        base = `z.object({\n${fields}\n})`;
+        base = `z.object({\n${fields}\n}).brand('${port.identifier}')`;
       } else {
-        base = 'z.object({})';
+        base = `z.object({}).brand('${port.identifier}')`;
       }
       break;
     case 'UNION':

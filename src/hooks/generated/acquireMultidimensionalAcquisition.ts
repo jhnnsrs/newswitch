@@ -7,11 +7,13 @@ import {
 // --- Shared Models ---
 
 /** Represents an illumination channel to acquire. */
-export const IlluminationSchema = z.object({
-  source: z.string(),
-  wavelength: z.number(),
-  intensity: z.number(),
-});
+export const IlluminationSchema = z
+  .object({
+    source: z.string(),
+    wavelength: z.number(),
+    intensity: z.number(),
+  })
+  .brand('illumination');
 /** Represents an illumination channel to acquire. */
 export type Illumination = z.infer<typeof IlluminationSchema>;
 
@@ -41,6 +43,7 @@ export const StreamsSchema = z
         "List of illuminations to use for this stream (e.g., [{'source': 'LED1', 'wavelength': 488, 'intensity': 0.8}])",
       ),
   })
+  .brand('streams')
   .superRefine((val, ctx) => {
     {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -62,111 +65,123 @@ export const StreamsSchema = z
 export type Streams = z.infer<typeof StreamsSchema>;
 
 /** Data class representing a software autofocus hook to be executed during acquisition. */
-export const SoftwareAutofocusHookSchema = z.object({
-  speed: z.number().optional(),
-});
+export const SoftwareAutofocusHookSchema = z
+  .object({
+    speed: z.number().optional(),
+  })
+  .brand('software_autofocus_hook');
 /** Data class representing a software autofocus hook to be executed during acquisition. */
 export type SoftwareAutofocusHook = z.infer<typeof SoftwareAutofocusHookSchema>;
 
 /** Data class representing a z-calibration hook to be executed during acquisition. */
-export const ZCalibrationHookSchema = z.object({
-  calibration_points: z.number().optional(),
-});
+export const ZCalibrationHookSchema = z
+  .object({
+    calibration_points: z.number().optional(),
+  })
+  .brand('z_calibration_hook');
 /** Data class representing a z-calibration hook to be executed during acquisition. */
 export type ZCalibrationHook = z.infer<typeof ZCalibrationHookSchema>;
 
 /** Represents a stack of images at different z-slices. */
-export const StackSchema = z.object({
-  z_offset: z.number(),
-  z_slices: z.array(z.number()),
-  z_step: z.number(),
-  channels: z.array(
-    StreamsSchema.describe(
-      'Represents which channels to acquire at each position.',
+export const StackSchema = z
+  .object({
+    z_offset: z.number(),
+    z_slices: z.array(z.number()),
+    z_step: z.number(),
+    channels: z.array(
+      StreamsSchema.describe(
+        'Represents which channels to acquire at each position.',
+      ),
     ),
-  ),
-  /** List of hooks to execute at each z-slice (e.g., 'autofocus', 'z_calibration') */
-  z_hooks: z
-    .array(
-      z.union([
-        SoftwareAutofocusHookSchema.describe(
-          'Data class representing a software autofocus hook to be executed during acquisition.',
-        ),
-        ZCalibrationHookSchema.describe(
-          'Data class representing a z-calibration hook to be executed during acquisition.',
-        ),
-      ]),
-    )
-    .describe(
-      "List of hooks to execute at each z-slice (e.g., 'autofocus', 'z_calibration')",
-    ),
-});
+    /** List of hooks to execute at each z-slice (e.g., 'autofocus', 'z_calibration') */
+    z_hooks: z
+      .array(
+        z.union([
+          SoftwareAutofocusHookSchema.describe(
+            'Data class representing a software autofocus hook to be executed during acquisition.',
+          ),
+          ZCalibrationHookSchema.describe(
+            'Data class representing a z-calibration hook to be executed during acquisition.',
+          ),
+        ]),
+      )
+      .describe(
+        "List of hooks to execute at each z-slice (e.g., 'autofocus', 'z_calibration')",
+      ),
+  })
+  .brand('stack');
 /** Represents a stack of images at different z-slices. */
 export type Stack = z.infer<typeof StackSchema>;
 
 /** Represents a position in 3D space. */
-export const PositionSchema = z.object({
-  x: z.number(),
-  y: z.number(),
-  z: z.number(),
-  stacks: z.array(
-    StackSchema.describe('Represents a stack of images at different z-slices.'),
-  ),
-  /** List of hooks to execute at each position (e.g., 'autofocus', 'z_calibration') */
-  p_hooks: z
-    .array(
-      z.union([
-        SoftwareAutofocusHookSchema.describe(
-          'Data class representing a software autofocus hook to be executed during acquisition.',
-        ),
-        ZCalibrationHookSchema.describe(
-          'Data class representing a z-calibration hook to be executed during acquisition.',
-        ),
-      ]),
-    )
-    .describe(
-      "List of hooks to execute at each position (e.g., 'autofocus', 'z_calibration')",
+export const PositionSchema = z
+  .object({
+    x: z.number(),
+    y: z.number(),
+    z: z.number(),
+    stacks: z.array(
+      StackSchema.describe(
+        'Represents a stack of images at different z-slices.',
+      ),
     ),
-});
+    /** List of hooks to execute at each position (e.g., 'autofocus', 'z_calibration') */
+    p_hooks: z
+      .array(
+        z.union([
+          SoftwareAutofocusHookSchema.describe(
+            'Data class representing a software autofocus hook to be executed during acquisition.',
+          ),
+          ZCalibrationHookSchema.describe(
+            'Data class representing a z-calibration hook to be executed during acquisition.',
+          ),
+        ]),
+      )
+      .describe(
+        "List of hooks to execute at each position (e.g., 'autofocus', 'z_calibration')",
+      ),
+  })
+  .brand('position');
 /** Represents a position in 3D space. */
 export type Position = z.infer<typeof PositionSchema>;
 
 /** Represents a timepoint in a temporal sequence. */
-export const TimepointSchema = z.object({
-  /** Absolute time to acquire this timepoint (e.g., '2024-01-01T12:00:00') or None to acquire immediately after the previous timepoint */
-  time: z
-    .any()
-    .describe(
-      "Absolute time to acquire this timepoint (e.g., '2024-01-01T12:00:00') or None to acquire immediately after the previous timepoint",
-    )
-    .optional(),
-  /** List of stage positions to acquire at this timepoint */
-  positions: z
-    .array(PositionSchema.describe('Represents a position in 3D space.'))
-    .describe('List of stage positions to acquire at this timepoint'),
-  /** Order in which to visit stage positions (e.g., 'sequential', 'random') */
-  position_order: z
-    .string()
-    .describe(
-      "Order in which to visit stage positions (e.g., 'sequential', 'random')",
-    )
-    .optional(),
-  /** List of hooks to execute at each timepoint (e.g., 'autofocus', 'z_calibration') */
-  t_hooks: z
-    .array(
-      z.union([
-        SoftwareAutofocusHookSchema.describe(
-          'Data class representing a software autofocus hook to be executed during acquisition.',
-        ),
-        ZCalibrationHookSchema.describe(
-          'Data class representing a z-calibration hook to be executed during acquisition.',
-        ),
-      ]),
-    )
-    .describe(
-      "List of hooks to execute at each timepoint (e.g., 'autofocus', 'z_calibration')",
-    ),
-});
+export const TimepointSchema = z
+  .object({
+    /** Absolute time to acquire this timepoint (e.g., '2024-01-01T12:00:00') or None to acquire immediately after the previous timepoint */
+    time: z
+      .any()
+      .describe(
+        "Absolute time to acquire this timepoint (e.g., '2024-01-01T12:00:00') or None to acquire immediately after the previous timepoint",
+      )
+      .optional(),
+    /** List of stage positions to acquire at this timepoint */
+    positions: z
+      .array(PositionSchema.describe('Represents a position in 3D space.'))
+      .describe('List of stage positions to acquire at this timepoint'),
+    /** Order in which to visit stage positions (e.g., 'sequential', 'random') */
+    position_order: z
+      .string()
+      .describe(
+        "Order in which to visit stage positions (e.g., 'sequential', 'random')",
+      )
+      .optional(),
+    /** List of hooks to execute at each timepoint (e.g., 'autofocus', 'z_calibration') */
+    t_hooks: z
+      .array(
+        z.union([
+          SoftwareAutofocusHookSchema.describe(
+            'Data class representing a software autofocus hook to be executed during acquisition.',
+          ),
+          ZCalibrationHookSchema.describe(
+            'Data class representing a z-calibration hook to be executed during acquisition.',
+          ),
+        ]),
+      )
+      .describe(
+        "List of hooks to execute at each timepoint (e.g., 'autofocus', 'z_calibration')",
+      ),
+  })
+  .brand('timepoint');
 /** Represents a timepoint in a temporal sequence. */
 export type Timepoint = z.infer<typeof TimepointSchema>;
 
@@ -209,6 +224,7 @@ export const MultidimensionalAcquisitionSchema = z
         "List of hooks to execute at the start of the acquisition (e.g., 'autofocus', 'z_calibration')",
       ),
   })
+  .brand('multidimensional_acquisition')
   .superRefine((val, ctx) => {
     {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any

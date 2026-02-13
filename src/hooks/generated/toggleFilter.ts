@@ -7,14 +7,16 @@ import {
 // --- Shared Models ---
 
 /** The newly active filter. */
-export const FilterSchema = z.object({
-  slot: z.number().optional(),
-  name: z.string().optional(),
-  center_wavelength: z.number().optional(),
-  bandwidth: z.number().optional(),
-  transmission: z.number().optional(),
-  is_active: z.boolean().optional(),
-});
+export const FilterSchema = z
+  .object({
+    slot: z.number().optional(),
+    name: z.string().optional(),
+    center_wavelength: z.number().optional(),
+    bandwidth: z.number().optional(),
+    transmission: z.number().optional(),
+    is_active: z.boolean().optional(),
+  })
+  .brand('filter');
 /** The newly active filter. */
 export type Filter = z.infer<typeof FilterSchema>;
 

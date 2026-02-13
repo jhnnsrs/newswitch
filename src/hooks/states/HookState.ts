@@ -8,9 +8,11 @@ import {
 // --- Schema ---
 export const HookStateSchema = z.object({
   registered_hooks: z.array(
-    z.object({
-      type: z.string(),
-    }),
+    z
+      .object({
+        type: z.string(),
+      })
+      .brand("registered_hook"),
   ),
 });
 
