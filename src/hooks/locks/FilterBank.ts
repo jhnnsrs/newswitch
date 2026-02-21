@@ -6,6 +6,7 @@ import {
 
 // --- Definition ---
 export const FilterBankDefinition: LockDefinition<"filter_bank"> = {
+  // Lock schema for filter_bank (You can add a "description" field in your schema for better documentation)
   key: "filter_bank", // The ID used by the backend
 };
 

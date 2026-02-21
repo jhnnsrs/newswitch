@@ -6,6 +6,7 @@ import {
 
 // --- Definition ---
 export const CameraParametersDefinition: LockDefinition<"camera_parameters"> = {
+  // Lock schema for camera_parameters (You can add a "description" field in your schema for better documentation)
   key: "camera_parameters", // The ID used by the backend
 };
 

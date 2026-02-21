@@ -6,6 +6,7 @@ import {
 
 // --- Definition ---
 export const IoDefinition: LockDefinition<"io"> = {
+  // Lock schema for io (You can add a "description" field in your schema for better documentation)
   key: "io", // The ID used by the backend
 };
 
