@@ -26,14 +26,7 @@ const BACKEND_WS = window.__agent_ws_url__ || import.meta.env.VITE_WEBSOCKET_URL
 function MicroscopeControlPanel() {
   return (
     <div className="h-screen flex flex-col bg-background text-foreground dark">
-      {/* Compact Header */}
-      <header className="h-12 border-b bg-card flex items-center justify-between px-4 shrink-0">
-        <div className="flex items-center gap-2">
-          <Microscope className="h-5 w-5 text-primary" />
-          <h1 className="text-lg font-semibold">Mikroskope</h1>
-        </div>
-        <StatusPanel />
-      </header>
+     
 
       {/* Main Layout: Resizable Left Panel + Center View + Right Panel */}
       <ResizablePanelGroup direction="horizontal" className="flex-1">
