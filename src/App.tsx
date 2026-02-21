@@ -16,6 +16,13 @@ import { Toaster } from './components/ui/sonner'
 import { TransportProvider } from './transport'
 
 
+// The backend API URL is either injected into the global scope by the
+// electron app or taken from environment variables, allowing for flexibility in different deployment scenarios.
+const BACKEND_API = window.__agent_url__ || import.meta.env.VITE_BACKEND_URL 
+const BACKEND_WS = window.__agent_ws_url__ || import.meta.env.VITE_WEBSOCKET_URL
+
+
+
 function MicroscopeControlPanel() {
   return (
     <div className="h-screen flex flex-col bg-background text-foreground dark">
@@ -65,8 +72,8 @@ function App() {
   return (
     <TransportProvider config={{ 
       instanceId: 'microscope-control-panel',
-      apiEndpoint: import.meta.env.VITE_BACKEND_URL, 
-      wsEndpoint: import.meta.env.VITE_WEBSOCKET_URL 
+      apiEndpoint: BACKEND_API,
+      wsEndpoint: BACKEND_WS
     }}>
       <MicroscopeControlPanel />
       <Toaster position="bottom-right" richColors />

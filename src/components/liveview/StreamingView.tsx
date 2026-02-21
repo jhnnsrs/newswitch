@@ -47,7 +47,7 @@ interface LiveViewProps {
 }
 
 export const StreamingView: React.FC<LiveViewProps> = ({
-  url = 'ws://jhnnsrs-lab:8099/ws/video',
+  url = import.meta.env.VITE_WEBSOCKET_URL + '/video',
   autoReconnect = true,
   reconnectDelay = 2000,
   maxReconnectAttempts = 5,
