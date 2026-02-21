@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import prettier from 'prettier';
+import zod from 'zod';
 import type { Plugin } from 'vite';
 
 // --- CONFIG ---
@@ -14,12 +15,25 @@ export interface GenerateStatesPluginOptions {
 }
 
 
+const LockSchema = zod.object({
+  key: zod.string(),
+  description: zod.string().optional(),
+  // Add more fields as needed based on your schema
+});
+
+const LocksSchema = zod.object({
+  locks: zod.record(zod.string(), LockSchema)
+});
+
+type LockDef = zod.infer<typeof LockSchema>;
+type LocksSchemaType = zod.infer<typeof LocksSchema>;
+
 
 const toCamel = (s: string) => s.replace(/_([a-z])/g, (g) => g[1].toUpperCase());
 const toPascal = (s: string) => { const c = toCamel(s); return c.charAt(0).toUpperCase() + c.slice(1); };
 
 // --- CONTENT GENERATOR ---
-const generateContent = (key: string, stateDef: any) => {
+const generateContent = (key: string, lockDef: LockDef) => {
   const hookName = `use${toPascal(key)}Lock`; // useStageState
   const typeName = `${toPascal(key)}`;      // StageState (Type)
   const defName = `${toPascal(key)}Definition`;
@@ -31,6 +45,7 @@ import { useLockSync, type LockDefinition, type UseLockSyncOptions} from '${IMPO
 
 // --- Definition ---
 export const ${defName}: LockDefinition<"${key}"> = {
+  // ${lockDef.description ? lockDef.description : 'No description provided'} (You can add a "description" field in your schema for better documentation)
   key: "${key}", // The ID used by the backend
 };
 
@@ -58,14 +73,14 @@ export default function generateLocksPlugin(options: GenerateStatesPluginOptions
 
       console.log(`🔄 [GenLocks] Fetching schema from ${schemaUrl}...`);
       
-      let schema;
+      let schema: LocksSchemaType | null = null;
       try {
         const response = await fetch(schemaUrl);
         if (!response.ok) {
           console.error(`❌ [GenLocks] Failed to fetch schema from ${schemaUrl}: ${response.status}`);
           return;
         }
-        schema = await response.json();
+        schema = LocksSchema.parse(await response.json());
       } catch (error) {
         console.error(`❌ [GenLocks] Errosr fetching schema from ${schemaUrl}:`, error);
         return;

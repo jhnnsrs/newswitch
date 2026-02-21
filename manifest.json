@@ -1,0 +1,25 @@
+{
+  "generatedAt": "2026-02-21T14:27:24.304Z",
+  "dependencies": [
+    "acquireMultidimensionalAcquisition",
+    "activateDetector",
+    "captureImage",
+    "deactivateDetector",
+    "failingCamera",
+    "index",
+    "longStuffRunning",
+    "moveHome",
+    "moveStage",
+    "moveToStagePosition",
+    "setIlluminationIntensity",
+    "startLiveView",
+    "stopLiveView",
+    "switchFilter",
+    "switchObjective",
+    "toggleFilter",
+    "toggleObjective",
+    "turnOffIlluminationChannel",
+    "turnOnIllumination",
+    "updateDetector"
+  ]
+}
