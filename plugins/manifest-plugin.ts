@@ -5,12 +5,12 @@ import path from 'node:path';
 interface HookManifestOptions {
   /** Path to the folder containing your generated hooks */
   hooksDir: string;
-  /** Name of the output file. Default: 'manifest.json' */
+  /** Name of the output file. Default: 'blok.json' */
   outDir?: string;
 }
 
 export function ViteHookManifest(options: HookManifestOptions): Plugin {
-  const { hooksDir, outDir = 'manifest.json' } = options;
+  const { hooksDir, outDir = 'blok.json' } = options;
   const importedHooks = new Set<string>();
 
   return {
@@ -34,9 +34,31 @@ export function ViteHookManifest(options: HookManifestOptions): Plugin {
     // Runs after the bundle is written to the disk
     writeBundle() {
       const manifestPath = path.resolve(process.cwd(), outDir);
+      const packagePath = path.resolve(process.cwd(), 'package.json');
+      let packageData: Record<string, unknown> = {};
+
+      try {
+        packageData = JSON.parse(fs.readFileSync(packagePath, 'utf-8')) as Record<string, unknown>;
+      } catch {
+        packageData = {};
+      }
+
+      const scripts = (packageData.scripts as Record<string, string> | undefined) ?? {};
       
       const manifest = {
         generatedAt: new Date().toISOString(),
+        app: {
+          name: (packageData.name as string | undefined) ?? 'unknown',
+          version: (packageData.version as string | undefined) ?? '0.0.0',
+          description: (packageData.description as string | undefined) ?? '',
+          startPage: (packageData.homepage as string | undefined) ?? '/index.html',
+          type: (packageData.type as string | undefined) ?? 'unknown',
+          scripts: {
+            dev: scripts.dev ?? '',
+            build: scripts.build ?? '',
+            preview: scripts.preview ?? '',
+          },
+        },
         dependencies: Array.from(importedHooks).sort()
       };
 

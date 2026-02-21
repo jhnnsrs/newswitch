@@ -26,7 +26,7 @@ export default defineConfig(({ mode }) => {
       tailwindcss(),
       ViteHookManifest({
       hooksDir: 'src/hooks/generated', // The source of your generated hooks
-      outDir: 'manifest.json'          // Optional: custom name/location
+      outDir: 'blok.json'              // Optional: custom name/location
     })
     ],
     resolve: {

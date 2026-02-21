@@ -64,11 +64,9 @@ jobs:
 
       - name: Create release archive
         if: steps.semantic.outputs.new_release_published == 'true'
-        env:
-          TAG_NAME: ${{ steps.semantic.outputs.new_release_git_tag }}
         run: |
-          ZIP_NAME="newswitch-${TAG_NAME}.zip"
-          zip -r "$ZIP_NAME" dist
+          ZIP_NAME="blok.zip"
+          (cd dist && zip -r "../$ZIP_NAME" .)
           echo "ZIP_NAME=$ZIP_NAME" >> "$GITHUB_ENV"
 
       - name: Generate manifest metadata for release body
@@ -76,28 +74,28 @@ jobs:
         env:
           VERSION: ${{ steps.semantic.outputs.new_release_version }}
         run: |
-          if [ ! -f manifest.json ]; then
-            echo "manifest.json not found at repository root."
+          if [ ! -f blok.json ]; then
+            echo "blok.json not found at repository root."
             exit 1
           fi
 
-          GENERATED_AT="$(jq -r '.generatedAt // "n/a"' manifest.json)"
-          DEP_COUNT="$(jq -r '(.dependencies // []) | length' manifest.json)"
+          GENERATED_AT="$(jq -r '.generatedAt // "n/a"' blok.json)"
+          DEP_COUNT="$(jq -r '(.dependencies // []) | length' blok.json)"
 
           {
-            echo "## Build manifest metadata"
+            echo "## Build blok metadata"
             echo
             echo "## Build metadata"
             echo "- Version: ${VERSION}"
             echo "- Generated at: ${GENERATED_AT}"
             echo "- Dependency count: ${DEP_COUNT}"
             echo
-            echo "## Manifest dependencies"
-            jq -r '(.dependencies // []) | .[] | "- `\(.)`"' manifest.json
+            echo "## Blok dependencies"
+            jq -r '(.dependencies // []) | .[] | "- `\(.)`"' blok.json
             echo
-            echo "## Raw manifest.json"
+            echo "## Raw blok.json"
             echo '```json'
-            cat manifest.json
+            cat blok.json
             echo '```'
           } > release-manifest-metadata.md
 
@@ -108,7 +106,7 @@ jobs:
           tag_name: ${{ steps.semantic.outputs.new_release_git_tag }}
           files: |
             ${{ env.ZIP_NAME }}
-            manifest.json
+            blok.json
 
       - name: Append manifest metadata to release notes
         if: steps.semantic.outputs.new_release_published == 'true'
@@ -125,8 +123,8 @@ jobs:
             const release = await github.rest.repos.getReleaseByTag({ owner, repo, tag })
             const currentBody = release.data.body || ''
 
-            if (currentBody.includes('## Build manifest metadata')) {
-              core.info('Manifest metadata already present in release notes; skipping append.')
+            if (currentBody.includes('## Build blok metadata')) {
+              core.info('Blok metadata already present in release notes; skipping append.')
               return
             }
 
