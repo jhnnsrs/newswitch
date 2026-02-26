@@ -44,6 +44,7 @@ const SelectionCrosshair = ({ position }: { position: Vector3 }) => {
  */
 const ClickWidget = ({ position, onClose }: { position: Vector3; onClose: () => void }) => {
 
+    const { data: stageState } = useStageState({ subscribe: true });
     const { assign: moveToPosition } = useMoveStage();
 
 
@@ -61,7 +62,7 @@ const ClickWidget = ({ position, onClose }: { position: Vector3; onClose: () => 
                         Z: {position.z.toFixed(2)}
                     </div>
                 )}
-                <Button onClick={() => moveToPosition({ x: -position.x, y: -position.y, z: position.z, is_absolute: true, step_size: 1 })} className="w-full mt-2 text-xs bg-emerald-600 hover:bg-emerald-700 text-white py-1 px-2 rounded">Move Here</Button>
+                <Button onClick={() => {moveToPosition({ x:  (stageState?.x || 0) - position.x, y: (stageState?.y || 0) - position.y, z: 0, is_absolute: true, step_size: 10 }); onClose()}} className="w-full mt-2 text-xs bg-emerald-600 hover:bg-emerald-700 text-white py-1 px-2 rounded">Move Here</Button>
             </Card>
         </Html>
     );      
@@ -90,14 +91,14 @@ export const StageBox = () => {
                 <ClickWidget position={clickPoint} onClose={() => setClickPoint(null)} />
             )}
             {clickPoint && <SelectionCrosshair position={clickPoint} />}
-        <group position={[stageState.x, stageState.y, stageState.z]}>
+        <group position={[stageState.x, stageState.y, -0.5]}>
             <mesh position={[0, 0, -1]} onClick={(e) => {
                     if (!e.metaKey) return; // Allow zoom/pan with modifier keys
                     e.stopPropagation();
                     setClickPoint(e.point);
                 }}>
                 <planeGeometry args={[stageRangeX, stageRangeY]} />
-                <meshStandardMaterial color="#000000" />
+                <meshStandardMaterial color="#916e6e57" />
             </mesh>
             {/* 2. The Functional Grid Overlay */}
                 <gridHelper 

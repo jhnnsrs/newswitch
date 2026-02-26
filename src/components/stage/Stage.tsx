@@ -13,11 +13,9 @@ import {
     VideoTexture,
 } from 'three';
 import { useCurrentAffineTransform } from '../../hooks/useCurrentAffineTransform';
-import { StageBox } from './StageBox';
-import { TransportProvider } from '@/transport';
-import { TransportContext } from '@/transport/TransportProvider';
 import { PanelContext, PanelProvider } from './PanelProvider';
 import { PanelRenderer } from './panels/PanelRenderer';
+import { StageBox } from './StageBox';
 
 type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'error';
 
@@ -257,7 +255,7 @@ export const Stage = () => {
                 <StageBox />
 
                 
-                <MapControls makeDefault enableZoom={true} enablePan={true} enableRotate={false} zoomSpeed={1} panSpeed={1} />
+                <MapControls makeDefault enableZoom={true} enablePan={true} enableRotate={true} zoomSpeed={1} panSpeed={1} />
 
                 {/* The Live Video Feed */}
                 <LivePlane matrix={stageMatrix} texture={liveTexture} />
