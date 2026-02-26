@@ -1,6 +1,5 @@
-import { useCurrentAffineTransform } from '../../hooks/useCurrentAffineTransform';
 import { useStageState } from '@/hooks/states';
-import { Line, OrbitControls } from '@react-three/drei';
+import { Line, MapControls, OrthographicCamera } from '@react-three/drei';
 import { Canvas, useFrame } from '@react-three/fiber';
 import JMuxer from 'jmuxer';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -9,10 +8,11 @@ import {
     DoubleSide,
     LinearFilter,
     Matrix4,
+    Mesh,
     SRGBColorSpace,
     VideoTexture,
-    Mesh,
 } from 'three';
+import { useCurrentAffineTransform } from '../../hooks/useCurrentAffineTransform';
 
 type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'error';
 
@@ -176,7 +176,35 @@ const ScaleBar = ({ axis, lengthUm, position, color }: any) => {
     );
 };
 
-export const Stage = ({ setStats }: StageProps) => {
+
+
+const StageBox = () => {
+    const { data: stageState } = useStageState({ subscribe: true });
+
+    if (!stageState) return null;
+
+    const stageRangeX = Math.max(200, (stageState?.max_x ?? 100) - (stageState?.min_x ?? -100));
+    const stageRangeY = Math.max(200, (stageState?.max_y ?? 100) - (stageState?.min_y ?? -100));
+
+    // Position is [x, y, z]. We use Z=-0.5 so it sits slightly below our video and grid.
+    return (
+        <group position={[stageState.x, stageState.y, stageState.z]}>
+            <mesh position={[0, 0, -1]}>
+                <planeGeometry args={[stageRangeX, stageRangeY]} />
+                <meshStandardMaterial color="#000000" />
+            </mesh>
+            <mesh position={[0, 0, -0.9]}>
+                <planeGeometry args={[stageRangeX, stageRangeY]} />
+                <meshBasicMaterial color="#334155" wireframe wireframeLinewidth={5} />
+            </mesh>
+        </group>
+    );
+};
+
+
+
+
+export const Stage = ({ setStats }) => {
     const { data: stageState } = useStageState({ subscribe: true });
     const affine = useCurrentAffineTransform();
     const [streamStats, setStreamStats] = useState<StreamStats>({ bytesReceived: 0, chunksReceived: 0 });
@@ -219,10 +247,11 @@ export const Stage = ({ setStats }: StageProps) => {
 
     return (
         <div className="relative h-full w-full overflow-hidden rounded-lg bg-black">
-            <Canvas camera={{ position: [150, -200, 180], fov: 40, near: 0.1, far: 10000, up: [0, 0, 1] }}>
+            <Canvas >
                 <color attach="background" args={['#020617']} />
                 <ambientLight intensity={0.7} />
                 <pointLight position={[100, 100, 100]} />
+                <OrthographicCamera makeDefault zoom={1} position={[0, 0, 100]} near={0.1} far={1000} up={[0, 0, 1]} />
 
                 {/* Grid Visuals */}
                 <group>
@@ -230,10 +259,11 @@ export const Stage = ({ setStats }: StageProps) => {
                     <Line points={[[0, -stageRangeY / 2, 0.1], [0, stageRangeY / 2, 0.1]]} color="#22c55e" lineWidth={1} />
                 </group>
 
-                <mesh position={[0, 0, -0.5]}>
-                    <planeGeometry args={[stageRangeX, stageRangeY]} />
-                    <meshStandardMaterial color="#111827" wireframe transparent opacity={0.3} />
-                </mesh>
+
+                <StageBox />
+
+                
+                <MapControls makeDefault enableZoom={true} enablePan={true} enableRotate={false} zoomSpeed={1} panSpeed={1} />
 
                 {/* The Live Video Feed */}
                 <LivePlane matrix={stageMatrix} texture={liveTexture} />
@@ -249,7 +279,6 @@ export const Stage = ({ setStats }: StageProps) => {
                 <ScaleBar axis="x" lengthUm={20} position={[stageRangeX / 2 - 20, -stageRangeY / 2 + 10, 2]} color="#ef4444" />
                 <ScaleBar axis="y" lengthUm={20} position={[stageRangeX / 2 - 30, -stageRangeY / 2 + 20, 2]} color="#22c55e" />
 
-                <OrbitControls makeDefault target={[0, 0, 0]} />
             </Canvas>
 
             {/* UI Overlays */}
