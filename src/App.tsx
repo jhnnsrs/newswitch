@@ -1,12 +1,11 @@
-import { Microscope } from 'lucide-react'
 import './App.css'
 import {
   LiveView,
   MultidimensionalAcquisitionControl,
   SettingsPanel,
   StageControl,
-  StatusPanel,
 } from './components/microscope'
+import { Stage } from './components/stage/Stage'
 import {
   ResizableHandle,
   ResizablePanel,
@@ -40,7 +39,7 @@ function MicroscopeControlPanel() {
         {/* Center Live View */}
         <ResizablePanel defaultSize={55}>
           <div className="h-full flex flex-col overflow-hidden bg-muted/30">
-            <LiveView />
+            <Stage />
           </div>
         </ResizablePanel>
 

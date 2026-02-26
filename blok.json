@@ -1,0 +1,37 @@
+{
+  "generatedAt": "2026-02-26T11:48:11.815Z",
+  "app": {
+    "name": "newswitch",
+    "version": "0.0.0",
+    "description": "",
+    "startPage": "/index.html",
+    "type": "module",
+    "scripts": {
+      "dev": "vite",
+      "build": "vite build",
+      "preview": "vite preview"
+    }
+  },
+  "dependencies": [
+    "acquireMultidimensionalAcquisition",
+    "activateDetector",
+    "captureImage",
+    "deactivateDetector",
+    "failingCamera",
+    "index",
+    "longStuffRunning",
+    "moveHome",
+    "moveStage",
+    "moveToStagePosition",
+    "setIlluminationIntensity",
+    "startLiveView",
+    "stopLiveView",
+    "switchFilter",
+    "switchObjective",
+    "toggleFilter",
+    "toggleObjective",
+    "turnOffIlluminationChannel",
+    "turnOnIllumination",
+    "updateDetector"
+  ]
+}
