@@ -1,5 +1,5 @@
 import { useStageState } from '@/hooks/states';
-import { Line, MapControls, OrthographicCamera } from '@react-three/drei';
+import { Line, MapControls, OrthographicCamera, useContextBridge } from '@react-three/drei';
 import { Canvas, useFrame } from '@react-three/fiber';
 import JMuxer from 'jmuxer';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -13,6 +13,11 @@ import {
     VideoTexture,
 } from 'three';
 import { useCurrentAffineTransform } from '../../hooks/useCurrentAffineTransform';
+import { StageBox } from './StageBox';
+import { TransportProvider } from '@/transport';
+import { TransportContext } from '@/transport/TransportProvider';
+import { PanelContext, PanelProvider } from './PanelProvider';
+import { PanelRenderer } from './panels/PanelRenderer';
 
 type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'error';
 
@@ -178,40 +183,27 @@ const ScaleBar = ({ axis, lengthUm, position, color }: any) => {
 
 
 
-const StageBox = () => {
-    const { data: stageState } = useStageState({ subscribe: true });
 
-    if (!stageState) return null;
-
-    const stageRangeX = Math.max(200, (stageState?.max_x ?? 100) - (stageState?.min_x ?? -100));
-    const stageRangeY = Math.max(200, (stageState?.max_y ?? 100) - (stageState?.min_y ?? -100));
-
-    // Position is [x, y, z]. We use Z=-0.5 so it sits slightly below our video and grid.
+export const SceneWrapper = ({ children }) => {
+    const ContextBridge = useContextBridge(PanelContext);
     return (
-        <group position={[stageState.x, stageState.y, stageState.z]}>
-            <mesh position={[0, 0, -1]}>
-                <planeGeometry args={[stageRangeX, stageRangeY]} />
-                <meshStandardMaterial color="#000000" />
-            </mesh>
-            <mesh position={[0, 0, -0.9]}>
-                <planeGeometry args={[stageRangeX, stageRangeY]} />
-                <meshBasicMaterial color="#334155" wireframe wireframeLinewidth={5} />
-            </mesh>
-        </group>
+        <Canvas>
+            <ContextBridge>
+                {children}
+            </ContextBridge>
+        </Canvas>
     );
-};
+}
 
 
 
-
-export const Stage = ({ setStats }) => {
+export const Stage = () => {
     const { data: stageState } = useStageState({ subscribe: true });
     const affine = useCurrentAffineTransform();
     const [streamStats, setStreamStats] = useState<StreamStats>({ bytesReceived: 0, chunksReceived: 0 });
 
     const { texture: liveTexture, connectionState } = useLiveVideoTexture(DEFAULT_VIDEO_WS, (stats) => {
         setStreamStats(stats);
-        setStats?.(stats);
     });
 
     const stageMatrix = useMemo(() => {
@@ -245,9 +237,11 @@ export const Stage = ({ setStats }) => {
         return `${(bytes / Math.pow(1024, i)).toFixed(2)} ${['B', 'KB', 'MB', 'GB'][i]}`;
     };
 
+
     return (
         <div className="relative h-full w-full overflow-hidden rounded-lg bg-black">
-            <Canvas >
+            <PanelProvider>
+            <SceneWrapper>
                 <color attach="background" args={['#020617']} />
                 <ambientLight intensity={0.7} />
                 <pointLight position={[100, 100, 100]} />
@@ -278,8 +272,9 @@ export const Stage = ({ setStats }) => {
 
                 <ScaleBar axis="x" lengthUm={20} position={[stageRangeX / 2 - 20, -stageRangeY / 2 + 10, 2]} color="#ef4444" />
                 <ScaleBar axis="y" lengthUm={20} position={[stageRangeX / 2 - 30, -stageRangeY / 2 + 20, 2]} color="#22c55e" />
+            </SceneWrapper>
 
-            </Canvas>
+            <PanelRenderer/>
 
             {/* UI Overlays */}
             <div className="pointer-events-none absolute right-2 top-2 rounded bg-black/80 p-2 text-[10px] text-white">
@@ -292,6 +287,7 @@ export const Stage = ({ setStats }) => {
             <div className="pointer-events-none absolute bottom-2 left-2 rounded bg-black/80 p-2 font-mono text-[10px] text-white">
                 POS: X {(stageState?.x ?? 0).toFixed(2)} Y {(stageState?.y ?? 0).toFixed(2)} Z {(stageState?.z ?? 0).toFixed(2)}
             </div>
+            </PanelProvider>
         </div>
     );
 };

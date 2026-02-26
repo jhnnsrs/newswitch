@@ -19,7 +19,7 @@ import {
 } from './types';
 import { WebSocketManager } from './WebSocketManager';
 
-const TransportContext = createContext<TransportContextValue | null>(null);
+export const TransportContext = createContext<TransportContextValue | null>(null);
 
 const DEFAULT_RECONNECT_CONFIG = {
   maxAttempts: 5,
