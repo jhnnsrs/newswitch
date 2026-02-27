@@ -2,7 +2,7 @@ import { useCameraState, useExpanseState, useStageState, type ExpanseState } fro
 import { Line, MapControls, OrthographicCamera, useContextBridge } from '@react-three/drei';
 import { Canvas, useFrame } from '@react-three/fiber';
 import JMuxer from 'jmuxer';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import {
     CanvasTexture,
     DoubleSide,
@@ -19,6 +19,8 @@ import { StageBox } from './StageBox';
 import { ActionButton } from '../ActionButton';
 import { ClearExpanseDefinition } from '@/hooks/generated';
 import { CircleArrowDown, RefreshCwIcon } from 'lucide-react';
+import { useTransport } from '@/transport/TransportProvider';
+import ImagePlane from './ImagePlane';
 
 type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'error';
 
@@ -170,25 +172,6 @@ const LivePlane = ({ matrix, texture }: { matrix: Matrix4, texture: VideoTexture
 };
 
 
-const ImagePlane = ({ image }: { image: ExpanseState["current_images"][0] }) => {
-    const meshRef = useRef<Mesh>(null);
-
-    // This is crucial: VideoTextures sometimes need manual 'needsUpdate' 
-    // flags when the source is a JMuxer-fed video element.
-
-    return (
-        <mesh ref={meshRef} matrixAutoUpdate={false}>
-            <planeGeometry args={[1, 1]} />
-            <meshStandardMaterial 
-                color={'#22c55e'} 
-                side={DoubleSide} 
-                transparent={true}
-                opacity={0.5}
-                toneMapped={false}
-            />
-        </mesh>
-    );
-};
 
 const ScaleBar = ({ axis, lengthUm, position, color }: any) => {
     const size: [number, number, number] =
@@ -284,8 +267,9 @@ export const Expanse = () => {
                 {/* The Live Video Feed */}
                 {cameraState?.is_acquiring && <LivePlane matrix={stageMatrix} texture={liveTexture} />}
 
-
-                {expanseState?.current_images?.map((img) => <ImagePlane key={img.id} image={img} />)}
+                <Suspense fallback={<></>}>
+                    {expanseState?.current_images?.map((img, idx) => <ImagePlane key={img.id} image={img} index={idx} />)}
+                </Suspense>
 
 
                 <ScaleBar axis="x" lengthUm={20} position={[stageRangeX / 2 - 20, -stageRangeY / 2 + 10, 2]} color="#ef4444" />
