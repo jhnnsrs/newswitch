@@ -8,7 +8,9 @@ import {
 
 // --- Schemas ---
 export const StartLiveViewArgsSchema = z.object({});
-export const StartLiveViewReturnSchema = z.string();
+export const StartLiveViewReturnSchema = z.object({
+  return0: z.string(),
+});
 
 // --- Types ---
 export type StartLiveViewArgs = z.infer<typeof StartLiveViewArgsSchema>;

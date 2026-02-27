@@ -96,6 +96,7 @@ export const useGlobalStateStore = create<GlobalStateStore>()(
           // Set the new state (this triggers Zustand subscribers)
           set((state) => {
             state.states[key] = newDocument;
+            state.stateRevisions[key] = envelope.rev;
           });
         } catch (err) {
           console.error(`[StateStore] Failed to apply patch to ${key}:`, err);

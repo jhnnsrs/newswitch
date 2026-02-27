@@ -1,4 +1,4 @@
-import { useStageState } from '@/hooks/states';
+import { useCameraState, useExpanseState, useStageState, type ExpanseState } from '@/hooks/states';
 import { Line, MapControls, OrthographicCamera, useContextBridge } from '@react-three/drei';
 import { Canvas, useFrame } from '@react-three/fiber';
 import JMuxer from 'jmuxer';
@@ -16,6 +16,9 @@ import { useCurrentAffineTransform } from '../../hooks/useCurrentAffineTransform
 import { PanelContext, PanelProvider } from './PanelProvider';
 import { PanelRenderer } from './panels/PanelRenderer';
 import { StageBox } from './StageBox';
+import { ActionButton } from '../ActionButton';
+import { ClearExpanseDefinition } from '@/hooks/generated';
+import { CircleArrowDown, RefreshCwIcon } from 'lucide-react';
 
 type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'error';
 
@@ -166,6 +169,27 @@ const LivePlane = ({ matrix, texture }: { matrix: Matrix4, texture: VideoTexture
     );
 };
 
+
+const ImagePlane = ({ image }: { image: ExpanseState["current_images"][0] }) => {
+    const meshRef = useRef<Mesh>(null);
+
+    // This is crucial: VideoTextures sometimes need manual 'needsUpdate' 
+    // flags when the source is a JMuxer-fed video element.
+
+    return (
+        <mesh ref={meshRef} matrixAutoUpdate={false}>
+            <planeGeometry args={[1, 1]} />
+            <meshStandardMaterial 
+                color={'#22c55e'} 
+                side={DoubleSide} 
+                transparent={true}
+                opacity={0.5}
+                toneMapped={false}
+            />
+        </mesh>
+    );
+};
+
 const ScaleBar = ({ axis, lengthUm, position, color }: any) => {
     const size: [number, number, number] =
         axis === 'x' ? [lengthUm, 0.8, 0.8] :
@@ -195,8 +219,10 @@ export const SceneWrapper = ({ children }) => {
 
 
 
-export const Stage = () => {
+export const Expanse = () => {
     const { data: stageState } = useStageState({ subscribe: true });
+    const { data: expanseState } = useExpanseState({ subscribe: true });
+    const { data: cameraState } = useCameraState({ subscribe: true });
     const affine = useCurrentAffineTransform();
     const [streamStats, setStreamStats] = useState<StreamStats>({ bytesReceived: 0, chunksReceived: 0 });
 
@@ -226,8 +252,6 @@ export const Stage = () => {
     const stageRangeX = Math.max(200, (stageState?.max_x ?? 100) - (stageState?.min_x ?? -100));
     const stageRangeY = Math.max(200, (stageState?.max_y ?? 100) - (stageState?.min_y ?? -100));
 
-    const checkerA = useMemo(() => createCheckerboardTexture(512, 10, '#f8fafc', '#0f172a'), []);
-    const checkerB = useMemo(() => createCheckerboardTexture(512, 20, '#22c55e', '#020617'), []);
 
     const formatBytes = (bytes: number): string => {
         if (bytes === 0) return '0 B';
@@ -258,15 +282,11 @@ export const Stage = () => {
                 <MapControls makeDefault enableZoom={true} enablePan={true} enableRotate={true} zoomSpeed={1} panSpeed={1} />
 
                 {/* The Live Video Feed */}
-                <LivePlane matrix={stageMatrix} texture={liveTexture} />
+                {cameraState?.is_acquiring && <LivePlane matrix={stageMatrix} texture={liveTexture} />}
 
-                {/* Reference Checkers */}
-                {checkerA && (
-                    <mesh position={[40, 40, 0.2]}>
-                        <planeGeometry args={[20, 20]} />
-                        <meshStandardMaterial map={checkerA} side={DoubleSide} />
-                    </mesh>
-                )}
+
+                {expanseState?.current_images?.map((img) => <ImagePlane key={img.id} image={img} />)}
+
 
                 <ScaleBar axis="x" lengthUm={20} position={[stageRangeX / 2 - 20, -stageRangeY / 2 + 10, 2]} color="#ef4444" />
                 <ScaleBar axis="y" lengthUm={20} position={[stageRangeX / 2 - 30, -stageRangeY / 2 + 20, 2]} color="#22c55e" />
@@ -284,6 +304,9 @@ export const Stage = () => {
             
             <div className="pointer-events-none absolute bottom-2 left-2 rounded bg-black/80 p-2 font-mono text-[10px] text-white">
                 POS: X {(stageState?.x ?? 0).toFixed(2)} Y {(stageState?.y ?? 0).toFixed(2)} Z {(stageState?.z ?? 0).toFixed(2)}
+            </div>
+            <div className=" absolute bottom-2 right-2 rounded bg-black/80 p-2 font-mono text-[10px] text-white">
+                {expanseState?.current_images?.length ?? 0} IMAGES <ActionButton action={ClearExpanseDefinition} args={{}} size={"icon-xs"} variant={"outline"}><RefreshCwIcon/></ActionButton>
             </div>
             </PanelProvider>
         </div>

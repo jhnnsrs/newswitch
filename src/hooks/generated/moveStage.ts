@@ -27,7 +27,7 @@ export const MoveStageArgsSchema = z.object({
     .describe('Step size in micrometers for movement simulation (default: 1.0)')
     .optional(),
 });
-export const MoveStageReturnSchema = z.void();
+export const MoveStageReturnSchema = z.object({});
 
 // --- Types ---
 export type MoveStageArgs = z.infer<typeof MoveStageArgsSchema>;

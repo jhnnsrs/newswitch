@@ -11,7 +11,7 @@ export const ActivateDetectorArgsSchema = z.object({
   /** Detector slot number to activate */
   slot: z.number().describe('Detector slot number to activate'),
 });
-export const ActivateDetectorReturnSchema = z.void();
+export const ActivateDetectorReturnSchema = z.object({});
 
 // --- Types ---
 export type ActivateDetectorArgs = z.infer<typeof ActivateDetectorArgsSchema>;

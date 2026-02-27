@@ -10,7 +10,9 @@ import {
 export const FailingCameraArgsSchema = z.object({
   intensity: z.number(),
 });
-export const FailingCameraReturnSchema = z.string();
+export const FailingCameraReturnSchema = z.object({
+  return0: z.string(),
+});
 
 // --- Types ---
 export type FailingCameraArgs = z.infer<typeof FailingCameraArgsSchema>;

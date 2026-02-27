@@ -253,9 +253,12 @@ export const AcquireMultidimensionalAcquisitionArgsSchema = z.object({
     'Configuration for the acquisition.',
   ),
 });
-export const AcquireMultidimensionalAcquisitionReturnSchema = z
-  .array(z.record(z.string(), z.any()))
-  .describe('List of acquired images with metadata.');
+export const AcquireMultidimensionalAcquisitionReturnSchema = z.object({
+  /** List of acquired images with metadata. */
+  return0: z
+    .array(z.record(z.string(), z.any()))
+    .describe('List of acquired images with metadata.'),
+});
 
 // --- Types ---
 export type AcquireMultidimensionalAcquisitionArgs = z.infer<

@@ -230,6 +230,7 @@ const generateContent = (key: string, impl: Implementation) => {
 
   // --- ARGS SCHEMA GENERATION ---
   const argsList: SchemaArg[] = impl.definition.args || [];
+  const returnsList: SchemaArg[] = impl.definition.returns || [];
   
   const argsFields = argsList
     .map((a) => `${renderDescription(a.description)}${a.key}: ${mapToZod(a, ctx)}`)
@@ -245,10 +246,16 @@ const generateContent = (key: string, impl: Implementation) => {
   const argsDef = `export const ${argsSchemaName} = ${argsSchemaCode};`;
 
   // --- RETURN SCHEMA GENERATION ---
-  const returnArg = impl.definition.returns?.[0];
+   const returnsFields = returnsList
+    .map((a) => `${renderDescription(a.description)}${a.key}: ${mapToZod(a, ctx)}`)
+    .join(',\n');
+
+
+
   const returnSchemaName = `${toPascal(key)}ReturnSchema`;
-  const returnDefString = returnArg ? mapToZod(returnArg, ctx) : 'z.void()';
-  const returnDef = `export const ${returnSchemaName} = ${returnDefString};`;
+  let returnSchemaCode = `z.object({\n${returnsFields}\n})`;
+  returnSchemaCode = appendValidators(returnSchemaCode, returnsList);
+  const returnDef = `export const ${returnSchemaName} = ${returnSchemaCode};`;
 
   // --- NAMED TYPES ---
   const namedTypesCode = Array.from(ctx.namedTypes.entries())

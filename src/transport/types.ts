@@ -14,6 +14,7 @@ export interface Task<TArgs = unknown, TReturn = unknown> {
   id: string;
   action: string;
   args: TArgs;
+  reference: string;
   status: TaskStatus;
   result?: TReturn;
   error?: string;

@@ -11,7 +11,9 @@ export const CaptureImageArgsSchema = z.object({
   /** Detector slot number */
   slot: z.number().describe('Detector slot number').optional(),
 });
-export const CaptureImageReturnSchema = z.string();
+export const CaptureImageReturnSchema = z.object({
+  return0: z.string(),
+});
 
 // --- Types ---
 export type CaptureImageArgs = z.infer<typeof CaptureImageArgsSchema>;
@@ -26,7 +28,7 @@ export const CaptureImageDefinition: ActionDefinition<
   description: '',
   argsSchema: CaptureImageArgsSchema,
   returnSchema: CaptureImageReturnSchema,
-  lockKeys: ['camera_parameters', 'io'],
+  lockKeys: ['camera_parameters', 'expanse_state', 'io'],
 };
 
 /**

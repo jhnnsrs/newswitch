@@ -22,9 +22,10 @@ export type Filter = z.infer<typeof FilterSchema>;
 
 // --- Schemas ---
 export const ToggleFilterArgsSchema = z.object({});
-export const ToggleFilterReturnSchema = FilterSchema.describe(
-  'The newly active filter.',
-);
+export const ToggleFilterReturnSchema = z.object({
+  /** The newly active filter. */
+  return0: FilterSchema.describe('The newly active filter.'),
+});
 
 // --- Types ---
 export type ToggleFilterArgs = z.infer<typeof ToggleFilterArgsSchema>;

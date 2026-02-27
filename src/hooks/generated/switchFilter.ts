@@ -25,9 +25,10 @@ export const SwitchFilterArgsSchema = z.object({
   /** Filter slot number */
   slot: z.number().describe('Filter slot number'),
 });
-export const SwitchFilterReturnSchema = FilterSchema.describe(
-  'The newly active filter.',
-);
+export const SwitchFilterReturnSchema = z.object({
+  /** The newly active filter. */
+  return0: FilterSchema.describe('The newly active filter.'),
+});
 
 // --- Types ---
 export type SwitchFilterArgs = z.infer<typeof SwitchFilterArgsSchema>;

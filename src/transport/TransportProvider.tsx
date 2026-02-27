@@ -8,7 +8,7 @@ import React, {
   useMemo,
   useRef,
 } from 'react';
-import { useGlobalStateStore, useTransportStore } from '../store';
+import { selectTask, useGlobalStateStore, useTransportStore } from '../store';
 import {
   type AssignInput,
   type AssignOptions,
@@ -40,14 +40,19 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
   config,
 }) => {
   const globalStateStore = useGlobalStateStore();
-  const transportStore = useTransportStore();
   
-  // Subscribe to state from Zustand store
+  // Subscribe only to primitives/maps needed for rendering to prevent re-rendering on every task update
   const isConnected = useTransportStore((s) => s.isConnected);
   const isReconnecting = useTransportStore((s) => s.isReconnecting);
   const isUnconnectable = useTransportStore((s) => s.isUnconnectable);
   const reconnectAttempt = useTransportStore((s) => s.reconnectAttempt);
   const tasks = useTransportStore((s) => s.tasks);
+
+  // Pull actions from the store natively
+  const addTask = useTransportStore((s) => s.addTask);
+  const updateTask = useTransportStore((s) => s.updateTask);
+  const getTaskFromStore = useTransportStore((s) => s.getTask);
+  const setAssignationID = useTransportStore((s) => s.setAssignationID);
 
   const managerRef = useRef<WebSocketManager | null>(null);
 
@@ -136,7 +141,12 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
   ): Promise<Task<TArgs, TReturn>> => {
     const url = `${config.apiEndpoint.replace(/\/$/, '')}/${actionName}`;
 
-    // Build the full AssignInput request
+    // 1. Ensure a reference exists (either from options or generated)
+    const reference = options?.reference || `local-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+    // 2. Add the task locally first so the UI can react immediately
+    addTask(actionName, reference, args, 'pending');
+
     const assignInput: AssignInput<TArgs> = {
       args,
       instanceId: config.instanceId,
@@ -144,7 +154,7 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
       policy: options?.policy,
       agent: options?.agent,
       reservation: options?.reservation,
-      reference: options?.reference,
+      reference: reference, // Pass the explicit reference to the server
       parent: options?.parent,
       cached: options?.cached ?? false,
       log: options?.log ?? true,
@@ -154,28 +164,33 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
       step: options?.step,
     };
 
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(assignInput),
-    });
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(assignInput),
+      });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Failed to assign action: ${response.status} ${errorText}`);
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to assign action: ${response.status} ${errorText}`);
+      }
+
+      const data: AssignResponse = await response.json();
+      
+      // 3. Link the server's task ID back to our local reference
+      setAssignationID(reference, data.task_id);
+      
+      // 4. Update the task with the status returned from the server
+      updateTask(reference, { status: data.status });
+
+      return getTaskFromStore<TArgs, TReturn>(reference)!;
+    } catch (error: any) {
+      // Clean up and mark as failed if the network request bombs out
+      updateTask(reference, { status: 'failed', error: error.message });
+      throw error;
     }
-
-    const data: AssignResponse = await response.json();
-    const task = transportStore.addTask<TArgs, TReturn>(
-      data.task_id,
-      actionName,
-      args,
-      data.status,
-      options?.notify
-    );
-
-    return task;
-  }, [config.apiEndpoint, config.instanceId, transportStore]);
+  }, [config.apiEndpoint, config.instanceId, addTask, setAssignationID, updateTask, getTaskFromStore]);
 
   // Get task from server
   const getTask = useCallback(async <TArgs = unknown, TReturn = unknown>(
@@ -199,21 +214,22 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
       result: data.result,
       error: data.error,
       progress: data.progress,
+      reference: data.reference, // Ensure we pull down the reference if the server sends it
       createdAt: new Date(data.created_at ?? data.createdAt),
       updatedAt: new Date(data.updated_at ?? data.updatedAt ?? Date.now()),
     };
 
-    transportStore.updateTask(taskId, task);
+    updateTask(taskId, task);
 
     return task;
-  }, [config.apiEndpoint, transportStore]);
+  }, [config.apiEndpoint, updateTask]);
 
   // Get cached task
   const getCachedTask = useCallback((
     taskId: string
   ): Task | undefined => {
-    return transportStore.getTask(taskId);
-  }, [transportStore]);
+    return getTaskFromStore(taskId);
+  }, [getTaskFromStore]);
 
   const cancelTask = useCallback(async (taskId: string): Promise<void> => {
     const url = `${config.apiEndpoint.replace(/\/$/, '')}/cancel`;
@@ -225,9 +241,8 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
       throw new Error(`Failed to cancel task: ${response.status} ${errorText}`);
     }
 
-    transportStore.updateTask(taskId, { status: 'cancelled' });
-  }, [config.apiEndpoint, transportStore]);
-
+    updateTask(taskId, { status: 'cancelled' });
+  }, [config.apiEndpoint, updateTask]);
 
   const unpauseTask = useCallback(async (taskId: string): Promise<void> => {
     const url = `${config.apiEndpoint.replace(/\/$/, '')}/resume`;
@@ -239,9 +254,8 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
       throw new Error(`Failed to unpause task: ${response.status} ${errorText}`);
     }
 
-    transportStore.updateTask(taskId, { status: 'running' });
-  }, [config.apiEndpoint, transportStore]);
-
+    updateTask(taskId, { status: 'running' });
+  }, [config.apiEndpoint, updateTask]);
 
   const stepTask = useCallback(async (taskId: string): Promise<void> => {
     const url = `${config.apiEndpoint.replace(/\/$/, '')}/step`;
@@ -250,11 +264,11 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`Failed to unpause task: ${response.status} ${errorText}`);
+      throw new Error(`Failed to step task: ${response.status} ${errorText}`);
     }
 
-    transportStore.updateTask(taskId, { status: 'running' });
-  }, [config.apiEndpoint, transportStore]);
+    updateTask(taskId, { status: 'running' });
+  }, [config.apiEndpoint, updateTask]);
 
   const pauseTask = useCallback(async (taskId: string): Promise<void> => {
     const url = `${config.apiEndpoint.replace(/\/$/, '')}/pause`;
@@ -266,16 +280,21 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
       throw new Error(`Failed to pause task: ${response.status} ${errorText}`);
     }
 
-    transportStore.updateTask(taskId, { status: 'paused' });
-  }, [config.apiEndpoint, transportStore]);
+    updateTask(taskId, { status: 'paused' });
+  }, [config.apiEndpoint, updateTask]);
 
-  // Subscribe to task updates
+  // Subscribe to task updates using Zustand's native subscribe
   const subscribeToTask = useCallback((
     taskId: string,
     callback: (task: Task) => void
   ): (() => void) => {
-    return transportStore.subscribeToTask(taskId, callback);
-  }, [transportStore]);
+    return useTransportStore.subscribe(
+      selectTask(taskId),
+      (task) => {
+        if (task) callback(task as Task);
+      }
+    );
+  }, []);
 
   // Fetch state from server
   const fetchState = useCallback(async (stateName: string): Promise<unknown> => {

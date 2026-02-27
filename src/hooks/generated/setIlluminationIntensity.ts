@@ -16,9 +16,10 @@ export const SetIlluminationIntensityArgsSchema = z.object({
     .describe('Illumination channel number (default 1)')
     .optional(),
 });
-export const SetIlluminationIntensityReturnSchema = z
-  .number()
-  .describe('The actual clamped intensity value.');
+export const SetIlluminationIntensityReturnSchema = z.object({
+  /** The actual clamped intensity value. */
+  return0: z.number().describe('The actual clamped intensity value.'),
+});
 
 // --- Types ---
 export type SetIlluminationIntensityArgs = z.infer<

@@ -5,7 +5,7 @@ import {
   SettingsPanel,
   StageControl,
 } from './components/microscope'
-import { Stage } from './components/stage/Stage'
+import { Expanse } from './components/stage/Expanse'
 import {
   ResizableHandle,
   ResizablePanel,
@@ -39,7 +39,7 @@ function MicroscopeControlPanel() {
         {/* Center Live View */}
         <ResizablePanel defaultSize={55}>
           <div className="h-full flex flex-col overflow-hidden bg-muted/30">
-            <Stage />
+            <Expanse />
           </div>
         </ResizablePanel>
 

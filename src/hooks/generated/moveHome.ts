@@ -8,7 +8,7 @@ import {
 
 // --- Schemas ---
 export const MoveHomeArgsSchema = z.object({});
-export const MoveHomeReturnSchema = z.void();
+export const MoveHomeReturnSchema = z.object({});
 
 // --- Types ---
 export type MoveHomeArgs = z.infer<typeof MoveHomeArgsSchema>;

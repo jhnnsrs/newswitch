@@ -12,7 +12,7 @@ export const MoveToStagePositionArgsSchema = z.object({
   position_y: z.number(),
   position_z: z.number(),
 });
-export const MoveToStagePositionReturnSchema = z.void();
+export const MoveToStagePositionReturnSchema = z.object({});
 
 // --- Types ---
 export type MoveToStagePositionArgs = z.infer<

@@ -102,17 +102,18 @@ export class WebSocketManager {
 
   reconnect() {
     console.log('[WebSocketManager] Manual reconnect');
-    const store = useTransportStore.getState();
     
-    // Reset all state
+    // 1. Clean up first to prevent accidental reconnection loops if a close event fires
+    this.cleanup();
+    
+    // 2. Reset state
     this.shouldReconnect = true;
+    const store = useTransportStore.getState();
     store.setReconnectAttempt(0);
     store.setUnconnectable(false);
     store.setReconnecting(false);
     
-    this.cleanup();
-    
-    // Connect after small delay
+    // 3. Connect after small delay
     setTimeout(() => {
       this.connect();
     }, 100);
@@ -213,21 +214,18 @@ export class WebSocketManager {
         }
 
         case FromAgentMessageType.LOCK: {
-          const stateStore = useGlobalStateStore.getState();
-          stateStore.setLock(message.key, message.assignation);
+          globalStateStore.setLock(message.key, message.assignation);
           console.log(`[WebSocketManager] Locked state "${message.key}" with assigniation ID "${message.assignation}"`);
           break;
         }
 
         case FromAgentMessageType.UNLOCK: {
-          const stateStore = useGlobalStateStore.getState();
-          stateStore.setLock(message.key, undefined);
+          globalStateStore.setLock(message.key, undefined);
           console.log(`[WebSocketManager] Unlocked state "${message.key}"`);
           break;
         }
 
         case FromAgentMessageType.DONE: {
-
           const existingTask = transportStore.getTask(message.assignation);
           if (existingTask?.notify) {
             toast.success(`Task completed: ${existingTask.action}`, {
@@ -237,6 +235,8 @@ export class WebSocketManager {
 
           transportStore.updateTask(message.assignation, {
             status: 'completed',
+            // It's good practice to attach the final return value if available in DONE
+            ...(message.returns !== undefined ? { result: message.returns } : {})
           });
           
           break;
@@ -323,8 +323,6 @@ export class WebSocketManager {
           globalStateStore.setState(message.state, message.value);
           break;
         }
-
-        
 
         case FromAgentMessageType.STATE_PATCH: {
           globalStateStore.applyEnvelope(message.envelope);

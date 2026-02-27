@@ -10,7 +10,7 @@ export interface ActionDefinition<TArgs, TReturn> {
   name: string;
   description?: string;
   argsSchema: ZodType<TArgs>;
-  returnSchema?: ZodType<TReturn>;
+  returnSchema: ZodType<TReturn>;
   lockKeys: string[];
 }
 
@@ -32,10 +32,6 @@ export interface UseTransportActionResult<TArgs, TReturn> {
   call: (args: TArgs, options?: AssignOptions) => Promise<TReturn>;
   /** Assign (execute) the action and resolve immediately with the Task object */
   assign: (args: TArgs, options?: AssignOptions) => Promise<Task<TArgs, TReturn>>;
-  /** Current task (most recently assigned) */
-  task: Task<TArgs, TReturn> | null;
-  /** All tasks for this action */
-  tasks: Task<TArgs, TReturn>[];
   /** Current task status */
   status: TaskStatus | null;
   /** Current task result */
@@ -62,8 +58,6 @@ export interface UseTransportActionResult<TArgs, TReturn> {
   clear: () => void;
 }
 
-const noTaskSelector = () => undefined;
-
 export const useTransportAction = <TArgs, TReturn>(
   definition: ActionDefinition<TArgs, TReturn>,
   options: UseTransportActionOptions = {}
@@ -78,11 +72,10 @@ export const useTransportAction = <TArgs, TReturn>(
 
   const transport = useTransport();
   
-  const [currentTaskId, setCurrentTaskId] = useState<string | null>(null);
-  const [allTaskIds, setAllTaskIds] = useState<string[]>([]);
+  // Track strictly by reference
+  const [currentReference, setCurrentReference] = useState<string | null>(null);
   const [validationError, setValidationError] = useState<z.ZodError | null>(null);
   
-  const unsubscribeRef = useRef<(() => void) | null>(null);
   const callbacksRef = useRef({ onStatusChange, onComplete, onError, onProgress });
   
   useEffect(() => {
@@ -90,16 +83,13 @@ export const useTransportAction = <TArgs, TReturn>(
   }, [onStatusChange, onComplete, onError, onProgress]);
 
   // --- Selectors ---
-  const taskSelector = useMemo(
-    () => currentTaskId ? selectTask<TArgs, TReturn>(currentTaskId) : noTaskSelector,
-    [currentTaskId]
-  );
-  const task = useTransportStore(taskSelector) ?? null;
+  
+  // Create a memoized selector for the current reference to prevent unnecessary rerenders
+  const taskSelector = useMemo(() => {
+    return currentReference ? selectTask<TArgs, TReturn>(currentReference) : () => undefined;
+  }, [currentReference]);
 
-  const allTasks = useTransportStore((store) => store.tasks);
-  const tasks = allTaskIds
-    .map((id) => allTasks[id] as Task<TArgs, TReturn> | undefined)
-    .filter((t): t is Task<TArgs, TReturn> => t !== undefined);
+  const task = useTransportStore(taskSelector) ?? null;
 
   const locks = useGlobalStateStore((state) => state.locks);
   const blockingLockKey = definition.lockKeys?.find(key => locks[key] != null);
@@ -107,6 +97,7 @@ export const useTransportAction = <TArgs, TReturn>(
   const lockedBy = blockingLockKey ? locks[blockingLockKey] ?? null : null;
 
   // --- Derived State ---
+  const currentTaskId = task?.id; // Will be the server ID if setAssignationID was called by transport, or fallback reference
   const status = task?.status ?? null;
   const result = (task?.result as TReturn) ?? null;
   const error = task?.error ?? null;
@@ -128,13 +119,18 @@ export const useTransportAction = <TArgs, TReturn>(
   }, []);
 
   useEffect(() => {
-    if (!autoSubscribe || !currentTaskId) return;
-    unsubscribeRef.current = useTransportStore.getState().subscribeToTask(currentTaskId, handleTaskUpdate);
-    return () => {
-      unsubscribeRef.current?.();
-      unsubscribeRef.current = null;
-    };
-  }, [currentTaskId, autoSubscribe, handleTaskUpdate]);
+    if (!autoSubscribe || !currentReference) return;
+    
+    // Use Zustand's native subscribe capability directly 
+    const unsubscribe = useTransportStore.subscribe(
+      selectTask(currentReference),
+      (updatedTask) => {
+        if (updatedTask) handleTaskUpdate(updatedTask as Task);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [currentReference, autoSubscribe, handleTaskUpdate]);
 
   // --- Core Execution Logic ---
   const execute = useCallback(async (args: TArgs, opts?: AssignOptions): Promise<Task<TArgs, TReturn>> => {
@@ -152,14 +148,17 @@ export const useTransportAction = <TArgs, TReturn>(
       throw parsed.error;
     }
 
+    const reference = opts?.reference || `local-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    setCurrentReference(reference);
+
+    // The transport.assign method is now strictly responsible for calling setAssignationID
+    // internally once it receives the server response.
     const newTask = await transport.assign<TArgs, TReturn>(
       definition.name,
       parsed.data,
-      opts
+      { ...opts, reference }
     );
 
-    setCurrentTaskId(newTask.id);
-    setAllTaskIds((prev) => [...prev, newTask.id]);
     return newTask;
   }, [definition, transport]);
 
@@ -169,17 +168,23 @@ export const useTransportAction = <TArgs, TReturn>(
   }, [execute]);
 
   const call = useCallback(async (args: TArgs, opts?: AssignOptions): Promise<TReturn> => {
-    const newTask = await execute(args, opts);
+    const reference = opts?.reference || `local-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
-    return new Promise((resolve, reject) => {
+    return new Promise<TReturn>((resolve, reject) => {
+      // 1. Subscribe using Zustand's native selector mechanism
       const unsubscribe = useTransportStore.subscribe(
-        (state) => state.tasks[newTask.id],
+        selectTask<TArgs, TReturn>(reference),
         (taskState) => {
           if (!taskState) return;
 
           if (taskState.status === 'completed') {
             unsubscribe();
-            resolve(taskState.result as TReturn);
+            const parsed = definition.returnSchema.safeParse(taskState.result);
+            if (!parsed.success) {
+              reject(new Error(`Return value failed schema validation: ${parsed.error.message}`));
+              return;
+            }
+            resolve(parsed.data);
           } else if (taskState.status === 'failed') {
             unsubscribe();
             reject(new Error(taskState.error || 'Task failed'));
@@ -189,10 +194,17 @@ export const useTransportAction = <TArgs, TReturn>(
           }
         }
       );
+
+      // 2. Trigger execution
+      execute(args, { ...opts, reference }).catch((err) => {
+        unsubscribe();
+        reject(err);
+      });
     });
-  }, [execute]);
+  }, [execute, definition.returnSchema]);
 
   const refresh = useCallback(async (): Promise<void> => {
+    // We send the resolved currentTaskId to the server, as it needs its own assignation ID
     if (!currentTaskId) return;
     await transport.getTask(currentTaskId);
   }, [currentTaskId, transport]);
@@ -203,17 +215,13 @@ export const useTransportAction = <TArgs, TReturn>(
   }, [currentTaskId, transport]);
 
   const clear = useCallback((): void => {
-    unsubscribeRef.current?.();
-    unsubscribeRef.current = null;
-    setCurrentTaskId(null);
+    setCurrentReference(null);
     setValidationError(null);
   }, []);
 
   return {
     call,
     assign,
-    task,
-    tasks,
     status,
     result,
     error,

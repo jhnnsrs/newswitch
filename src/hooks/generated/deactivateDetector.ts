@@ -11,7 +11,9 @@ export const DeactivateDetectorArgsSchema = z.object({
   /** Detector slot number to deactivate */
   slot: z.number().describe('Detector slot number to deactivate'),
 });
-export const DeactivateDetectorReturnSchema = z.string();
+export const DeactivateDetectorReturnSchema = z.object({
+  return0: z.string(),
+});
 
 // --- Types ---
 export type DeactivateDetectorArgs = z.infer<

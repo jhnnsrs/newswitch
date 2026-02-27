@@ -6,3 +6,4 @@ export * from './FilterBankState';
 export * from './IOState';
 export * from './SerialState';
 export * from './HookState';
+export * from './ExpanseState';

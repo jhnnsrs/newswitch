@@ -8,7 +8,9 @@ import {
 
 // --- Schemas ---
 export const StopLiveViewArgsSchema = z.object({});
-export const StopLiveViewReturnSchema = z.string();
+export const StopLiveViewReturnSchema = z.object({
+  return0: z.string(),
+});
 
 // --- Types ---
 export type StopLiveViewArgs = z.infer<typeof StopLiveViewArgsSchema>;

@@ -1,3 +1,4 @@
+export * from './clearExpanse';
 export * from './setIlluminationIntensity';
 export * from './longStuffRunning';
 export * from './turnOnIllumination';

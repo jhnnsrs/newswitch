@@ -21,9 +21,10 @@ export const TurnOnIlluminationArgsSchema = z.object({
     )
     .optional(),
 });
-export const TurnOnIlluminationReturnSchema = z
-  .string()
-  .describe('Confirmation message.');
+export const TurnOnIlluminationReturnSchema = z.object({
+  /** Confirmation message. */
+  return0: z.string().describe('Confirmation message.'),
+});
 
 // --- Types ---
 export type TurnOnIlluminationArgs = z.infer<

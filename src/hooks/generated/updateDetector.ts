@@ -40,9 +40,10 @@ export const UpdateDetectorArgsSchema = z.object({
   /** Gain value (optional) */
   gain: z.number().describe('Gain value (optional)').optional(),
 });
-export const UpdateDetectorReturnSchema = DetectorSchema.describe(
-  'Shared state for detector parameters.',
-);
+export const UpdateDetectorReturnSchema = z.object({
+  /** Shared state for detector parameters. */
+  return0: DetectorSchema.describe('Shared state for detector parameters.'),
+});
 
 // --- Types ---
 export type UpdateDetectorArgs = z.infer<typeof UpdateDetectorArgsSchema>;

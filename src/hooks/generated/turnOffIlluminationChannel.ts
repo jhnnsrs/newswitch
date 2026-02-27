@@ -11,9 +11,10 @@ export const TurnOffIlluminationChannelArgsSchema = z.object({
   /** Illumination channel number to turn off */
   channel: z.number().describe('Illumination channel number to turn off'),
 });
-export const TurnOffIlluminationChannelReturnSchema = z
-  .string()
-  .describe('Confirmation message.');
+export const TurnOffIlluminationChannelReturnSchema = z.object({
+  /** Confirmation message. */
+  return0: z.string().describe('Confirmation message.'),
+});
 
 // --- Types ---
 export type TurnOffIlluminationChannelArgs = z.infer<

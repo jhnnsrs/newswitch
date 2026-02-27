@@ -11,7 +11,7 @@ export const SwitchObjectiveArgsSchema = z.object({
   /** Objective slot number */
   slot: z.number().describe('Objective slot number'),
 });
-export const SwitchObjectiveReturnSchema = z.void();
+export const SwitchObjectiveReturnSchema = z.object({});
 
 // --- Types ---
 export type SwitchObjectiveArgs = z.infer<typeof SwitchObjectiveArgsSchema>;

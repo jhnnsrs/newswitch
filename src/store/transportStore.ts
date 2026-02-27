@@ -11,11 +11,16 @@ export interface TransportStore {
   isUnconnectable: boolean;
   reconnectAttempt: number;
 
-  /** Tasks by ID */
+  /** Tasks dictionary, strictly keyed by local 'reference' */
   tasks: Record<string, Task>;
+  
+  /** Secondary map to resolve server-provided task IDs back to their local reference */
+  taskIdToReference: Record<string, string>;
 
-  /** Task subscribers (for compatibility with callback-based subscriptions) */
-  taskSubscribers: Record<string, Set<(task: Task) => void>>;
+  /** * Cache for WebSocket updates that arrive before the HTTP POST resolves.
+   * Keyed by the server's assignation ID.
+   */
+  pendingTaskUpdates: Record<string, Partial<Task>[]>;
 
   // Connection actions
   setConnected: (connected: boolean) => void;
@@ -27,30 +32,24 @@ export interface TransportStore {
 
   // Task actions
   addTask: <TArgs = unknown, TReturn = unknown>(
-    taskId: string,
     action: string,
+    reference: string,
     args: TArgs,
     status?: TaskStatus,
-    notify?: boolean,
   ) => Task<TArgs, TReturn>;
 
-  updateTask: (taskId: string, updates: Partial<Task>) => void;
+  /** Explicitly attach the server's task ID to a local reference after assignment */
+  setAssignationID: (reference: string, assignationId: string) => void;
+
+  updateTask: (referenceOrId: string, updates: Partial<Task>) => void;
 
   getTask: <TArgs = unknown, TReturn = unknown>(
-    taskId: string,
+    referenceOrId: string,
   ) => Task<TArgs, TReturn> | undefined;
 
-  removeTask: (taskId: string) => void;
+  removeTask: (referenceOrId: string) => void;
 
   clearTasks: () => void;
-
-  // Subscription actions (for callback-based subscriptions)
-  subscribeToTask: (
-    taskId: string,
-    callback: (task: Task) => void,
-  ) => () => void;
-
-  notifyTaskSubscribers: (taskId: string, task: Task) => void;
 }
 
 export const useTransportStore = create<TransportStore>()(
@@ -60,14 +59,15 @@ export const useTransportStore = create<TransportStore>()(
       isReconnecting: false,
       isUnconnectable: false,
       reconnectAttempt: 0,
+      
       tasks: {},
-      taskSubscribers: {},
+      taskIdToReference: {},
+      pendingTaskUpdates: {},
 
       // Connection actions
       setConnected: (connected) => {
         set((state) => {
           state.isConnected = connected;
-          // Reset unconnectable when successfully connected
           if (connected) {
             state.isUnconnectable = false;
           }
@@ -114,97 +114,122 @@ export const useTransportStore = create<TransportStore>()(
 
       // Task actions
       addTask: <TArgs = unknown, TReturn = unknown>(
-        taskId: string,
         action: string,
+        reference: string,
         args: TArgs,
         status: TaskStatus = "pending",
-        notify?: boolean,
       ): Task<TArgs, TReturn> => {
         const now = new Date();
         const task: Task<TArgs, TReturn> = {
-          id: taskId,
+          id: reference, // Use reference as a placeholder ID until setAssignationID is called
           action,
           args,
           status,
-          notify,
+          reference,
           createdAt: now,
           updatedAt: now,
         };
 
         set((state) => {
-          state.tasks[taskId] = task as Task;
+          state.tasks[reference] = task as Task;
         });
 
         return task;
       },
 
-      updateTask: (taskId, updates) => {
-        const currentTask = get().tasks[taskId];
-        if (!currentTask) return;
-
+      setAssignationID: (reference, assignationId) => {
         set((state) => {
-          const task = state.tasks[taskId];
+          const task = state.tasks[reference];
           if (task) {
-            Object.assign(task, updates, { updatedAt: new Date() });
+            task.id = assignationId;
+            task.updatedAt = new Date();
+            state.taskIdToReference[assignationId] = reference;
+
+            // RACE CONDITION FIX: Flush any pending WebSocket updates 
+            // that arrived before this HTTP response resolved.
+            const pendingUpdates = state.pendingTaskUpdates[assignationId];
+            if (pendingUpdates && pendingUpdates.length > 0) {
+              pendingUpdates.forEach((update) => {
+                Object.assign(task, update, { updatedAt: new Date() });
+              });
+              // Clean up the cache once applied
+              delete state.pendingTaskUpdates[assignationId];
+            }
           }
         });
+      },
 
-        // Notify subscribers after update
-        const updatedTask = get().tasks[taskId];
-        if (updatedTask) {
-          get().notifyTaskSubscribers(taskId, updatedTask);
-        }
+      updateTask: (referenceOrId, updates) => {
+        set((state) => {
+          const ref = state.tasks[referenceOrId] 
+            ? referenceOrId 
+            : state.taskIdToReference[referenceOrId];
+            
+          // If the task doesn't exist yet, it's likely a WebSocket update outrunning the HTTP response.
+          // Cache it based on the ID provided (which will be the server's assignation ID).
+          if (!ref) {
+            if (!state.pendingTaskUpdates[referenceOrId]) {
+              state.pendingTaskUpdates[referenceOrId] = [];
+            }
+            state.pendingTaskUpdates[referenceOrId].push(updates);
+            return;
+          }
+
+          // Otherwise, apply the update normally
+          const task = state.tasks[ref];
+          Object.assign(task, updates, { updatedAt: new Date() });
+
+          // Catch any spontaneous ID updates that bypass setAssignationID
+          if (updates.id && updates.id !== ref) {
+            state.taskIdToReference[updates.id] = ref;
+          }
+        });
       },
 
       getTask: <TArgs = unknown, TReturn = unknown>(
-        taskId: string,
+        referenceOrId: string,
       ): Task<TArgs, TReturn> | undefined => {
-        return get().tasks[taskId] as Task<TArgs, TReturn> | undefined;
+        const state = get();
+        const ref = state.tasks[referenceOrId] 
+          ? referenceOrId 
+          : state.taskIdToReference[referenceOrId];
+          
+        return ref ? (state.tasks[ref] as Task<TArgs, TReturn>) : undefined;
       },
 
-      removeTask: (taskId) => {
+      removeTask: (referenceOrId) => {
         set((state) => {
-          delete state.tasks[taskId];
-          delete state.taskSubscribers[taskId];
+          const ref = state.tasks[referenceOrId] 
+            ? referenceOrId 
+            : state.taskIdToReference[referenceOrId];
+            
+          if (!ref) {
+             // Also clear any orphaned updates if the task is removed before it's even fully created
+             if (state.pendingTaskUpdates[referenceOrId]) {
+                delete state.pendingTaskUpdates[referenceOrId];
+             }
+             return;
+          }
+
+          const task = state.tasks[ref];
+          
+          if (task.id && state.taskIdToReference[task.id]) {
+            delete state.taskIdToReference[task.id];
+          }
+          if (task.id && state.pendingTaskUpdates[task.id]) {
+            delete state.pendingTaskUpdates[task.id];
+          }
+          
+          delete state.tasks[ref];
         });
       },
 
       clearTasks: () => {
         set((state) => {
           state.tasks = {};
-          state.taskSubscribers = {};
+          state.taskIdToReference = {};
+          state.pendingTaskUpdates = {};
         });
-      },
-
-      // Subscription actions
-      subscribeToTask: (taskId, callback) => {
-        // Add subscriber
-        set((state) => {
-          if (!state.taskSubscribers[taskId]) {
-            state.taskSubscribers[taskId] = new Set();
-          }
-          state.taskSubscribers[taskId].add(callback);
-        });
-
-        // Return unsubscribe function
-        return () => {
-          set((state) => {
-            const subs = state.taskSubscribers[taskId];
-            if (subs) {
-              subs.delete(callback);
-              if (subs.size === 0) {
-                delete state.taskSubscribers[taskId];
-              }
-            }
-          });
-        };
-      },
-
-      notifyTaskSubscribers: (taskId, task) => {
-        const subs = get().taskSubscribers[taskId];
-        if (subs) {
-          subs.forEach((callback) => callback(task));
-        }
       },
     })),
   ),
@@ -212,9 +237,13 @@ export const useTransportStore = create<TransportStore>()(
 
 // Selectors
 export const selectTask =
-  <TArgs = unknown, TReturn = unknown>(taskId: string) =>
-  (store: TransportStore) =>
-    store.tasks[taskId] as Task<TArgs, TReturn> | undefined;
+  <TArgs = unknown, TReturn = unknown>(referenceOrId: string) =>
+  (store: TransportStore) => {
+    const ref = store.tasks[referenceOrId] 
+      ? referenceOrId 
+      : store.taskIdToReference[referenceOrId];
+    return ref ? (store.tasks[ref] as Task<TArgs, TReturn>) : undefined;
+  };
 
 export const selectTasks = (store: TransportStore) => store.tasks;
 
@@ -223,12 +252,9 @@ export const selectTasksByAction =
     Object.values(store.tasks).filter((task) => task.action === actionName);
 
 export const selectIsConnected = (store: TransportStore) => store.isConnected;
-export const selectIsReconnecting = (store: TransportStore) =>
-  store.isReconnecting;
-export const selectIsUnconnectable = (store: TransportStore) =>
-  store.isUnconnectable;
-export const selectReconnectAttempt = (store: TransportStore) =>
-  store.reconnectAttempt;
+export const selectIsReconnecting = (store: TransportStore) => store.isReconnecting;
+export const selectIsUnconnectable = (store: TransportStore) => store.isUnconnectable;
+export const selectReconnectAttempt = (store: TransportStore) => store.reconnectAttempt;
 
 // Convenience hook for accessing the store outside of React
 export const transportStore = {

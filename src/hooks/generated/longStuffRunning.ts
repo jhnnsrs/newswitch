@@ -8,7 +8,7 @@ import {
 
 // --- Schemas ---
 export const LongStuffRunningArgsSchema = z.object({});
-export const LongStuffRunningReturnSchema = z.void();
+export const LongStuffRunningReturnSchema = z.object({});
 
 // --- Types ---
 export type LongStuffRunningArgs = z.infer<typeof LongStuffRunningArgsSchema>;

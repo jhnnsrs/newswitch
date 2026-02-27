@@ -32,7 +32,7 @@ export function useCaptureAndDownload(
   const { autoDownload = true } = options;
   
   const { apiEndpoint } = useTransport();
-  const { assign: captureImage, isLoading: isCapturing, isLocked } = useCaptureImage();
+  const { call: captureImage, isLoading: isCapturing, isLocked } = useCaptureImage();
   
   const [isDownloading, setIsDownloading] = useState(false);
   const [lastCapture, setLastCapture] = useState<string | null>(null);
@@ -82,8 +82,10 @@ export function useCaptureAndDownload(
     
     try {
       // Capture returns a Task, the file path is in task.result
+      console.log('[useCaptureAndDownload] Starting capture...');
       const task = await captureImage({});
-      const filePath = task.result;
+      console.log('[useCaptureAndDownload] Capture task assigned:', task);
+      const filePath = task.return0
       
       if (filePath) {
         setLastCapture(filePath);

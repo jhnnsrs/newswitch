@@ -8,7 +8,7 @@ import {
 
 // --- Schemas ---
 export const ToggleObjectiveArgsSchema = z.object({});
-export const ToggleObjectiveReturnSchema = z.void();
+export const ToggleObjectiveReturnSchema = z.object({});
 
 // --- Types ---
 export type ToggleObjectiveArgs = z.infer<typeof ToggleObjectiveArgsSchema>;
