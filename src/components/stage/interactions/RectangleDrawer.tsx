@@ -6,7 +6,6 @@ import { Line } from '@react-three/drei';
 import { useMemo, useState } from 'react';
 import * as THREE from 'three';
 
-
 // --- Path Generation Component ---
 
 const ScanPathPreview = ({ region }: { region: ScanRegion }) => {
@@ -35,18 +34,28 @@ const ScanPathPreview = ({ region }: { region: ScanRegion }) => {
         const stepX = calculatedFovWidth * (1 - safeOverlap);
         const stepY = calculatedFovHeight * (1 - safeOverlap);
 
+        // Calculate how many columns and rows are needed to cover the drawn area
         const cols = Math.max(1, Math.ceil((maxX - minX - calculatedFovWidth) / stepX) + 1);
         const rows = Math.max(1, Math.ceil((maxY - minY - calculatedFovHeight) / stepY) + 1);
 
-        const startX = minX + calculatedFovWidth / 2;
-        const startY = minY + calculatedFovHeight / 2;
+        // Center of the user-drawn region
+        const regionCenterX = (minX + maxX) / 2;
+        const regionCenterY = (minY + maxY) / 2;
+
+        // Total physical dimensions of the resulting grid
+        const totalGridWidth = (cols - 1) * stepX + calculatedFovWidth;
+        const totalGridHeight = (rows - 1) * stepY + calculatedFovHeight;
+
+        // Shift the starting point so the grid is perfectly centered over the drawn region
+        const startX = regionCenterX - (totalGridWidth / 2) + (calculatedFovWidth / 2);
+        const startY = regionCenterY - (totalGridHeight / 2) + (calculatedFovHeight / 2);
 
         const points: [number, number, number][] = [];
 
-        if (region.pattern === 'snake_row' || region.pattern === 'raster_row') {
+        if (region.pattern === "SNAKE_ROW" || region.pattern === 'RASTER_ROW') {
             for (let r = 0; r < rows; r++) {
                 const y = startY + r * stepY;
-                const isReverse = region.pattern === 'snake_row' && r % 2 !== 0;
+                const isReverse = region.pattern === 'SNAKE_ROW' && r % 2 !== 0;
                 
                 for (let c = 0; c < cols; c++) {
                     const actualC = isReverse ? cols - 1 - c : c;
@@ -57,7 +66,7 @@ const ScanPathPreview = ({ region }: { region: ScanRegion }) => {
         } else {
             for (let c = 0; c < cols; c++) {
                 const x = startX + c * stepX;
-                const isReverse = region.pattern === 'snake_col' && c % 2 !== 0;
+                const isReverse = region.pattern === 'SNAKE_COL' && c % 2 !== 0;
                 
                 for (let r = 0; r < rows; r++) {
                     const actualR = isReverse ? rows - 1 - r : r;
@@ -114,7 +123,6 @@ const ScanPathPreview = ({ region }: { region: ScanRegion }) => {
         </group>
     );
 };
-
 
 export const RectangleDrawer = () => {
     // Mode store state
