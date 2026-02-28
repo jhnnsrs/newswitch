@@ -1,11 +1,16 @@
-import { Badge } from '@/components/ui/badge';
-import { useCameraState, useIlluminationState, useObjectiveState, useStageState } from '@/hooks/states';
-import { CheckCircle2, RefreshCw, XCircle } from 'lucide-react';
+import { Badge } from "@/components/ui/badge";
+import {
+  useCameraState,
+  useIlluminationState,
+  useObjectiveState,
+  useStageState,
+} from "@/hooks/states";
+import { CheckCircle2, RefreshCw, XCircle } from "lucide-react";
 
 function StatusBadge({
   label,
   isLoading,
-  isConnected
+  isConnected,
 }: {
   label: string;
   isLoading: boolean;
@@ -13,7 +18,7 @@ function StatusBadge({
 }) {
   return (
     <Badge
-      variant={isLoading ? 'outline' : isConnected ? 'default' : 'secondary'}
+      variant={isLoading ? "outline" : isConnected ? "default" : "secondary"}
       className="gap-1 text-xs"
     >
       {isLoading ? (
@@ -29,18 +34,40 @@ function StatusBadge({
 }
 
 export function StatusPanel() {
-
-  const { data: camera, loading: cameraLoading } = useCameraState({ subscribe: true });
-  const { data: stage, loading: stageLoading } = useStageState({ subscribe: true });
-  const { data: illumination, loading: illuminationLoading } = useIlluminationState({ subscribe: true });
-  const { data: objective, loading: objectiveLoading } = useObjectiveState({ subscribe: true });
+  const { data: camera, loading: cameraLoading } = useCameraState({
+    subscribe: true,
+  });
+  const { data: stage, loading: stageLoading } = useStageState({
+    subscribe: true,
+  });
+  const { data: illumination, loading: illuminationLoading } =
+    useIlluminationState({ subscribe: true });
+  const { data: objective, loading: objectiveLoading } = useObjectiveState({
+    subscribe: true,
+  });
 
   return (
     <div className="flex items-center gap-1.5">
-      <StatusBadge label="Cam" isLoading={cameraLoading} isConnected={!!camera} />
-      <StatusBadge label="Stage" isLoading={stageLoading} isConnected={!!stage} />
-      <StatusBadge label="Light" isLoading={illuminationLoading} isConnected={!!illumination} />
-      <StatusBadge label="Obj" isLoading={objectiveLoading} isConnected={!!objective} />
+      <StatusBadge
+        label="Cam"
+        isLoading={cameraLoading}
+        isConnected={!!camera}
+      />
+      <StatusBadge
+        label="Stage"
+        isLoading={stageLoading}
+        isConnected={!!stage}
+      />
+      <StatusBadge
+        label="Light"
+        isLoading={illuminationLoading}
+        isConnected={!!illumination}
+      />
+      <StatusBadge
+        label="Obj"
+        isLoading={objectiveLoading}
+        isConnected={!!objective}
+      />
     </div>
   );
 }

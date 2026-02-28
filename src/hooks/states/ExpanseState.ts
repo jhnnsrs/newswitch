@@ -14,6 +14,7 @@ export const ExpanseStateSchema = z.object({
         metadata: z
           .object({
             objective_id: z.string(),
+            detector_id: z.string(),
             affine_matrix: z.array(z.array(z.number())),
           })
           .brand("metadata"),

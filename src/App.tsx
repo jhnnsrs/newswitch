@@ -1,32 +1,29 @@
-import './App.css'
+import "./App.css";
 import {
   LiveView,
   MultidimensionalAcquisitionControl,
   SettingsPanel,
   StageControl,
-} from './components/microscope'
-import { Expanse } from './components/stage/Expanse'
+} from "./components/microscope";
+import { CalculateAffineTransformationControl } from "./components/microscope/CalculateAffineTransformationControl";
+import { Expanse } from "./components/stage/Expanse";
 import {
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
-} from './components/ui/resizable'
-import { Toaster } from './components/ui/sonner'
-import { TransportProvider } from './transport'
-
+} from "./components/ui/resizable";
+import { Toaster } from "./components/ui/sonner";
+import { TransportProvider } from "./transport";
 
 // The backend API URL is either injected into the global scope by the
 // electron app or taken from environment variables, allowing for flexibility in different deployment scenarios.
-const BACKEND_API = window.__agent_url__ || import.meta.env.VITE_BACKEND_URL 
-const BACKEND_WS = window.__agent_ws_url__ || import.meta.env.VITE_WEBSOCKET_URL
-
-
+const BACKEND_API = window.__agent_url__ || import.meta.env.VITE_BACKEND_URL;
+const BACKEND_WS =
+  window.__agent_ws_url__ || import.meta.env.VITE_WEBSOCKET_URL;
 
 function MicroscopeControlPanel() {
   return (
     <div className="h-screen flex flex-col bg-background text-foreground dark">
-     
-
       {/* Main Layout: Resizable Left Panel + Center View + Right Panel */}
       <ResizablePanelGroup direction="horizontal" className="flex-1">
         {/* Left Settings Panel */}
@@ -51,26 +48,27 @@ function MicroscopeControlPanel() {
             <StageControl />
 
             <MultidimensionalAcquisitionControl />
+            <CalculateAffineTransformationControl />
           </div>
-
         </ResizablePanel>
       </ResizablePanelGroup>
     </div>
-  )
+  );
 }
-
 
 function App() {
   return (
-    <TransportProvider config={{ 
-      instanceId: 'microscope-control-panel',
-      apiEndpoint: BACKEND_API,
-      wsEndpoint: BACKEND_WS
-    }}>
+    <TransportProvider
+      config={{
+        instanceId: "microscope-control-panel",
+        apiEndpoint: BACKEND_API,
+        wsEndpoint: BACKEND_WS,
+      }}
+    >
       <MicroscopeControlPanel />
       <Toaster position="bottom-right" richColors />
     </TransportProvider>
-  )
+  );
 }
 
-export default App
+export default App;

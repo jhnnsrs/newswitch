@@ -1,6 +1,6 @@
-import { useTransport } from '@/transport/TransportProvider';
-import { useCallback, useState } from 'react';
-import { useCaptureImage } from './generated';
+import { useTransport } from "@/transport/TransportProvider";
+import { useCallback, useState } from "react";
+import { useCaptureImage } from "./generated";
 
 interface UseCaptureAndDownloadOptions {
   /** Custom filename for the download (without extension) */
@@ -27,81 +27,88 @@ interface UseCaptureAndDownloadReturn {
 }
 
 export function useCaptureAndDownload(
-  options: UseCaptureAndDownloadOptions = {}
+  options: UseCaptureAndDownloadOptions = {},
 ): UseCaptureAndDownloadReturn {
   const { autoDownload = true } = options;
-  
+
   const { apiEndpoint } = useTransport();
-  const { call: captureImage, isLoading: isCapturing, isLocked } = useCaptureImage();
-  
+  const {
+    call: captureImage,
+    isLoading: isCapturing,
+    isLocked,
+  } = useCaptureImage();
+
   const [isDownloading, setIsDownloading] = useState(false);
   const [lastCapture, setLastCapture] = useState<string | null>(null);
   const [error, setError] = useState<Error | null>(null);
 
-  const downloadFile = useCallback(async (filePath: string) => {
-    setIsDownloading(true);
-    setError(null);
-    
-    try {
-      const baseUrl = apiEndpoint.replace(/\/$/, '');
-      const url = `${baseUrl}/files/${encodeURIComponent(filePath)}`;
-      
-      const response = await fetch(url);
-      
-      if (!response.ok) {
-        throw new Error(`Failed to download file: ${response.statusText}`);
+  const downloadFile = useCallback(
+    async (filePath: string) => {
+      setIsDownloading(true);
+      setError(null);
+
+      try {
+        const baseUrl = apiEndpoint.replace(/\/$/, "");
+        const url = `${baseUrl}/files/${encodeURIComponent(filePath)}`;
+
+        const response = await fetch(url);
+
+        if (!response.ok) {
+          throw new Error(`Failed to download file: ${response.statusText}`);
+        }
+
+        const blob = await response.blob();
+
+        // Extract filename from path or use provided one
+        const fileName = filePath.split("/").pop() || "capture.png";
+
+        // Create download link
+        const downloadUrl = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = downloadUrl;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        // Cleanup
+        URL.revokeObjectURL(downloadUrl);
+      } catch (err) {
+        const error = err instanceof Error ? err : new Error("Download failed");
+        setError(error);
+        console.error("[useCaptureAndDownload] Download error:", error);
+      } finally {
+        setIsDownloading(false);
       }
-      
-      const blob = await response.blob();
-      
-      // Extract filename from path or use provided one
-      const fileName = filePath.split('/').pop() || 'capture.png';
-      
-      // Create download link
-      const downloadUrl = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = downloadUrl;
-      link.download = fileName;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      // Cleanup
-      URL.revokeObjectURL(downloadUrl);
-    } catch (err) {
-      const error = err instanceof Error ? err : new Error('Download failed');
-      setError(error);
-      console.error('[useCaptureAndDownload] Download error:', error);
-    } finally {
-      setIsDownloading(false);
-    }
-  }, [apiEndpoint]);
+    },
+    [apiEndpoint],
+  );
 
   const capture = useCallback(async (): Promise<string | null> => {
     setError(null);
-    
+
     try {
       // Capture returns a Task, the file path is in task.result
-      console.log('[useCaptureAndDownload] Starting capture...');
+      console.log("[useCaptureAndDownload] Starting capture...");
       const task = await captureImage({});
-      console.log('[useCaptureAndDownload] Capture task assigned:', task);
-      const filePath = task.return0
-      
+      console.log("[useCaptureAndDownload] Capture task assigned:", task);
+      const filePath = task.return0;
+
       if (filePath) {
         setLastCapture(filePath);
-        
+
         if (autoDownload) {
           await downloadFile(filePath);
         }
-        
+
         return filePath;
       }
-      
+
       return null;
     } catch (err) {
-      const error = err instanceof Error ? err : new Error('Capture failed');
+      const error = err instanceof Error ? err : new Error("Capture failed");
       setError(error);
-      console.error('[useCaptureAndDownload] Capture error:', error);
+      console.error("[useCaptureAndDownload] Capture error:", error);
       return null;
     }
   }, [captureImage, autoDownload, downloadFile]);

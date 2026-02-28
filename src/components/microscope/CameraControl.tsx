@@ -1,5 +1,5 @@
-import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
+import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import {
   useActivateDetector,
   useCaptureImage,
@@ -7,13 +7,13 @@ import {
   useStartLiveView,
   useStopLiveView,
   useUpdateDetector,
-} from '@/hooks/generated';
-import { useCameraState } from '@/hooks/states';
-import { cn } from '@/lib/utils';
-import { Gauge, MonitorUp, Timer } from 'lucide-react';
-import { useState } from 'react';
-import { OptimisticSlider } from '../ui/optimistic_slider';
-import { ResponsiveGrid } from '../ui/responsive-grid';
+} from "@/hooks/generated";
+import { useCameraState } from "@/hooks/states";
+import { cn } from "@/lib/utils";
+import { Gauge, MonitorUp, Timer } from "lucide-react";
+import { useState } from "react";
+import { OptimisticSlider } from "../ui/optimistic_slider";
+import { ResponsiveGrid } from "../ui/responsive-grid";
 
 export function CameraControl() {
   const { data: cameraState, loading: stateLoading } = useCameraState({
@@ -24,16 +24,23 @@ export function CameraControl() {
     isLoading: isCapturing,
     isLocked: isCapturingLocked,
   } = useCaptureImage();
-  const { assign: startLiveView, isLoading: isStartingLive } = useStartLiveView();
+  const { assign: startLiveView, isLoading: isStartingLive } =
+    useStartLiveView();
   const { assign: stopLiveView, isLoading: isStoppingLive } = useStopLiveView();
-  const { assign: activateDetector, isLoading: isActivating } = useActivateDetector();
-  const { assign: deactivateDetector, isLoading: isDeactivating } = useDeactivateDetector();
+  const { assign: activateDetector, isLoading: isActivating } =
+    useActivateDetector();
+  const { assign: deactivateDetector, isLoading: isDeactivating } =
+    useDeactivateDetector();
   const { call: updateDetector, isLoading: isUpdating } = useUpdateDetector();
 
   // Local state for slider dragging
-  const [localExposures, setLocalExposures] = useState<Record<number, number>>({});
+  const [localExposures, setLocalExposures] = useState<Record<number, number>>(
+    {},
+  );
   const [localGains, setLocalGains] = useState<Record<number, number>>({});
-  const [selectedDetectorSlot, setSelectedDetectorSlot] = useState<number | null>(null);
+  const [selectedDetectorSlot, setSelectedDetectorSlot] = useState<
+    number | null
+  >(null);
 
   const isLive = cameraState?.is_acquiring ?? false;
   const detectors = cameraState?.detectors ?? [];
@@ -102,25 +109,28 @@ export function CameraControl() {
 
   return (
     <div className="space-y-4">
-
       {/* Detectors */}
       <ResponsiveGrid>
         {detectors?.map((detector) => {
           const isActive = detector.is_active;
           const currentExposure =
-            localExposures[detector.slot] ?? detector.current_exposure_time ?? detector.min_exposure_time;
+            localExposures[detector.slot] ??
+            detector.current_exposure_time ??
+            detector.min_exposure_time;
           const currentGain =
-            localGains[detector.slot] ?? detector.current_gain ?? detector.min_gain;
+            localGains[detector.slot] ??
+            detector.current_gain ??
+            detector.min_gain;
           const isExpanded = selectedDetectorSlot === detector.slot;
 
           return (
             <div
               key={detector.slot}
               className={cn(
-                'rounded-lg border transition-all',
+                "rounded-lg border transition-all",
                 isActive
-                  ? 'bg-primary/5 border-primary/30'
-                  : 'bg-muted/30 border-transparent'
+                  ? "bg-primary/5 border-primary/30"
+                  : "bg-muted/30 border-transparent",
               )}
             >
               {/* Detector Header */}
@@ -133,17 +143,15 @@ export function CameraControl() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <MonitorUp
-                      className={cn(
-                        'h-4 w-4',
-                        isActive && 'text-green-500'
-                      )}
+                      className={cn("h-4 w-4", isActive && "text-green-500")}
                     />
                     <span className="text-sm font-medium">{detector.name}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     {isActive && (
                       <span className="text-xs text-muted-foreground font-mono">
-                        {detector.current_exposure_time.toFixed(0)}ms / {detector.current_gain.toFixed(1)}×
+                        {detector.current_exposure_time.toFixed(0)}ms /{" "}
+                        {detector.current_gain.toFixed(1)}×
                       </span>
                     )}
                     <Switch
@@ -189,9 +197,12 @@ export function CameraControl() {
                     </div>
                     <OptimisticSlider
                       value={[currentExposure]}
-                      onSave={(v) => updateDetector(
-                        { slot: detector.slot, exposure_time: v[0] }
-                      )}
+                      onSave={(v) =>
+                        updateDetector({
+                          slot: detector.slot,
+                          exposure_time: v[0],
+                        })
+                      }
                       min={detector.min_exposure_time}
                       max={detector.max_exposure_time}
                       step={0.1}
@@ -200,22 +211,31 @@ export function CameraControl() {
                     />
                     {detector.preset_exposure_times?.length > 0 && (
                       <div className="flex gap-1 flex-wrap">
-                        {detector.preset_exposure_times.slice(0, 6).map((val) => (
-                          <Button
-                            key={val}
-                            size="sm"
-                            variant={
-                              Math.abs((detector.current_exposure_time ?? 0) - val) < 0.5
-                                ? 'default'
-                                : 'outline'
-                            }
-                            onClick={() => updateDetector({ slot: detector.slot, exposure_time: val })}
-                            className="h-6 text-xs px-2"
-                            disabled={isUpdating}
-                          >
-                            {val >= 1000 ? `${val / 1000}s` : `${val}ms`}
-                          </Button>
-                        ))}
+                        {detector.preset_exposure_times
+                          .slice(0, 6)
+                          .map((val) => (
+                            <Button
+                              key={val}
+                              size="sm"
+                              variant={
+                                Math.abs(
+                                  (detector.current_exposure_time ?? 0) - val,
+                                ) < 0.5
+                                  ? "default"
+                                  : "outline"
+                              }
+                              onClick={() =>
+                                updateDetector({
+                                  slot: detector.slot,
+                                  exposure_time: val,
+                                })
+                              }
+                              className="h-6 text-xs px-2"
+                              disabled={isUpdating}
+                            >
+                              {val >= 1000 ? `${val / 1000}s` : `${val}ms`}
+                            </Button>
+                          ))}
                       </div>
                     )}
                   </div>
@@ -248,7 +268,8 @@ export function CameraControl() {
                     <div className="flex gap-1">
                       {[1, 2, 4, 8, 16, 32]
                         .filter(
-                          (v) => v >= detector.min_gain && v <= detector.max_gain
+                          (v) =>
+                            v >= detector.min_gain && v <= detector.max_gain,
                         )
                         .map((val) => (
                           <Button
@@ -256,10 +277,12 @@ export function CameraControl() {
                             size="sm"
                             variant={
                               Math.abs((detector.current_gain ?? 0) - val) < 0.1
-                                ? 'default'
-                                : 'outline'
+                                ? "default"
+                                : "outline"
                             }
-                            onClick={() => updateDetector({ slot: detector.slot, gain: val })}
+                            onClick={() =>
+                              updateDetector({ slot: detector.slot, gain: val })
+                            }
                             className="flex-1 h-6 text-xs px-1"
                             disabled={isUpdating}
                           >
@@ -274,13 +297,11 @@ export function CameraControl() {
           );
         })}
 
-        {(!detectors ||
-          detectors.length === 0) &&
-          !stateLoading && (
-            <div className="text-center py-4 text-sm text-muted-foreground col-span-full">
-              No detectors available
-            </div>
-          )}
+        {(!detectors || detectors.length === 0) && !stateLoading && (
+          <div className="text-center py-4 text-sm text-muted-foreground col-span-full">
+            No detectors available
+          </div>
+        )}
       </ResponsiveGrid>
     </div>
   );

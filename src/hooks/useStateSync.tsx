@@ -1,8 +1,13 @@
 // src/hooks/useStateSync.ts
-import { useCallback, useEffect, useRef } from 'react';
-import { ZodType } from 'zod';
-import { selectError, selectLoading, selectState, useGlobalStateStore } from '../store';
-import { useTransport } from '../transport/TransportProvider';
+import { useCallback, useEffect, useRef } from "react";
+import { ZodType } from "zod";
+import {
+  selectError,
+  selectLoading,
+  selectState,
+  useGlobalStateStore,
+} from "../store";
+import { useTransport } from "../transport/TransportProvider";
 
 // --- Interfaces ---
 
@@ -32,9 +37,11 @@ export interface UseStateSyncResult<U> {
  * to determine the return type at the call-site.
  */
 export const buildUseState = <T extends Record<string, unknown>>(
-  definition: StateDefinition<T>
+  definition: StateDefinition<T>,
 ) => {
-  return <U = T>(options: UseStateSyncOptions<T, U> = {}): UseStateSyncResult<U> => {
+  return <U = T,>(
+    options: UseStateSyncOptions<T, U> = {},
+  ): UseStateSyncResult<U> => {
     return useStateSync<T, U>(definition, options);
   };
 };
@@ -43,7 +50,7 @@ export const buildUseState = <T extends Record<string, unknown>>(
 
 export const useStateSync = <T extends Record<string, unknown>, U = T>(
   definition: StateDefinition<T>,
-  options: UseStateSyncOptions<T, U> = {}
+  options: UseStateSyncOptions<T, U> = {},
 ): UseStateSyncResult<U> => {
   const { subscribe = false, fetchOnMount = true, selector } = options;
 
@@ -53,9 +60,8 @@ export const useStateSync = <T extends Record<string, unknown>, U = T>(
   // 2. Apply selector logic
   // If rawData exists and selector exists, use selector.
   // Otherwise, cast rawData to U (which is safe because U defaults to T if no selector).
-  const data = (rawData && selector) 
-    ? selector(rawData) 
-    : (rawData as unknown as U | null);
+  const data =
+    rawData && selector ? selector(rawData) : (rawData as unknown as U | null);
 
   const loading = useGlobalStateStore(selectLoading(definition.key));
   const error = useGlobalStateStore(selectError(definition.key));
@@ -73,12 +79,17 @@ export const useStateSync = <T extends Record<string, unknown>, U = T>(
       setError(definition.key, null);
 
       // Just fetch; the store update happens via setState
-      const response = await fetchState<{ state: T; revision: number }>(definition.key);
+      const response = await fetchState<{ state: T; revision: number }>(
+        definition.key,
+      );
 
       const parsed = schemaRef.current.safeParse(response.state);
       if (!parsed.success) {
         console.error(`[${definition.key}] Validation Failed:`, parsed.error);
-        setError(definition.key, new Error(`Validation failed for ${definition.key}`));
+        setError(
+          definition.key,
+          new Error(`Validation failed for ${definition.key}`),
+        );
       } else {
         setState(definition.key, parsed.data);
       }

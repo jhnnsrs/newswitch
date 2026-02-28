@@ -1,14 +1,15 @@
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Separator } from '@/components/ui/separator';
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
-  useStartLiveView,
-  useStopLiveView
-} from '@/hooks/generated';
-import { useCameraState, useObjectiveState } from '@/hooks/states';
-import { useCaptureAndDownload } from '@/hooks/useCaptureAndDownload';
-import { cn } from '@/lib/utils';
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { Separator } from "@/components/ui/separator";
+import { useStartLiveView, useStopLiveView } from "@/hooks/generated";
+import { useCameraState, useObjectiveState } from "@/hooks/states";
+import { useCaptureAndDownload } from "@/hooks/useCaptureAndDownload";
+import { cn } from "@/lib/utils";
 import {
   Camera,
   ChevronDown,
@@ -18,13 +19,13 @@ import {
   Settings2,
   Square,
   Sun,
-  Target
-} from 'lucide-react';
-import { useState } from 'react';
-import { CameraControl } from './CameraControl';
-import { FilterBankControl } from './FilterBankControl';
-import { IlluminationControl } from './IlluminationControl';
-import { ObjectiveControl } from './ObjectiveControl';
+  Target,
+} from "lucide-react";
+import { useState } from "react";
+import { CameraControl } from "./CameraControl";
+import { FilterBankControl } from "./FilterBankControl";
+import { IlluminationControl } from "./IlluminationControl";
+import { ObjectiveControl } from "./ObjectiveControl";
 
 interface SettingsSectionProps {
   title: string;
@@ -34,7 +35,13 @@ interface SettingsSectionProps {
   badge?: string;
 }
 
-function SettingsSection({ title, icon, children, defaultOpen = true, badge }: SettingsSectionProps) {
+function SettingsSection({
+  title,
+  icon,
+  children,
+  defaultOpen = true,
+  badge,
+}: SettingsSectionProps) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
   return (
@@ -43,9 +50,15 @@ function SettingsSection({ title, icon, children, defaultOpen = true, badge }: S
         <div className="flex items-center gap-2 text-sm font-medium">
           {icon}
           {title}
-          {badge && <Badge variant="secondary" className="text-xs ml-2">{badge}</Badge>}
+          {badge && (
+            <Badge variant="secondary" className="text-xs ml-2">
+              {badge}
+            </Badge>
+          )}
         </div>
-        <ChevronDown className={cn("h-4 w-4 transition-transform", isOpen && "rotate-180")} />
+        <ChevronDown
+          className={cn("h-4 w-4 transition-transform", isOpen && "rotate-180")}
+        />
       </CollapsibleTrigger>
       <CollapsibleContent className="px-3 pb-3 space-y-3">
         {children}
@@ -58,14 +71,25 @@ export function SettingsPanel() {
   const { data: cameraState } = useCameraState({ subscribe: true });
   const { data: objectiveState } = useObjectiveState({ subscribe: true });
 
-
   // Live view and capture controls
-  const { assign: startLiveView, isLoading: isStarting, isLocked: isStartLocked } = useStartLiveView();
-  const { assign: stopLiveView, isLoading: isStopping, isLocked: isStopLocked } = useStopLiveView();
-  const { capture, isCapturing, isDownloading, isLocked: isCaptureLocked } = useCaptureAndDownload();
+  const {
+    assign: startLiveView,
+    isLoading: isStarting,
+    isLocked: isStartLocked,
+  } = useStartLiveView();
+  const {
+    assign: stopLiveView,
+    isLoading: isStopping,
+    isLocked: isStopLocked,
+  } = useStopLiveView();
+  const {
+    capture,
+    isCapturing,
+    isDownloading,
+    isLocked: isCaptureLocked,
+  } = useCaptureAndDownload();
 
   const isLive = cameraState?.is_acquiring ?? false;
-
 
   return (
     <div className="h-full flex flex-col">
@@ -114,17 +138,14 @@ export function SettingsPanel() {
             ) : (
               <Camera className="h-3 w-3" />
             )}
-            {isDownloading ? 'Save' : isCapturing ? 'Snap' : 'Snap'}
+            {isDownloading ? "Save" : isCapturing ? "Snap" : "Snap"}
           </Button>
         </div>
       </div>
 
       <div className="flex-1 overflow-y-auto">
         {/* Camera Settings */}
-        <SettingsSection
-          title="Camera"
-          icon={<Camera className="h-4 w-4" />}
-        >
+        <SettingsSection title="Camera" icon={<Camera className="h-4 w-4" />}>
           <CameraControl />
         </SettingsSection>
 
@@ -138,10 +159,7 @@ export function SettingsPanel() {
           <IlluminationControl />
         </SettingsSection>
         {/* Illumination Settings */}
-        <SettingsSection
-          title="Filters"
-          icon={<Filter className="h-4 w-4" />}
-        >
+        <SettingsSection title="Filters" icon={<Filter className="h-4 w-4" />}>
           <FilterBankControl />
         </SettingsSection>
 
@@ -151,13 +169,14 @@ export function SettingsPanel() {
         <SettingsSection
           title="Objective"
           icon={<Target className="h-4 w-4" />}
-          badge={objectiveState?.slot ? `Slot ${objectiveState.slot}` : undefined}
+          badge={
+            objectiveState?.slot ? `Slot ${objectiveState.slot}` : undefined
+          }
         >
           <ObjectiveControl />
         </SettingsSection>
 
         <Separator />
-
       </div>
     </div>
   );

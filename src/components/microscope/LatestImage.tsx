@@ -1,14 +1,22 @@
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-import { useIOState } from '@/hooks/states';
-import { useTransport } from '@/transport/TransportProvider';
-import { Download, ImageIcon, RefreshCw } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useIOState } from "@/hooks/states";
+import { useTransport } from "@/transport/TransportProvider";
+import { Download, ImageIcon, RefreshCw } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 
 export function LatestImage() {
-  const { data: ioState, loading: stateLoading } = useIOState({ subscribe: true });
+  const { data: ioState, loading: stateLoading } = useIOState({
+    subscribe: true,
+  });
   const { apiEndpoint } = useTransport();
 
   const [imageUrl, setImageUrl] = useState<string | null>(null);
@@ -30,7 +38,7 @@ export function LatestImage() {
     const fetchImage = async () => {
       try {
         // Construct the URL to fetch the image from backend
-        const baseUrl = apiEndpoint.replace(/\/$/, '');
+        const baseUrl = apiEndpoint.replace(/\/$/, "");
         const url = `${baseUrl}/files/${encodeURIComponent(filePath)}`;
 
         const response = await fetch(url);
@@ -51,8 +59,8 @@ export function LatestImage() {
         setImageUrl(newUrl);
         setError(null);
       } catch (err) {
-        console.error('[LatestImage] Error fetching image:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load image');
+        console.error("[LatestImage] Error fetching image:", err);
+        setError(err instanceof Error ? err.message : "Failed to load image");
       } finally {
         setIsLoadingImage(false);
       }
@@ -73,9 +81,9 @@ export function LatestImage() {
   const handleDownload = () => {
     if (!imageUrl || !lastFile) return;
 
-    const link = document.createElement('a');
+    const link = document.createElement("a");
     link.href = imageUrl;
-    link.download = lastFile.split('/').pop() || 'image.png';
+    link.download = lastFile.split("/").pop() || "image.png";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -135,9 +143,7 @@ export function LatestImage() {
 
           {/* Image display area */}
           <div className="relative aspect-video bg-muted rounded-lg overflow-hidden flex items-center justify-center">
-            {isLoadingImage && (
-              <Skeleton className="absolute inset-0" />
-            )}
+            {isLoadingImage && <Skeleton className="absolute inset-0" />}
 
             {error && !isLoadingImage && (
               <div className="text-center p-4">
@@ -149,7 +155,9 @@ export function LatestImage() {
             {!imageUrl && !isLoadingImage && !error && (
               <div className="text-center p-4">
                 <ImageIcon className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                <p className="text-sm text-muted-foreground">No image captured yet</p>
+                <p className="text-sm text-muted-foreground">
+                  No image captured yet
+                </p>
               </div>
             )}
 

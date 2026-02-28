@@ -1,10 +1,10 @@
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from '@/components/ui/collapsible';
+} from "@/components/ui/collapsible";
 import {
   Form,
   FormControl,
@@ -12,17 +12,17 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Progress } from '@/components/ui/progress';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Progress } from "@/components/ui/progress";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from '@/components/ui/tooltip';
+} from "@/components/ui/tooltip";
 import {
   AcquireMultidimensionalAcquisitionArgsSchema,
   useAcquireMultidimensionalAcquisition,
@@ -32,16 +32,16 @@ import {
   type Stack,
   type Streams,
   type Timepoint,
-} from '@/hooks/generated';
+} from "@/hooks/generated";
 import {
   useCameraState,
   useIlluminationState,
   useStageState,
-} from '@/hooks/states';
-import { cn } from '@/lib/utils';
-import { usePauseTask } from '@/transport/usePauseTask';
-import useResumeTask from '@/transport/useResumeTask';
-import { zodResolver } from '@hookform/resolvers/zod';
+} from "@/hooks/states";
+import { cn } from "@/lib/utils";
+import { usePauseTask } from "@/transport/usePauseTask";
+import useResumeTask from "@/transport/useResumeTask";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   ChevronDown,
   ChevronRight,
@@ -57,21 +57,21 @@ import {
   RotateCcw,
   Square,
   Trash2,
-} from 'lucide-react';
-import { useCallback, useState } from 'react';
-import { useFieldArray, useForm } from 'react-hook-form';
+} from "lucide-react";
+import { useCallback, useState } from "react";
+import { useFieldArray, useForm } from "react-hook-form";
 
 // ---------------------------------------------------------------------------
 // Helpers – z_slices is number[] in the schema, but we edit as comma string
 // ---------------------------------------------------------------------------
 
 function zSlicesToString(slices: number[]): string {
-  return slices.join(', ');
+  return slices.join(", ");
 }
 
 function stringToZSlices(raw: string): number[] {
   return raw
-    .split(',')
+    .split(",")
     .map((s) => parseFloat(s.trim()))
     .filter((n) => !isNaN(n));
 }
@@ -81,13 +81,13 @@ function stringToZSlices(raw: string): number[] {
 // ---------------------------------------------------------------------------
 
 function makeDefaultIllumination(): Illumination {
-  return { source: 'LED1', wavelength: 488, intensity: 0.8 };
+  return { source: "LED1", wavelength: 488, intensity: 0.8 };
 }
 
 function makeDefaultStream(): Streams {
   return {
-    detector: 'camera_1',
-    mapping: 'default',
+    detector: "camera_1",
+    mapping: "default",
     illuminations: [makeDefaultIllumination()],
   };
 }
@@ -120,7 +120,7 @@ function makeDefaultPosition(
 function makeDefaultTimepoint(positions?: Position[]): Timepoint {
   return {
     time: undefined,
-    position_order: 'sequential',
+    position_order: "sequential",
     positions: positions ?? [makeDefaultPosition()],
     t_hooks: [],
   };
@@ -132,8 +132,8 @@ function makeDefaultConfig(
   return {
     config: {
       timepoints: [makeDefaultTimepoint(positions)],
-      file_name: 'acquisition_001',
-      file_format: 'tiff',
+      file_name: "acquisition_001",
+      file_format: "tiff",
       m_hooks: [],
     },
   };
@@ -149,7 +149,9 @@ type FormValues = AcquireMultidimensionalAcquisitionArgs;
 export function MultidimensionalAcquisitionControl() {
   const [selectedTimepoint, setSelectedTimepoint] = useState(0);
   const [selectedPosition, setSelectedPosition] = useState(0);
-  const [expandedSection, setExpandedSection] = useState<string | null>('timepoints');
+  const [expandedSection, setExpandedSection] = useState<string | null>(
+    "timepoints",
+  );
 
   // Live microscope state
   const { data: cameraState } = useCameraState({ subscribe: true });
@@ -182,7 +184,7 @@ export function MultidimensionalAcquisitionControl() {
 
     return activeDetectors.map((det) => ({
       detector: det.name,
-      mapping: det.current_colormap || 'default',
+      mapping: det.current_colormap || "default",
       illuminations:
         activeIlluminations.length > 0
           ? activeIlluminations.map((ill) => ({
@@ -217,7 +219,7 @@ export function MultidimensionalAcquisitionControl() {
 
   const timepointsField = useFieldArray({
     control: form.control,
-    name: 'config.timepoints',
+    name: "config.timepoints",
   });
 
   // Ensure indices stay valid
@@ -225,12 +227,8 @@ export function MultidimensionalAcquisitionControl() {
     selectedTimepoint,
     Math.max(0, timepointsField.fields.length - 1),
   );
-  const positions =
-    form.watch(`config.timepoints.${safeTP}.positions`) ?? [];
-  const safePos = Math.min(
-    selectedPosition,
-    Math.max(0, positions.length - 1),
-  );
+  const positions = form.watch(`config.timepoints.${safeTP}.positions`) ?? [];
+  const safePos = Math.min(selectedPosition, Math.max(0, positions.length - 1));
 
   // ---------------------------------------------------------------------------
   // Actions
@@ -271,8 +269,12 @@ export function MultidimensionalAcquisitionControl() {
   // Add position from current stage + channels state
   const addPositionFromCurrentState = () => {
     const pos = buildPositionFromState();
-    const currentPositions = form.getValues(`config.timepoints.${safeTP}.positions`) ?? [];
-    form.setValue(`config.timepoints.${safeTP}.positions`, [...currentPositions, pos]);
+    const currentPositions =
+      form.getValues(`config.timepoints.${safeTP}.positions`) ?? [];
+    form.setValue(`config.timepoints.${safeTP}.positions`, [
+      ...currentPositions,
+      pos,
+    ]);
     setSelectedPosition(currentPositions.length);
   };
 
@@ -375,8 +377,10 @@ export function MultidimensionalAcquisitionControl() {
 
           {/* Timepoints Section */}
           <Collapsible
-            open={expandedSection === 'timepoints'}
-            onOpenChange={(open) => setExpandedSection(open ? 'timepoints' : null)}
+            open={expandedSection === "timepoints"}
+            onOpenChange={(open) =>
+              setExpandedSection(open ? "timepoints" : null)
+            }
           >
             <CollapsibleTrigger asChild>
               <Button
@@ -393,8 +397,8 @@ export function MultidimensionalAcquisitionControl() {
                 </div>
                 <ChevronDown
                   className={cn(
-                    'h-4 w-4 transition-transform',
-                    expandedSection === 'timepoints' && 'rotate-180',
+                    "h-4 w-4 transition-transform",
+                    expandedSection === "timepoints" && "rotate-180",
                   )}
                 />
               </Button>
@@ -409,9 +413,9 @@ export function MultidimensionalAcquisitionControl() {
                       <div
                         key={field.id}
                         className={cn(
-                          'group flex items-center justify-between px-2 py-1.5 rounded text-sm cursor-pointer transition-colors',
-                          'hover:bg-accent',
-                          tpIdx === safeTP && 'bg-accent font-medium',
+                          "group flex items-center justify-between px-2 py-1.5 rounded text-sm cursor-pointer transition-colors",
+                          "hover:bg-accent",
+                          tpIdx === safeTP && "bg-accent font-medium",
                         )}
                         onClick={() => {
                           setSelectedTimepoint(tpIdx);
@@ -487,8 +491,10 @@ export function MultidimensionalAcquisitionControl() {
 
           {/* Positions Section */}
           <Collapsible
-            open={expandedSection === 'positions'}
-            onOpenChange={(open) => setExpandedSection(open ? 'positions' : null)}
+            open={expandedSection === "positions"}
+            onOpenChange={(open) =>
+              setExpandedSection(open ? "positions" : null)
+            }
           >
             <CollapsibleTrigger asChild>
               <Button
@@ -507,8 +513,8 @@ export function MultidimensionalAcquisitionControl() {
                 </div>
                 <ChevronDown
                   className={cn(
-                    'h-4 w-4 transition-transform',
-                    expandedSection === 'positions' && 'rotate-180',
+                    "h-4 w-4 transition-transform",
+                    expandedSection === "positions" && "rotate-180",
                   )}
                 />
               </Button>
@@ -520,9 +526,9 @@ export function MultidimensionalAcquisitionControl() {
                     <div
                       key={posIdx}
                       className={cn(
-                        'group flex items-center justify-between px-2 py-1.5 rounded text-sm cursor-pointer transition-colors',
-                        'hover:bg-accent',
-                        posIdx === safePos && 'bg-accent font-medium',
+                        "group flex items-center justify-between px-2 py-1.5 rounded text-sm cursor-pointer transition-colors",
+                        "hover:bg-accent",
+                        posIdx === safePos && "bg-accent font-medium",
                       )}
                       onClick={() => setSelectedPosition(posIdx)}
                     >
@@ -530,7 +536,8 @@ export function MultidimensionalAcquisitionControl() {
                         <MapPin className="h-3 w-3 text-muted-foreground" />
                         <span className="text-xs">P{posIdx + 1}</span>
                         <span className="text-[10px] text-muted-foreground font-mono">
-                          ({pos.x?.toFixed(0)}, {pos.y?.toFixed(0)}, {pos.z?.toFixed(0)})
+                          ({pos.x?.toFixed(0)}, {pos.y?.toFixed(0)},{" "}
+                          {pos.z?.toFixed(0)})
                         </span>
                       </div>
                       {positions.length > 1 && (
@@ -576,8 +583,10 @@ export function MultidimensionalAcquisitionControl() {
           {/* Selected Position Detail */}
           {positions.length > 0 && (
             <Collapsible
-              open={expandedSection === 'detail'}
-              onOpenChange={(open) => setExpandedSection(open ? 'detail' : null)}
+              open={expandedSection === "detail"}
+              onOpenChange={(open) =>
+                setExpandedSection(open ? "detail" : null)
+              }
             >
               <CollapsibleTrigger asChild>
                 <Button
@@ -593,8 +602,8 @@ export function MultidimensionalAcquisitionControl() {
                   </div>
                   <ChevronDown
                     className={cn(
-                      'h-4 w-4 transition-transform',
-                      expandedSection === 'detail' && 'rotate-180',
+                      "h-4 w-4 transition-transform",
+                      expandedSection === "detail" && "rotate-180",
                     )}
                   />
                 </Button>
@@ -616,7 +625,7 @@ export function MultidimensionalAcquisitionControl() {
             <div className="space-y-2 p-3 bg-muted/50 rounded-lg">
               <div className="flex items-center justify-between text-xs">
                 <span className="text-muted-foreground">
-                  {task?.status === 'paused' ? 'Paused' : 'Acquiring...'}
+                  {task?.status === "paused" ? "Paused" : "Acquiring..."}
                 </span>
                 <div className="flex items-center gap-2">
                   {progress !== null && progress !== undefined && (
@@ -626,7 +635,9 @@ export function MultidimensionalAcquisitionControl() {
                   )}
                   {task && (
                     <Badge
-                      variant={task.status === 'completed' ? 'default' : 'secondary'}
+                      variant={
+                        task.status === "completed" ? "default" : "secondary"
+                      }
                       className="text-[10px]"
                     >
                       {task.status}
@@ -654,7 +665,7 @@ export function MultidimensionalAcquisitionControl() {
                   <Square className="h-3.5 w-3.5 mr-1.5" />
                   Cancel
                 </Button>
-                {task?.status === 'paused' ? (
+                {task?.status === "paused" ? (
                   <Button
                     type="button"
                     variant="outline"
@@ -700,7 +711,7 @@ function PositionEditor({
   timepointIndex,
   positionIndex,
 }: {
-  control: ReturnType<typeof useForm<FormValues>>['control'];
+  control: ReturnType<typeof useForm<FormValues>>["control"];
   timepointIndex: number;
   positionIndex: number;
 }) {
@@ -713,7 +724,7 @@ function PositionEditor({
     <div className="space-y-3">
       {/* XYZ */}
       <div className="grid grid-cols-3 gap-2">
-        {(['x', 'y', 'z'] as const).map((axis) => (
+        {(["x", "y", "z"] as const).map((axis) => (
           <FormField
             key={axis}
             control={control}
@@ -779,7 +790,7 @@ function StackEditor({
   canRemove,
   onRemove,
 }: {
-  control: ReturnType<typeof useForm<FormValues>>['control'];
+  control: ReturnType<typeof useForm<FormValues>>["control"];
   timepointIndex: number;
   positionIndex: number;
   stackIndex: number;
@@ -925,7 +936,7 @@ function ChannelEditor({
   canRemove,
   onRemove,
 }: {
-  control: ReturnType<typeof useForm<FormValues>>['control'];
+  control: ReturnType<typeof useForm<FormValues>>["control"];
   timepointIndex: number;
   positionIndex: number;
   stackIndex: number;

@@ -1,20 +1,28 @@
-import { Button, buttonVariants } from '@/components/ui/button';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { cn } from '@/lib/utils';
-import { useGlobalStateStore } from '@/store';
-import { useTransport } from '@/transport/TransportProvider';
-import { type AssignOptions } from '@/transport/types';
-import { type ActionDefinition } from '@/transport/useTransportAction';
-import { type VariantProps } from 'class-variance-authority';
-import React, { type ButtonHTMLAttributes } from 'react';
-import { toast } from 'sonner';
+import { Button, buttonVariants } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
+import { useGlobalStateStore } from "@/store";
+import { useTransport } from "@/transport/TransportProvider";
+import { type AssignOptions } from "@/transport/types";
+import { type ActionDefinition } from "@/transport/useTransportAction";
+import { type VariantProps } from "class-variance-authority";
+import React, { type ButtonHTMLAttributes } from "react";
+import { toast } from "sonner";
 
 /** Generate a unique local reference */
 function generateReference(): string {
   return `ref-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 }
 
-interface ActionButtonProps<TArgs, TReturn> extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'action' | 'onError'>, VariantProps<typeof buttonVariants> {
+interface ActionButtonProps<TArgs, TReturn>
+  extends
+    Omit<ButtonHTMLAttributes<HTMLButtonElement>, "action" | "onError">,
+    VariantProps<typeof buttonVariants> {
   action: ActionDefinition<TArgs, TReturn>;
   args: TArgs;
   step?: boolean; // Optional prop to indicate if we should step and pause on the first pausepoint
@@ -37,9 +45,9 @@ export function ActionButton<TArgs, TReturn>({
 }: ActionButtonProps<TArgs, TReturn>) {
   // Check all lockKeys to see if any have an active task
   const locks = useGlobalStateStore((state) => state.locks);
-  
+
   // Find the first lockKey that has a task blocking it
-  const blockingLock = action.lockKeys?.find(key => locks[key] !== undefined);
+  const blockingLock = action.lockKeys?.find((key) => locks[key] !== undefined);
   const blockingTaskId = blockingLock ? locks[blockingLock] : undefined;
   const isLocked = !!blockingTaskId;
 
@@ -51,8 +59,8 @@ export function ActionButton<TArgs, TReturn>({
 
     // Check if any lockKey has an active task
     if (isLocked) {
-      toast.warning('Action locked', {
-        description: `Another task (${blockingTaskId}) is using a required resource.`
+      toast.warning("Action locked", {
+        description: `Another task (${blockingTaskId}) is using a required resource.`,
       });
       return;
     }
@@ -61,13 +69,26 @@ export function ActionButton<TArgs, TReturn>({
     const reference = generateReference();
 
     try {
-      console.log('Assigning action:', action.name, 'with args:', args, 'reference:', reference);
-      const task = await transport.assign(action.name, args, { ...assignOptions, reference, step });
-      console.log('Assigned task:', task);
+      console.log(
+        "Assigning action:",
+        action.name,
+        "with args:",
+        args,
+        "reference:",
+        reference,
+      );
+      const task = await transport.assign(action.name, args, {
+        ...assignOptions,
+        reference,
+        step,
+      });
+      console.log("Assigned task:", task);
     } catch (e) {
       console.error(e);
       if (e instanceof Error) {
-        toast.error(`Failed to assign ${action.name}`, { description: e.message });
+        toast.error(`Failed to assign ${action.name}`, {
+          description: e.message,
+        });
       }
     }
   };
@@ -92,12 +113,14 @@ export function ActionButton<TArgs, TReturn>({
     return (
       <TooltipProvider>
         <Tooltip>
-          <TooltipTrigger asChild>
-            {button}
-          </TooltipTrigger>
+          <TooltipTrigger asChild>{button}</TooltipTrigger>
           <TooltipContent>
             <p>Blocked by task: {blockingTaskId}</p>
-            {blockingLock && <p className="text-xs text-muted-foreground">Lock: {blockingLock}</p>}
+            {blockingLock && (
+              <p className="text-xs text-muted-foreground">
+                Lock: {blockingLock}
+              </p>
+            )}
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>

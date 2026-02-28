@@ -5,14 +5,16 @@ import { useResumeTask } from "@/transport/useResumeTask";
 import { Button } from "./ui/button";
 import { Progress } from "./ui/progress";
 
-export const ProgressDisplay = (props: { activeTaskId: string | null | undefined }) => {
+export const ProgressDisplay = (props: {
+  activeTaskId: string | null | undefined;
+}) => {
   const activeTaskId = props.activeTaskId;
-  
+
   // Use the built-in selector which safely resolves both local references and server IDs
   const task = useTransportStore(
-    activeTaskId ? selectTask(activeTaskId) : () => undefined
+    activeTaskId ? selectTask(activeTaskId) : () => undefined,
   );
-  
+
   const cancel = useCancelTask();
   const resume = useResumeTask();
   const pause = usePauseTask();
@@ -25,7 +27,11 @@ export const ProgressDisplay = (props: { activeTaskId: string | null | undefined
     return (
       <div className="flex items-center justify-between text-muted-foreground text-sm p-3 bg-muted/50 rounded-lg">
         <span>Another app is controlling the stage</span>
-        <Button variant="outline" size="sm" onClick={() => cancel(activeTaskId)}>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => cancel(activeTaskId)}
+        >
           Cancel
         </Button>
       </div>
@@ -44,7 +50,7 @@ export const ProgressDisplay = (props: { activeTaskId: string | null | undefined
         )}
       </div>
       <Progress value={task.progress ?? 0} className="h-1.5" />
-      <div className='flex flex-row w-full gap-2'>
+      <div className="flex flex-row w-full gap-2">
         <Button
           variant="outline"
           size="sm"

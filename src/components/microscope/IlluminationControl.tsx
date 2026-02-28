@@ -1,64 +1,55 @@
-import { Switch } from '@/components/ui/switch';
+import { Switch } from "@/components/ui/switch";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from '@/components/ui/tooltip';
+} from "@/components/ui/tooltip";
 import {
   useSetIlluminationIntensity,
   useTurnOffIlluminationChannel,
   useTurnOnIllumination,
-} from '@/hooks/generated';
-import { useIlluminationState } from '@/hooks/states';
-import { cn } from '@/lib/utils';
-import { Power, Waves } from 'lucide-react';
-import { useState } from 'react';
-import { OptimisticSlider } from '../ui/optimistic_slider';
-import { ResponsiveGrid } from '../ui/responsive-grid';
+} from "@/hooks/generated";
+import { useIlluminationState } from "@/hooks/states";
+import { cn } from "@/lib/utils";
+import { Power, Waves } from "lucide-react";
+import { useState } from "react";
+import { OptimisticSlider } from "../ui/optimistic_slider";
+import { ResponsiveGrid } from "../ui/responsive-grid";
 
 // Color mapping for wavelengths
 const getWavelengthColor = (wavelength: number): string => {
-  if (wavelength < 420) return 'bg-violet-500';
-  if (wavelength < 500) return 'bg-blue-500';
-  if (wavelength < 570) return 'bg-green-500';
-  if (wavelength < 600) return 'bg-yellow-500';
-  if (wavelength < 650) return 'bg-orange-500';
-  return 'bg-red-500';
+  if (wavelength < 420) return "bg-violet-500";
+  if (wavelength < 500) return "bg-blue-500";
+  if (wavelength < 570) return "bg-green-500";
+  if (wavelength < 600) return "bg-yellow-500";
+  if (wavelength < 650) return "bg-orange-500";
+  return "bg-red-500";
 };
 
 const getWavelengthTextColor = (wavelength: number): string => {
-  if (wavelength < 420) return 'text-violet-400';
-  if (wavelength < 500) return 'text-blue-400';
-  if (wavelength < 570) return 'text-green-400';
-  if (wavelength < 600) return 'text-yellow-400';
-  if (wavelength < 650) return 'text-orange-400';
-  return 'text-red-400';
+  if (wavelength < 420) return "text-violet-400";
+  if (wavelength < 500) return "text-blue-400";
+  if (wavelength < 570) return "text-green-400";
+  if (wavelength < 600) return "text-yellow-400";
+  if (wavelength < 650) return "text-orange-400";
+  return "text-red-400";
 };
 
 const getKindLabel = (kind: string): string => {
   switch (kind) {
-    case 'LED':
-      return 'LED';
-    case 'LASER':
-      return 'Laser';
-    case 'HALOGEN':
-      return 'Halogen';
-    case 'ARC':
-      return 'Arc Lamp';
+    case "LED":
+      return "LED";
+    case "LASER":
+      return "Laser";
+    case "HALOGEN":
+      return "Halogen";
+    case "ARC":
+      return "Arc Lamp";
     default:
       return kind;
   }
 };
-
-
-
-
-
-
-
-
-
 
 export function IlluminationControl() {
   const { data: illuminationState, loading: stateLoading } =
@@ -69,10 +60,6 @@ export function IlluminationControl() {
     useTurnOffIlluminationChannel();
   const { call: setIntensity, isLoading: isSettingIntensity } =
     useSetIlluminationIntensity();
-
-
-
-
 
   const [localIntensities, setLocalIntensities] = useState<
     Record<number, number>
@@ -88,11 +75,10 @@ export function IlluminationControl() {
     return source?.is_active ? source.intensity : 0;
   };
 
-
   const handleToggleSource = (
     channel: number,
     defaultIntensity: number,
-    enabled: boolean
+    enabled: boolean,
   ) => {
     if (enabled) {
       turnOnIllumination({ channel, intensity: defaultIntensity });
@@ -106,7 +92,6 @@ export function IlluminationControl() {
 
   return (
     <div className="space-y-4">
-
       {/* Light Sources */}
       <ResponsiveGrid>
         {illuminations?.map((source) => {
@@ -117,10 +102,10 @@ export function IlluminationControl() {
             <div
               key={source.slot}
               className={cn(
-                'p-3 rounded-lg border transition-all',
+                "p-3 rounded-lg border transition-all",
                 isActive
-                  ? 'bg-primary/5 border-primary/30'
-                  : 'bg-muted/30 border-transparent'
+                  ? "bg-primary/5 border-primary/30"
+                  : "bg-muted/30 border-transparent",
               )}
             >
               {/* Source Header */}
@@ -131,9 +116,9 @@ export function IlluminationControl() {
                       <TooltipTrigger>
                         <div
                           className={cn(
-                            'w-3 h-3 rounded-full',
+                            "w-3 h-3 rounded-full",
                             getWavelengthColor(source.wavelength),
-                            isActive && 'animate-pulse'
+                            isActive && "animate-pulse",
                           )}
                         />
                       </TooltipTrigger>
@@ -147,8 +132,8 @@ export function IlluminationControl() {
                   </span>
                   <span
                     className={cn(
-                      'text-xs font-mono',
-                      getWavelengthTextColor(source.wavelength)
+                      "text-xs font-mono",
+                      getWavelengthTextColor(source.wavelength),
                     )}
                   >
                     {source.wavelength}nm
@@ -164,7 +149,7 @@ export function IlluminationControl() {
                       handleToggleSource(
                         source.slot,
                         source.intensity || 50,
-                        checked
+                        checked,
                       )
                     }
                     disabled={isLoading}
@@ -177,7 +162,9 @@ export function IlluminationControl() {
                 <Waves className="h-3 w-3 text-muted-foreground" />
                 <OptimisticSlider
                   value={[currentIntensity]}
-                  onSave={(v) => setIntensity({ channel: source.slot, intensity: v[0] })}
+                  onSave={(v) =>
+                    setIntensity({ channel: source.slot, intensity: v[0] })
+                  }
                   min={source.min_intensity}
                   max={source.max_intensity}
                   step={1}
@@ -200,13 +187,11 @@ export function IlluminationControl() {
           );
         })}
 
-        {(!illuminations ||
-          illuminations.length === 0) &&
-          !stateLoading && (
-            <div className="text-center py-4 text-sm text-muted-foreground col-span-full">
-              No light sources available
-            </div>
-          )}
+        {(!illuminations || illuminations.length === 0) && !stateLoading && (
+          <div className="text-center py-4 text-sm text-muted-foreground col-span-full">
+            No light sources available
+          </div>
+        )}
       </ResponsiveGrid>
 
       {/* Quick Off All Button */}

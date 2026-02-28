@@ -1,8 +1,8 @@
 // src/transport/WebSocketManager.ts
-import { toast } from 'sonner';
-import { useGlobalStateStore } from '../store/stateStore';
-import { useTransportStore } from '../store/transportStore';
-import { FromAgentMessageType, type FromAgentMessage } from './types';
+import { toast } from "sonner";
+import { useGlobalStateStore } from "../store/stateStore";
+import { useTransportStore } from "../store/transportStore";
+import { FromAgentMessageType, type FromAgentMessage } from "./types";
 
 export interface WebSocketConfig {
   wsUrl: string;
@@ -36,29 +36,31 @@ export class WebSocketManager {
 
   connect() {
     const transportStore = useTransportStore.getState();
-    
+
     // Don't connect if already unconnectable
     if (transportStore.isUnconnectable) {
-      console.log('[WebSocketManager] Skipping connect - marked as unconnectable');
+      console.log(
+        "[WebSocketManager] Skipping connect - marked as unconnectable",
+      );
       return;
     }
 
     // Don't connect if already connected
     if (this.ws?.readyState === WebSocket.OPEN) {
-      console.log('[WebSocketManager] Already connected');
+      console.log("[WebSocketManager] Already connected");
       return;
     }
 
     // Cleanup existing connection
     this.cleanup();
 
-    console.log('[WebSocketManager] Connecting to:', this.config.wsUrl);
+    console.log("[WebSocketManager] Connecting to:", this.config.wsUrl);
 
     try {
       this.ws = new WebSocket(this.config.wsUrl);
 
       this.ws.onopen = () => {
-        console.log('[WebSocketManager] Connected');
+        console.log("[WebSocketManager] Connected");
         const store = useTransportStore.getState();
         store.setConnected(true);
         store.resetReconnect();
@@ -70,7 +72,7 @@ export class WebSocketManager {
       this.ws.onmessage = this.handleMessage.bind(this);
 
       this.ws.onclose = (event) => {
-        console.log('[WebSocketManager] Closed:', event.code, event.reason);
+        console.log("[WebSocketManager] Closed:", event.code, event.reason);
         const store = useTransportStore.getState();
         store.setConnected(false);
 
@@ -83,15 +85,15 @@ export class WebSocketManager {
       };
 
       this.ws.onerror = (error) => {
-        console.error('[WebSocketManager] Error:', error);
+        console.error("[WebSocketManager] Error:", error);
       };
     } catch (error) {
-      console.error('[WebSocketManager] Failed to create WebSocket:', error);
+      console.error("[WebSocketManager] Failed to create WebSocket:", error);
     }
   }
 
   disconnect() {
-    console.log('[WebSocketManager] Disconnecting');
+    console.log("[WebSocketManager] Disconnecting");
     this.shouldReconnect = false;
     this.cleanup();
 
@@ -101,18 +103,18 @@ export class WebSocketManager {
   }
 
   reconnect() {
-    console.log('[WebSocketManager] Manual reconnect');
-    
+    console.log("[WebSocketManager] Manual reconnect");
+
     // 1. Clean up first to prevent accidental reconnection loops if a close event fires
     this.cleanup();
-    
+
     // 2. Reset state
     this.shouldReconnect = true;
     const store = useTransportStore.getState();
     store.setReconnectAttempt(0);
     store.setUnconnectable(false);
     store.setReconnecting(false);
-    
+
     // 3. Connect after small delay
     setTimeout(() => {
       this.connect();
@@ -133,9 +135,12 @@ export class WebSocketManager {
       this.ws.onclose = null;
       this.ws.onmessage = null;
       this.ws.onerror = null;
-      
-      if (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING) {
-        this.ws.close(1000, 'Client cleanup');
+
+      if (
+        this.ws.readyState === WebSocket.OPEN ||
+        this.ws.readyState === WebSocket.CONNECTING
+      ) {
+        this.ws.close(1000, "Client cleanup");
       }
       this.ws = null;
     }
@@ -145,7 +150,7 @@ export class WebSocketManager {
     this.stopPingInterval();
     this.pingIntervalId = setInterval(() => {
       if (this.ws?.readyState === WebSocket.OPEN) {
-        this.ws.send(JSON.stringify({ type: 'ping' }));
+        this.ws.send(JSON.stringify({ type: "ping" }));
       }
     }, this.config.pingInterval);
   }
@@ -165,7 +170,7 @@ export class WebSocketManager {
       store.setReconnecting(true);
       const delay = this.getReconnectDelay(nextAttempt - 1);
       console.log(
-        `[WebSocketManager] Reconnecting in ${Math.round(delay)}ms (attempt ${nextAttempt}/${this.config.reconnect.maxAttempts})`
+        `[WebSocketManager] Reconnecting in ${Math.round(delay)}ms (attempt ${nextAttempt}/${this.config.reconnect.maxAttempts})`,
       );
 
       this.reconnectTimeoutId = setTimeout(() => {
@@ -175,7 +180,7 @@ export class WebSocketManager {
         }
       }, delay);
     } else {
-      console.error('[WebSocketManager] Max reconnection attempts reached');
+      console.error("[WebSocketManager] Max reconnection attempts reached");
       this.shouldReconnect = false;
       store.setUnconnectable(true);
     }
@@ -190,7 +195,7 @@ export class WebSocketManager {
 
   private handleMessage(event: MessageEvent) {
     try {
-      console.log('[WebSocketManager] Message:', event.data);
+      console.log("[WebSocketManager] Message:", event.data);
       const message: FromAgentMessage = JSON.parse(event.data);
       const transportStore = useTransportStore.getState();
       const globalStateStore = useGlobalStateStore.getState();
@@ -198,7 +203,7 @@ export class WebSocketManager {
       switch (message.type) {
         case FromAgentMessageType.PROGRESS: {
           transportStore.updateTask(message.assignation, {
-            status: 'running',
+            status: "running",
             progress: message.progress,
             progressMessage: message.message,
           });
@@ -207,7 +212,7 @@ export class WebSocketManager {
 
         case FromAgentMessageType.YIELD: {
           transportStore.updateTask(message.assignation, {
-            status: 'running',
+            status: "running",
             result: message.returns,
           });
           break;
@@ -215,7 +220,9 @@ export class WebSocketManager {
 
         case FromAgentMessageType.LOCK: {
           globalStateStore.setLock(message.key, message.assignation);
-          console.log(`[WebSocketManager] Locked state "${message.key}" with assigniation ID "${message.assignation}"`);
+          console.log(
+            `[WebSocketManager] Locked state "${message.key}" with assigniation ID "${message.assignation}"`,
+          );
           break;
         }
 
@@ -234,78 +241,80 @@ export class WebSocketManager {
           }
 
           transportStore.updateTask(message.assignation, {
-            status: 'completed',
+            status: "completed",
             // It's good practice to attach the final return value if available in DONE
-            ...(message.returns !== undefined ? { result: message.returns } : {})
+            ...(message.returns !== undefined
+              ? { result: message.returns }
+              : {}),
           });
-          
+
           break;
         }
 
         case FromAgentMessageType.ERROR: {
           transportStore.updateTask(message.assignation, {
-            status: 'failed',
+            status: "failed",
             error: message.error,
           });
-          
+
           break;
         }
 
         case FromAgentMessageType.CRITICAL: {
           transportStore.updateTask(message.assignation, {
-            status: 'failed',
+            status: "failed",
             error: message.error,
           });
           toast.error(`Critical error in task: ${message.error}`);
 
-          console.error('[WebSocketManager] Critical error:', message.error);
-          
+          console.error("[WebSocketManager] Critical error:", message.error);
+
           break;
         }
 
         case FromAgentMessageType.PAUSED: {
           transportStore.updateTask(message.assignation, {
-            status: 'paused',
+            status: "paused",
           });
-          console.log('[WebSocketManager] Task paused:', message.assignation);
+          console.log("[WebSocketManager] Task paused:", message.assignation);
           break;
         }
 
         case FromAgentMessageType.RESUMED: {
           transportStore.updateTask(message.assignation, {
-            status: 'running',
+            status: "running",
           });
           break;
         }
 
         case FromAgentMessageType.CANCELLED: {
           transportStore.updateTask(message.assignation, {
-            status: 'cancelled',
+            status: "cancelled",
           });
-          
+
           break;
         }
 
         case FromAgentMessageType.INTERRUPTED: {
           transportStore.updateTask(message.assignation, {
-            status: 'interrupted',
+            status: "interrupted",
           });
-          
+
           break;
         }
 
         case FromAgentMessageType.STEPPED: {
-          console.log('[WebSocketManager] Stepped event received');
+          console.log("[WebSocketManager] Stepped event received");
           break;
         }
 
         case FromAgentMessageType.LOG: {
           const logMethod =
-            message.level === 'ERROR' || message.level === 'CRITICAL'
+            message.level === "ERROR" || message.level === "CRITICAL"
               ? console.error
-              : message.level === 'WARN'
-              ? console.warn
-              : console.log;
+              : message.level === "WARN"
+                ? console.warn
+                : console.log;
           logMethod(`[Agent Log] [${message.level}] ${message.message}`);
           break;
         }
@@ -315,7 +324,10 @@ export class WebSocketManager {
         }
 
         case FromAgentMessageType.REGISTER: {
-          console.log('[WebSocketManager] Agent registered:', message.instance_id);
+          console.log(
+            "[WebSocketManager] Agent registered:",
+            message.instance_id,
+          );
           break;
         }
 
@@ -326,20 +338,22 @@ export class WebSocketManager {
 
         case FromAgentMessageType.STATE_PATCH: {
           globalStateStore.applyEnvelope(message.envelope);
-          console.log(`[WebSocketManager] Applied patch to state ${message.envelope.state_name} with rev ${message.envelope.rev}`);
+          console.log(
+            `[WebSocketManager] Applied patch to state ${message.envelope.state_name} with rev ${message.envelope.rev}`,
+          );
           break;
         }
 
         default: {
           const _exhaustiveCheck: never = message;
           console.warn(
-            '[WebSocketManager] Unknown message type:',
-            (_exhaustiveCheck as FromAgentMessage).type
+            "[WebSocketManager] Unknown message type:",
+            (_exhaustiveCheck as FromAgentMessage).type,
           );
         }
       }
     } catch (error) {
-      console.error('[WebSocketManager] Failed to parse message:', error);
+      console.error("[WebSocketManager] Failed to parse message:", error);
     }
   }
 
@@ -347,7 +361,7 @@ export class WebSocketManager {
     if (this.ws?.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify(data));
     } else {
-      console.warn('[WebSocketManager] Cannot send - not connected');
+      console.warn("[WebSocketManager] Cannot send - not connected");
     }
   }
 
@@ -359,17 +373,19 @@ export class WebSocketManager {
 // Singleton instance
 let wsManager: WebSocketManager | null = null;
 
-export function getWebSocketManager(config?: WebSocketConfig): WebSocketManager {
+export function getWebSocketManager(
+  config?: WebSocketConfig,
+): WebSocketManager {
   if (!wsManager && config) {
     wsManager = new WebSocketManager(config);
   } else if (wsManager && config) {
     wsManager.updateConfig(config);
   }
-  
+
   if (!wsManager) {
-    throw new Error('WebSocketManager not initialized - config required');
+    throw new Error("WebSocketManager not initialized - config required");
   }
-  
+
   return wsManager;
 }
 

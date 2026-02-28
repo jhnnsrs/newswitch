@@ -1,8 +1,8 @@
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useLockSync } from '@/hooks/useLockSync';
-import { useTransportStore } from '@/store';
-import { Bug } from 'lucide-react';
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useLockSync } from "@/hooks/useLockSync";
+import { useTransportStore } from "@/store";
+import { Bug } from "lucide-react";
 
 interface SyncKeyDebugProps {
   syncKey: string;
@@ -10,7 +10,11 @@ interface SyncKeyDebugProps {
 
 export function SyncKeyDebug({ syncKey }: SyncKeyDebugProps) {
   const syncKeyState = useLockSync({ key: syncKey });
-  const task = useTransportStore((state) => syncKeyState?.lockingTaskId ? state.tasks[syncKeyState.lockingTaskId] : undefined);
+  const task = useTransportStore((state) =>
+    syncKeyState?.lockingTaskId
+      ? state.tasks[syncKeyState.lockingTaskId]
+      : undefined,
+  );
 
   return (
     <Card className="border-dashed border-orange-500/50 bg-orange-50/50 dark:bg-orange-950/20">
@@ -21,10 +25,11 @@ export function SyncKeyDebug({ syncKey }: SyncKeyDebugProps) {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-2 text-xs font-mono">
-
         <div className="flex items-center justify-between">
           <span className="text-muted-foreground">Task ID:</span>
-          <span className="font-semibold truncate max-w-[150px]">{syncKeyState?.lockingTaskId ?? '—'}</span>
+          <span className="font-semibold truncate max-w-[150px]">
+            {syncKeyState?.lockingTaskId ?? "—"}
+          </span>
         </div>
 
         {task && (
@@ -33,10 +38,13 @@ export function SyncKeyDebug({ syncKey }: SyncKeyDebugProps) {
               <span className="text-muted-foreground">Status:</span>
               <Badge
                 variant={
-                  task.status === 'completed' ? 'default' :
-                    task.status === 'failed' ? 'destructive' :
-                      task.status === 'running' ? 'secondary' :
-                        'outline'
+                  task.status === "completed"
+                    ? "default"
+                    : task.status === "failed"
+                      ? "destructive"
+                      : task.status === "running"
+                        ? "secondary"
+                        : "outline"
                 }
                 className="text-xs"
               >
@@ -59,14 +67,20 @@ export function SyncKeyDebug({ syncKey }: SyncKeyDebugProps) {
             {task.progressMessage && (
               <div className="flex flex-col gap-1">
                 <span className="text-muted-foreground">Message:</span>
-                <span className="text-xs break-all">{task.progressMessage}</span>
+                <span className="text-xs break-all">
+                  {task.progressMessage}
+                </span>
               </div>
             )}
 
             {task.error && (
               <div className="flex flex-col gap-1">
-                <span className="text-muted-foreground text-destructive">Error:</span>
-                <span className="text-xs break-all text-destructive">{task.error}</span>
+                <span className="text-muted-foreground text-destructive">
+                  Error:
+                </span>
+                <span className="text-xs break-all text-destructive">
+                  {task.error}
+                </span>
               </div>
             )}
 
@@ -81,11 +95,9 @@ export function SyncKeyDebug({ syncKey }: SyncKeyDebugProps) {
           </>
         )}
 
-
         {!task && syncKeyState?.lockingTaskId && (
           <div className="text-xs text-destructive">
-            Task ID exists but task not found in store
-            TODO: Implement this
+            Task ID exists but task not found in store TODO: Implement this
           </div>
         )}
 

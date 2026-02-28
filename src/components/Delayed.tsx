@@ -1,7 +1,12 @@
 import { useEffect, useState } from "react";
 
-
-export const Delayed = ({ children, waitBeforeShow = 1000 }: { children: React.ReactNode; waitBeforeShow?: number }) => {
+export const Delayed = ({
+  children,
+  waitBeforeShow = 1000,
+}: {
+  children: React.ReactNode;
+  waitBeforeShow?: number;
+}) => {
   const [isShown, setIsShown] = useState(false);
 
   useEffect(() => {

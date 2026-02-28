@@ -3,12 +3,12 @@ import {
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from '@/components/ui/tooltip';
-import { useSwitchObjective, useToggleObjective } from '@/hooks/generated';
-import { useObjectiveState } from '@/hooks/states';
-import { cn } from '@/lib/utils';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { useEffect, useState } from 'react';
+} from "@/components/ui/tooltip";
+import { useSwitchObjective, useToggleObjective } from "@/hooks/generated";
+import { useObjectiveState } from "@/hooks/states";
+import { cn } from "@/lib/utils";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useEffect, useState } from "react";
 
 export function ObjectiveControl() {
   const { data: objectiveState, loading: stateLoading } = useObjectiveState({
@@ -36,7 +36,7 @@ export function ObjectiveControl() {
   const handlePrevious = () => {
     if (!objectiveState?.mounted_lenses?.length) return;
     const currentIndex = objectiveState.mounted_lenses.findIndex(
-      (l) => l.slot === objectiveState.slot
+      (l) => l.slot === objectiveState.slot,
     );
     const prevIndex =
       currentIndex <= 0
@@ -48,7 +48,7 @@ export function ObjectiveControl() {
   const handleNext = () => {
     if (!objectiveState?.mounted_lenses?.length) return;
     const currentIndex = objectiveState.mounted_lenses.findIndex(
-      (l) => l.slot === objectiveState.slot
+      (l) => l.slot === objectiveState.slot,
     );
     const nextIndex =
       currentIndex >= objectiveState.mounted_lenses.length - 1
@@ -58,14 +58,13 @@ export function ObjectiveControl() {
   };
 
   const currentLens = objectiveState?.mounted_lenses?.find(
-    (l) => l.slot === objectiveState?.slot
+    (l) => l.slot === objectiveState?.slot,
   );
 
   const isLoading = isSwitching || isToggling;
 
   return (
     <div className="space-y-4">
-
       {/* Current Objective Display */}
       {currentLens && (
         <div className="flex items-center gap-2">
@@ -127,13 +126,13 @@ export function ObjectiveControl() {
                       onClick={() => handleSelectObjective(lens.slot)}
                       disabled={isLoading}
                       className={cn(
-                        'flex flex-col items-center justify-center min-w-[4rem] p-3 rounded-lg border transition-all',
+                        "flex flex-col items-center justify-center min-w-[4rem] p-3 rounded-lg border transition-all",
                         isActive
-                          ? 'bg-primary text-primary-foreground border-primary'
+                          ? "bg-primary text-primary-foreground border-primary"
                           : isSelected
-                            ? 'bg-secondary border-secondary'
-                            : 'bg-muted/30 border-transparent hover:bg-muted/50',
-                        isLoading && 'opacity-50 cursor-not-allowed'
+                            ? "bg-secondary border-secondary"
+                            : "bg-muted/30 border-transparent hover:bg-muted/50",
+                        isLoading && "opacity-50 cursor-not-allowed",
                       )}
                     >
                       {isActive && (
@@ -143,7 +142,7 @@ export function ObjectiveControl() {
                         {lens.magnification}×
                       </span>
                       <span className="text-xs opacity-80 truncate max-w-full">
-                        {lens.name.split(' ')[0]}
+                        {lens.name.split(" ")[0]}
                       </span>
                     </button>
                   </TooltipTrigger>

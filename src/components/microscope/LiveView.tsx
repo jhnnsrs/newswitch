@@ -1,7 +1,7 @@
-import { Badge } from '@/components/ui/badge';
-import { useCameraState, useStageState } from '@/hooks/states';
-import { Camera } from 'lucide-react';
-import { StreamingView } from '../liveview/StreamingView';
+import { Badge } from "@/components/ui/badge";
+import { useCameraState, useStageState } from "@/hooks/states";
+import { Camera } from "lucide-react";
+import { StreamingView } from "../liveview/StreamingView";
 
 export function LiveView() {
   const { data: cameraState } = useCameraState({ subscribe: true });
@@ -38,7 +38,8 @@ export function LiveView() {
           )}
           {cameraState && (
             <Badge variant="secondary" className="text-xs">
-              {cameraState.exposure_time?.toFixed(1)}ms | Gain {cameraState.gain?.toFixed(1)}
+              {cameraState.exposure_time?.toFixed(1)}ms | Gain{" "}
+              {cameraState.gain?.toFixed(1)}
             </Badge>
           )}
         </div>
@@ -47,7 +48,8 @@ export function LiveView() {
         <div className="absolute bottom-2 left-2 flex gap-2">
           {stageState && (
             <Badge variant="outline" className="text-xs font-mono bg-black/50">
-              X: {stageState.x?.toFixed(1)} Y: {stageState.y?.toFixed(1)} Z: {stageState.z?.toFixed(1)}
+              X: {stageState.x?.toFixed(1)} Y: {stageState.y?.toFixed(1)} Z:{" "}
+              {stageState.z?.toFixed(1)}
             </Badge>
           )}
         </div>

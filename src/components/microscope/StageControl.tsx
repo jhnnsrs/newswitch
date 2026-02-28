@@ -1,17 +1,17 @@
-import { ActionButton } from '@/components/ActionButton';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { ActionButton } from "@/components/ActionButton";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from '@/components/ui/tooltip';
-import { MoveHomeDefinition, MoveStageDefinition } from '@/hooks/generated';
-import { useStagePositionLock } from '@/hooks/locks';
-import { useStageState } from '@/hooks/states';
-import { cn } from '@/lib/utils';
+} from "@/components/ui/tooltip";
+import { MoveHomeDefinition, MoveStageDefinition } from "@/hooks/generated";
+import { useStagePositionLock } from "@/hooks/locks";
+import { useStageState } from "@/hooks/states";
+import { cn } from "@/lib/utils";
 import {
   ArrowDown,
   ArrowLeft,
@@ -20,11 +20,9 @@ import {
   Home,
   Move,
   RotateCcw,
-} from 'lucide-react';
-import { useState } from 'react';
-import { ProgressDisplay } from '../TaskDisplay';
-
-
+} from "lucide-react";
+import { useState } from "react";
+import { ProgressDisplay } from "../TaskDisplay";
 
 export function StageControl() {
   const { data: stageState, loading: stateLoading } = useStageState({
@@ -40,15 +38,15 @@ export function StageControl() {
 
   const [stepSize, setStepSize] = useState(stepSizes[1] ?? 10);
   const [zStep, setZStep] = useState(10);
-  const [targetX, setTargetX] = useState('');
-  const [targetY, setTargetY] = useState('');
-  const [targetZ, setTargetZ] = useState('');
+  const [targetX, setTargetX] = useState("");
+  const [targetY, setTargetY] = useState("");
+  const [targetZ, setTargetZ] = useState("");
 
   // Calculate position percentages for visual indicators
   const getPositionPercent = (
     value: number | undefined,
     min: number | undefined,
-    max: number | undefined
+    max: number | undefined,
   ) => {
     if (value === undefined || min === undefined || max === undefined)
       return 50;
@@ -60,17 +58,17 @@ export function StageControl() {
   const xPercent = getPositionPercent(
     stageState?.x,
     stageState?.min_x,
-    stageState?.max_x
+    stageState?.max_x,
   );
   const yPercent = getPositionPercent(
     stageState?.y,
     stageState?.min_y,
-    stageState?.max_y
+    stageState?.max_y,
   );
   const zPercent = getPositionPercent(
     stageState?.z,
     stageState?.min_z,
-    stageState?.max_z
+    stageState?.max_z,
   );
 
   return (
@@ -92,27 +90,33 @@ export function StageControl() {
       <div className="grid grid-cols-4 gap-2">
         {[
           {
-            label: 'X',
+            label: "X",
             value: stageState?.x,
             percent: xPercent,
-            unit: 'µm',
-            color: 'bg-red-500',
+            unit: "µm",
+            color: "bg-red-500",
           },
           {
-            label: 'Y',
+            label: "Y",
             value: stageState?.y,
             percent: yPercent,
-            unit: 'µm',
-            color: 'bg-green-500',
+            unit: "µm",
+            color: "bg-green-500",
           },
           {
-            label: 'Z',
+            label: "Z",
             value: stageState?.z,
             percent: zPercent,
-            unit: 'µm',
-            color: 'bg-blue-500',
+            unit: "µm",
+            color: "bg-blue-500",
           },
-          { label: 'A', value: stageState?.a, percent: null, unit: '°', color: 'bg-purple-500' },
+          {
+            label: "A",
+            value: stageState?.a,
+            percent: null,
+            unit: "°",
+            color: "bg-purple-500",
+          },
         ].map((axis) => (
           <TooltipProvider key={axis.label}>
             <Tooltip>
@@ -121,8 +125,8 @@ export function StageControl() {
                   {axis.percent !== null && (
                     <div
                       className={cn(
-                        'absolute bottom-0 left-0 h-1 transition-all',
-                        axis.color
+                        "absolute bottom-0 left-0 h-1 transition-all",
+                        axis.color,
                       )}
                       style={{ width: `${axis.percent}%` }}
                     />
@@ -131,9 +135,7 @@ export function StageControl() {
                     {axis.label}
                   </div>
                   <div className="text-sm font-mono font-bold">
-                    {stateLoading
-                      ? '...'
-                      : axis.value?.toFixed(1) ?? '—'}
+                    {stateLoading ? "..." : (axis.value?.toFixed(1) ?? "—")}
                   </div>
                   <div className="text-xs text-muted-foreground">
                     {axis.unit}
@@ -142,7 +144,7 @@ export function StageControl() {
               </TooltipTrigger>
               <TooltipContent>
                 <p>
-                  {axis.label}: {axis.value?.toFixed(3) ?? 'N/A'} {axis.unit}
+                  {axis.label}: {axis.value?.toFixed(3) ?? "N/A"} {axis.unit}
                 </p>
               </TooltipContent>
             </Tooltip>
@@ -159,7 +161,7 @@ export function StageControl() {
               <Button
                 key={size}
                 size="sm"
-                variant={stepSize === size ? 'default' : 'outline'}
+                variant={stepSize === size ? "default" : "outline"}
                 onClick={() => setStepSize(size)}
                 className="h-7 px-2 text-xs"
               >

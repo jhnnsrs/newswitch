@@ -1,20 +1,30 @@
-import { Slider } from '@/components/ui/slider';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { cn } from '@/lib/utils';
-import { useGlobalStateStore } from '@/store';
-import { Lock } from 'lucide-react';
-import * as React from 'react';
+import { Slider } from "@/components/ui/slider";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
+import { useGlobalStateStore } from "@/store";
+import { Lock } from "lucide-react";
+import * as React from "react";
 
 interface LockedSliderProps extends React.ComponentProps<typeof Slider> {
   lockKeys?: string[];
 }
 
-export function LockedSlider({ lockKeys = [], className, disabled, ...props }: LockedSliderProps) {
+export function LockedSlider({
+  lockKeys = [],
+  className,
+  disabled,
+  ...props
+}: LockedSliderProps) {
   // Check all lockKeys sto see if any have an active task
   const locks = useGlobalStateStore((state) => state.locks);
-  
+
   // Find the first lockKey that has a task blocking it
-  const blockingLock = lockKeys.find(key => locks[key] !== undefined);
+  const blockingLock = lockKeys.find((key) => locks[key] !== undefined);
   const blockingTaskId = blockingLock ? locks[blockingLock] : undefined;
   const isLocked = !!blockingTaskId;
 
@@ -37,12 +47,14 @@ export function LockedSlider({ lockKeys = [], className, disabled, ...props }: L
     return (
       <TooltipProvider>
         <Tooltip>
-          <TooltipTrigger asChild>
-            {slider}
-          </TooltipTrigger>
+          <TooltipTrigger asChild>{slider}</TooltipTrigger>
           <TooltipContent>
             <p>Blocked by task: {blockingTaskId}</p>
-            {blockingLock && <p className="text-xs text-muted-foreground">Lock: {blockingLock}</p>}
+            {blockingLock && (
+              <p className="text-xs text-muted-foreground">
+                Lock: {blockingLock}
+              </p>
+            )}
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>

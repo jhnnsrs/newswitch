@@ -1,8 +1,8 @@
 // src/transport/useTask.ts
 
-import { useCallback, useEffect, useState } from 'react';
-import { useTransport } from './TransportProvider';
-import type { Task, TaskStatus } from './types';
+import { useCallback, useEffect, useState } from "react";
+import { useTransport } from "./TransportProvider";
+import type { Task, TaskStatus } from "./types";
 
 export interface UseTaskOptions {
   /** Whether to fetch from server on mount */
@@ -30,7 +30,7 @@ export interface UseTaskResult<TArgs = unknown, TReturn = unknown> {
  */
 export const useTask = <TArgs = unknown, TReturn = unknown>(
   taskId: string | null,
-  options: UseTaskOptions = {}
+  options: UseTaskOptions = {},
 ): UseTaskResult<TArgs, TReturn> => {
   const {
     fetchOnMount = true,
@@ -53,7 +53,7 @@ export const useTask = <TArgs = unknown, TReturn = unknown>(
   const result = (task?.result as TReturn) ?? null;
   const error = task?.error ?? null;
   const progress = task?.progress ?? null;
-  const isLoading = status === 'pending' || status === 'running';
+  const isLoading = status === "pending" || status === "running";
 
   // Fetch task from server
   const refresh = useCallback(async (): Promise<void> => {
@@ -89,7 +89,8 @@ export const useTask = <TArgs = unknown, TReturn = unknown>(
   // Polling fallback when disconnected
   useEffect(() => {
     if (!pollingInterval || !taskId || transport.isConnected) return;
-    if (status === 'completed' || status === 'failed' || status === 'cancelled') return;
+    if (status === "completed" || status === "failed" || status === "cancelled")
+      return;
 
     const interval = setInterval(refresh, pollingInterval);
     return () => clearInterval(interval);

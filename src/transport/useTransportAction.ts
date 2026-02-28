@@ -1,10 +1,10 @@
 // src/transport/useTransportAction.ts
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { z, ZodType } from 'zod';
-import { selectTask, useGlobalStateStore, useTransportStore } from '../store';
-import { useTransport } from './TransportProvider';
-import type { AssignOptions, Task, TaskStatus } from './types';
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { z, ZodType } from "zod";
+import { selectTask, useGlobalStateStore, useTransportStore } from "../store";
+import { useTransport } from "./TransportProvider";
+import type { AssignOptions, Task, TaskStatus } from "./types";
 
 export interface ActionDefinition<TArgs, TReturn> {
   name: string;
@@ -31,7 +31,10 @@ export interface UseTransportActionResult<TArgs, TReturn> {
   /** Assign and wait for the final result via Promise */
   call: (args: TArgs, options?: AssignOptions) => Promise<TReturn>;
   /** Assign (execute) the action and resolve immediately with the Task object */
-  assign: (args: TArgs, options?: AssignOptions) => Promise<Task<TArgs, TReturn>>;
+  assign: (
+    args: TArgs,
+    options?: AssignOptions,
+  ) => Promise<Task<TArgs, TReturn>>;
   /** Current task status */
   status: TaskStatus | null;
   /** Current task result */
@@ -60,7 +63,7 @@ export interface UseTransportActionResult<TArgs, TReturn> {
 
 export const useTransportAction = <TArgs, TReturn>(
   definition: ActionDefinition<TArgs, TReturn>,
-  options: UseTransportActionOptions = {}
+  options: UseTransportActionOptions = {},
 ): UseTransportActionResult<TArgs, TReturn> => {
   const {
     autoSubscribe = true,
@@ -71,30 +74,41 @@ export const useTransportAction = <TArgs, TReturn>(
   } = options;
 
   const transport = useTransport();
-  
+
   // Track strictly by reference
   const [currentReference, setCurrentReference] = useState<string | null>(null);
-  const [validationError, setValidationError] = useState<z.ZodError | null>(null);
-  
-  const callbacksRef = useRef({ onStatusChange, onComplete, onError, onProgress });
-  
+  const [validationError, setValidationError] = useState<z.ZodError | null>(
+    null,
+  );
+
+  const callbacksRef = useRef({
+    onStatusChange,
+    onComplete,
+    onError,
+    onProgress,
+  });
+
   useEffect(() => {
     callbacksRef.current = { onStatusChange, onComplete, onError, onProgress };
   }, [onStatusChange, onComplete, onError, onProgress]);
 
   // --- Selectors ---
-  
+
   // Create a memoized selector for the current reference to prevent unnecessary rerenders
   const taskSelector = useMemo(() => {
-    return currentReference ? selectTask<TArgs, TReturn>(currentReference) : () => undefined;
+    return currentReference
+      ? selectTask<TArgs, TReturn>(currentReference)
+      : () => undefined;
   }, [currentReference]);
 
   const task = useTransportStore(taskSelector) ?? null;
 
   const locks = useGlobalStateStore((state) => state.locks);
-  const blockingLockKey = definition.lockKeys?.find(key => locks[key] != null);
+  const blockingLockKey = definition.lockKeys?.find(
+    (key) => locks[key] != null,
+  );
   const isLocked = !!blockingLockKey;
-  const lockedBy = blockingLockKey ? locks[blockingLockKey] ?? null : null;
+  const lockedBy = blockingLockKey ? (locks[blockingLockKey] ?? null) : null;
 
   // --- Derived State ---
   const currentTaskId = task?.id; // Will be the server ID if setAssignationID was called by transport, or fallback reference
@@ -102,106 +116,133 @@ export const useTransportAction = <TArgs, TReturn>(
   const result = (task?.result as TReturn) ?? null;
   const error = task?.error ?? null;
   const progress = task?.progress ?? null;
-  const isLoading = status === 'pending' || status === 'running';
+  const isLoading = status === "pending" || status === "running";
 
   // --- Task Lifecycle Handlers ---
   const handleTaskUpdate = useCallback((updatedTask: Task) => {
     const cbs = callbacksRef.current;
     if (cbs.onStatusChange) cbs.onStatusChange(updatedTask.status, updatedTask);
-    if (cbs.onProgress && updatedTask.progress !== undefined) cbs.onProgress(updatedTask.progress, updatedTask);
-    
-    if (updatedTask.status === 'completed' && cbs.onComplete) {
+    if (cbs.onProgress && updatedTask.progress !== undefined)
+      cbs.onProgress(updatedTask.progress, updatedTask);
+
+    if (updatedTask.status === "completed" && cbs.onComplete) {
       cbs.onComplete(updatedTask.result, updatedTask);
     }
-    if (updatedTask.status === 'failed' && cbs.onError && updatedTask.error) {
+    if (updatedTask.status === "failed" && cbs.onError && updatedTask.error) {
       cbs.onError(updatedTask.error, updatedTask);
     }
   }, []);
 
   useEffect(() => {
     if (!autoSubscribe || !currentReference) return;
-    
-    // Use Zustand's native subscribe capability directly 
+
+    // Use Zustand's native subscribe capability directly
     const unsubscribe = useTransportStore.subscribe(
       selectTask(currentReference),
       (updatedTask) => {
         if (updatedTask) handleTaskUpdate(updatedTask as Task);
-      }
+      },
     );
 
     return () => unsubscribe();
   }, [currentReference, autoSubscribe, handleTaskUpdate]);
 
   // --- Core Execution Logic ---
-  const execute = useCallback(async (args: TArgs, opts?: AssignOptions): Promise<Task<TArgs, TReturn>> => {
-    setValidationError(null);
+  const execute = useCallback(
+    async (
+      args: TArgs,
+      opts?: AssignOptions,
+    ): Promise<Task<TArgs, TReturn>> => {
+      setValidationError(null);
 
-    const currentLocks = useGlobalStateStore.getState().locks;
-    const blockingKey = definition.lockKeys?.find(key => currentLocks[key] != null);
-    if (blockingKey) {
-      throw new Error(`Action is locked by task ${currentLocks[blockingKey]} (lock: ${blockingKey})`);
-    }
+      const currentLocks = useGlobalStateStore.getState().locks;
+      const blockingKey = definition.lockKeys?.find(
+        (key) => currentLocks[key] != null,
+      );
+      if (blockingKey) {
+        throw new Error(
+          `Action is locked by task ${currentLocks[blockingKey]} (lock: ${blockingKey})`,
+        );
+      }
 
-    const parsed = definition.argsSchema.safeParse(args);
-    if (!parsed.success) {
-      setValidationError(parsed.error);
-      throw parsed.error;
-    }
+      const parsed = definition.argsSchema.safeParse(args);
+      if (!parsed.success) {
+        setValidationError(parsed.error);
+        throw parsed.error;
+      }
 
-    const reference = opts?.reference || `local-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-    setCurrentReference(reference);
+      const reference =
+        opts?.reference ||
+        `local-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      setCurrentReference(reference);
 
-    // The transport.assign method is now strictly responsible for calling setAssignationID
-    // internally once it receives the server response.
-    const newTask = await transport.assign<TArgs, TReturn>(
-      definition.name,
-      parsed.data,
-      { ...opts, reference }
-    );
-
-    return newTask;
-  }, [definition, transport]);
-
-  // --- Public Methods ---
-  const assign = useCallback(async (args: TArgs, opts?: AssignOptions) => {
-    return await execute(args, opts);
-  }, [execute]);
-
-  const call = useCallback(async (args: TArgs, opts?: AssignOptions): Promise<TReturn> => {
-    const reference = opts?.reference || `local-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-
-    return new Promise<TReturn>((resolve, reject) => {
-      // 1. Subscribe using Zustand's native selector mechanism
-      const unsubscribe = useTransportStore.subscribe(
-        selectTask<TArgs, TReturn>(reference),
-        (taskState) => {
-          if (!taskState) return;
-
-          if (taskState.status === 'completed') {
-            unsubscribe();
-            const parsed = definition.returnSchema.safeParse(taskState.result);
-            if (!parsed.success) {
-              reject(new Error(`Return value failed schema validation: ${parsed.error.message}`));
-              return;
-            }
-            resolve(parsed.data);
-          } else if (taskState.status === 'failed') {
-            unsubscribe();
-            reject(new Error(taskState.error || 'Task failed'));
-          } else if (taskState.status === 'cancelled') {
-            unsubscribe();
-            reject(new Error('Task was cancelled'));
-          }
-        }
+      // The transport.assign method is now strictly responsible for calling setAssignationID
+      // internally once it receives the server response.
+      const newTask = await transport.assign<TArgs, TReturn>(
+        definition.name,
+        parsed.data,
+        { ...opts, reference },
       );
 
-      // 2. Trigger execution
-      execute(args, { ...opts, reference }).catch((err) => {
-        unsubscribe();
-        reject(err);
+      return newTask;
+    },
+    [definition, transport],
+  );
+
+  // --- Public Methods ---
+  const assign = useCallback(
+    async (args: TArgs, opts?: AssignOptions) => {
+      return await execute(args, opts);
+    },
+    [execute],
+  );
+
+  const call = useCallback(
+    async (args: TArgs, opts?: AssignOptions): Promise<TReturn> => {
+      const reference =
+        opts?.reference ||
+        `local-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+      return new Promise<TReturn>((resolve, reject) => {
+        // 1. Subscribe using Zustand's native selector mechanism
+        const unsubscribe = useTransportStore.subscribe(
+          selectTask<TArgs, TReturn>(reference),
+          (taskState) => {
+            if (!taskState) return;
+
+            if (taskState.status === "completed") {
+              unsubscribe();
+              const parsed = definition.returnSchema.safeParse(
+                taskState.result,
+              );
+              if (!parsed.success) {
+                reject(
+                  new Error(
+                    `Return value failed schema validation: ${parsed.error.message}`,
+                  ),
+                );
+                return;
+              }
+              resolve(parsed.data);
+            } else if (taskState.status === "failed") {
+              unsubscribe();
+              reject(new Error(taskState.error || "Task failed"));
+            } else if (taskState.status === "cancelled") {
+              unsubscribe();
+              reject(new Error("Task was cancelled"));
+            }
+          },
+        );
+
+        // 2. Trigger execution
+        execute(args, { ...opts, reference }).catch((err) => {
+          unsubscribe();
+          reject(err);
+        });
       });
-    });
-  }, [execute, definition.returnSchema]);
+    },
+    [execute, definition.returnSchema],
+  );
 
   const refresh = useCallback(async (): Promise<void> => {
     // We send the resolved currentTaskId to the server, as it needs its own assignation ID
