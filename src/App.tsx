@@ -1,9 +1,8 @@
 import "./App.css";
 import {
-  LiveView,
   MultidimensionalAcquisitionControl,
   SettingsPanel,
-  StageControl,
+  StageControl
 } from "./components/microscope";
 import { CalculateAffineTransformationControl } from "./components/microscope/CalculateAffineTransformationControl";
 import { Expanse } from "./components/stage/Expanse";
