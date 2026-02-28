@@ -279,6 +279,7 @@ export const AcquireMultidimensionalAcquisitionDefinition: ActionDefinition<
   returnSchema: AcquireMultidimensionalAcquisitionReturnSchema,
   lockKeys: [
     'camera_parameters',
+    'expanse_state',
     'hook_registry',
     'illumination',
     'io',

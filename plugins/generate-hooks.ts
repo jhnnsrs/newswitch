@@ -18,6 +18,12 @@ interface ValidatorSchema {
   errorMessage: string;
 }
 
+export interface Choice {
+  label: string;
+  value: string | number;
+  description?: string;
+}
+
 interface SchemaArg {
   key?: string;
   kind: string;
@@ -25,6 +31,7 @@ interface SchemaArg {
   identifier?: string;
   default?: any;
   children?: SchemaArg[];
+  choices?: Choice[];
   description?: string;
   validators?: ValidatorSchema[];
 }
@@ -112,6 +119,12 @@ const appendValidators = (
   })`;
 };
 
+
+const mapChoicesToZodEnum = (choices: Choice[]): string => {
+  const values = choices.map((opt) => `z.literal(${JSON.stringify(opt.value)}).describe(${JSON.stringify(opt.description || opt.value)})`);
+  return `z.union([${values.join(", ")}])`;
+}
+
 const mapToZod = (arg: SchemaArg, ctx: GeneratorContext): string => {
   let base = "z.any()";
 
@@ -187,6 +200,17 @@ const mapToZod = (arg: SchemaArg, ctx: GeneratorContext): string => {
         } else {
           base = "z.any()";
         }
+        break;
+      case "ENUM":
+        console.log(arg)
+        if (arg.choices && arg.choices.length > 0) {
+          base = mapChoicesToZodEnum(arg.choices);
+        } else {
+          base = "z.string()";
+        }
+        break;
+      case "SCALAR":
+        base = "z.string()";
         break;
       default:
         base = "z.any()";

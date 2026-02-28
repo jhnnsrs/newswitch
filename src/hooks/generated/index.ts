@@ -19,3 +19,4 @@ export * from './switchFilter';
 export * from './toggleFilter';
 export * from './acquireMultidimensionalAcquisition';
 export * from './calculateCurrentAffineMatrix';
+export * from './scanRegion';
