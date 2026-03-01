@@ -93,6 +93,7 @@ export const IlluminationKubeStateSchema = z
     kube_id: z.string(),
     slot_id: z.number(),
     intensity: z.number(),
+    wavelength: z.number(),
     /** Affine transformation matrix of the kube */
     affine_matrix: z
       .array(z.array(z.number()))
