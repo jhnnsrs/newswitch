@@ -23,6 +23,8 @@ import { ScanRegionPanel } from "./panels/ScanRegionPanel";
 import { ImagesPlane } from "./planes/ImagesPlane";
 import { LivePlane } from "./planes/LivePlane";
 import { StagePlane } from "./planes/StagePlane";
+import { ImageMetadataPanel } from "./panels/ImageMetadata";
+import { CurrentImageLightPathPlane } from "./planes/LightPathStatePlane";
 
 
 
@@ -133,6 +135,8 @@ export const Expanse = () => {
             />
           </group>
 
+          <CurrentImageLightPathPlane />
+
           <StagePlane />
 
           <CameraController />
@@ -161,6 +165,7 @@ export const Expanse = () => {
         </SceneWrapper>
 
         <ScanRegionPanel />
+        <ImageMetadataPanel />
 
         <SceneOverlay />
       </PanelProvider>

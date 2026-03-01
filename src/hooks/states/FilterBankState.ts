@@ -1,24 +1,22 @@
 import { z } from "zod";
-import {
-  buildUseState,
-  type StateDefinition,
-  type UseStateSyncOptions,
-} from "../useStateSync";
+import { buildUseState, type StateDefinition } from "../useStateSync";
 
-// --- Schema ---
+// --- Sub-Schemas ---
+export const FilterSchema = z
+  .object({
+    __brand: z.literal("filter").default("filter"),
+    slot: z.number(),
+    name: z.string(),
+    center_wavelength: z.number(),
+    bandwidth: z.number(),
+    transmission: z.number(),
+    is_active: z.boolean(),
+  })
+  .brand("filter");
+
+// --- Main Schema ---
 export const FilterBankStateSchema = z.object({
-  filters: z.array(
-    z
-      .object({
-        slot: z.number(),
-        name: z.string(),
-        center_wavelength: z.number(),
-        bandwidth: z.number(),
-        transmission: z.number(),
-        is_active: z.boolean(),
-      })
-      .brand("filter"),
-  ),
+  filters: z.array(FilterSchema),
   current_slot: z.number(),
 });
 

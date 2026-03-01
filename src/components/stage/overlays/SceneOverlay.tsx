@@ -30,7 +30,7 @@ export const SceneOverlay = () => {
                         className='bg-black'
                         key={mode.value}
                         onClick={() => setDisplayMode(mode.value)}
-                        disabled={mode.value === '3D' && interactionMode === 'PAN'} // Disable 3D view when in PAN mode
+                        disabled={mode.value === displayMode} // Disable 3D view when in PAN mode
                     >
                         <span className="text-xs font-bold">{mode.label}</span>
                     </Button>

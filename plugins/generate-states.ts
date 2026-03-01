@@ -31,9 +31,51 @@ interface Port {
   description?: string;
 }
 
+const toCamel = (s: string) =>
+  s.replace(/_([a-z])/g, (g) => g[1].toUpperCase());
+const toPascal = (s: string) => {
+  const c = toCamel(s);
+  return c.charAt(0).toUpperCase() + c.slice(1);
+};
+
+// --- CODE SNIPPETS ---
+const utilsCode = `
+import { z } from 'zod';
+
+/**
+ * Creates a schema that handles the { use: index, value: data } pattern.
+ */
+export function createIndexedUnion<T extends [z.ZodTypeAny, ...z.ZodTypeAny[]]>(schemas: T) {
+  return z
+    .object({
+      use: z.number().int().min(0).max(schemas.length - 1),
+      value: z.unknown(),
+    })
+    .transform((val, ctx): z.infer<T[number]> => {
+      const schema = schemas[val.use];
+      const result = schema.safeParse(val.value);
+      
+      if (!result.success) {
+        result.error.issues.forEach((issue) => ctx.addIssue(issue));
+        return z.NEVER;
+      }
+      
+      return result.data;
+    });
+}
+`;
+
 // --- ZOD MAPPING ---
-const mapToZod = (port: Port): string => {
+const mapToZod = (
+  port: Port,
+  subSchemas: Map<string, string>,
+  fallbackName: string = "Unknown"
+): string => {
   let base = "z.any()";
+
+  // Determine a sensible name for this node if it lacks a clear identifier or valid key
+  const isValidKey = port.key && port.key !== "..." && port.key !== "";
+  const nodeName = port.identifier || (isValidKey ? port.key : fallbackName);
 
   switch (port.kind) {
     case "FLOAT":
@@ -68,8 +110,11 @@ const mapToZod = (port: Port): string => {
       break;
     case "LIST":
       if (port.children && port.children.length > 0) {
-        // Lists have a single child describing the element type
-        const elementType = mapToZod(port.children[0]);
+        // Derive a singular name from the plural node name, or append "Item"
+        const childFallback = nodeName.endsWith("s")
+          ? nodeName.slice(0, -1)
+          : `${nodeName}Item`;
+        const elementType = mapToZod(port.children[0], subSchemas, childFallback);
         base = `z.array(${elementType})`;
       } else {
         base = "z.array(z.any())";
@@ -77,46 +122,79 @@ const mapToZod = (port: Port): string => {
       break;
     case "DICT":
       if (port.children && port.children.length > 0) {
-        // Dict has a single child describing the value type (keys are always strings)
-        const valueType = mapToZod(port.children[0]);
+        const childFallback = `${nodeName}Value`;
+        const valueType = mapToZod(port.children[0], subSchemas, childFallback);
         base = `z.record(z.string(), ${valueType})`;
       } else {
         base = "z.record(z.string(), z.any())";
       }
       break;
-    case "MODEL":
-      if (port.children && port.children.length > 0) {
-        // Model is a nested object with its own fields
-        const fields = port.children
-          .map((child) => `  ${child.key}: ${mapToZod(child)}`)
-          .join(",\n");
-        base = `z.object({\n${fields}\n}).brand('${port.identifier}')`;
-      } else {
-        base = `z.object({}).brand('${port.identifier}')`;
+    case "MODEL": {
+      const brandName = port.identifier || nodeName;
+      const modelName = port.identifier
+        ? `${toPascal(port.identifier)}Schema`
+        : `${toPascal(nodeName)}ModelSchema`;
+
+      if (!subSchemas.has(modelName)) {
+        let fieldsCode = "";
+        
+        // Inject a runtime brand into the Zod object using a literal with a default
+        const injectedBrand = `__brand: z.literal('${brandName}').default('${brandName}')`;
+
+        if (port.children && port.children.length > 0) {
+          const fields = port.children
+            .map(
+              (child) =>
+                `  ${child.key}: ${mapToZod(child, subSchemas, child.key)}`
+            );
+          fieldsCode = `{\n  ${injectedBrand},\n${fields.join(",\n")}\n}`;
+        } else {
+          fieldsCode = `{ \n  ${injectedBrand}\n}`;
+        }
+
+        const brandSuffix = port.identifier
+          ? `.brand('${port.identifier}')`
+          : "";
+
+        // Save the standalone schema definition
+        subSchemas.set(
+          modelName,
+          `export const ${modelName} = z.object(${fieldsCode})${brandSuffix};`
+        );
       }
+      base = modelName;
       break;
-    case "UNION":
-      if (port.children && port.children.length > 0) {
-        const types = port.children.map((child) => mapToZod(child));
-        base = `z.union([${types.join(", ")}])`;
-      } else {
-        base = "z.any()";
+    }
+    case "UNION": {
+      // Use the derived nodeName for the union as well
+      const unionName = port.identifier
+        ? `${toPascal(port.identifier)}UnionSchema`
+        : `${toPascal(nodeName)}UnionSchema`;
+
+      if (!subSchemas.has(unionName)) {
+        if (port.children && port.children.length > 0) {
+          const types = port.children.map((child, index) =>
+            mapToZod(child, subSchemas, `${nodeName}Variant${index + 1}`)
+          );
+          // Save the indexed union definition
+          subSchemas.set(
+            unionName,
+            `export const ${unionName} = createIndexedUnion([\n  ${types.join(",\n  ")}\n]);`
+          );
+        } else {
+          base = "z.any()";
+          break;
+        }
       }
+      base = unionName;
       break;
+    }
     default:
-      // Unknown type, fallback to any
       base = "z.any()";
   }
 
   if (port.nullable) return `${base}.nullable()`;
   return base;
-};
-
-const toCamel = (s: string) =>
-  s.replace(/_([a-z])/g, (g) => g[1].toUpperCase());
-const toPascal = (s: string) => {
-  const c = toCamel(s);
-  return c.charAt(0).toUpperCase() + c.slice(1);
 };
 
 // --- CONTENT GENERATOR ---
@@ -126,19 +204,29 @@ const generateContent = (key: string, stateDef: any) => {
   const typeName = `${toPascal(key)}`; // StageState (Type)
   const defName = `${toPascal(key)}Definition`;
 
-  // 1. Generate Zod Schema fields from 'ports'
+  const subSchemas = new Map<string, string>();
+
+  // 1. Generate Zod Schema fields from 'ports' and populate subSchemas
+  // Pass down the port's actual key as the top-level fallback
   const fields = stateDef.ports
-    .map((p: Port) => `  ${p.key}: ${mapToZod(p)}`)
+    .map((p: Port) => `  ${p.key}: ${mapToZod(p, subSchemas, p.key)}`)
     .join(",\n");
 
-  const schemaCode = `export const ${schemaName} = z.object({\n${fields}\n});`;
+  const subSchemasCode = Array.from(subSchemas.values()).join("\n\n");
+  const mainSchemaCode = `export const ${schemaName} = z.object({\n${fields}\n});`;
+
+  const includesUnion = subSchemasCode.includes("createIndexedUnion");
 
   return `
 import { z } from 'zod';
-import { buildUseState, type StateDefinition, type UseStateSyncOptions } from '${IMPORT_PATH_TO_SYNC}';
+import { buildUseState, type StateDefinition } from '${IMPORT_PATH_TO_SYNC}';
+${includesUnion ? "import { createIndexedUnion } from './utils';" : ""}
 
-// --- Schema ---
-${schemaCode}
+// --- Sub-Schemas ---
+${subSchemasCode}
+
+// --- Main Schema ---
+${mainSchemaCode}
 
 // --- Type ---
 export type ${typeName} = z.infer<typeof ${schemaName}>;
@@ -152,7 +240,8 @@ export const ${defName}: StateDefinition<${typeName}> = {
 /**
  * Hook to sync ${key}
  */
-export const ${hookName} = buildUseState<${typeName}>(${defName})`;
+export const ${hookName} = buildUseState<${typeName}>(${defName});
+`;
 };
 
 // --- VITE PLUGIN ---
@@ -191,9 +280,15 @@ export default function generateStatesPlugin(
 
       if (!fs.existsSync(OUTPUT_DIR))
         fs.mkdirSync(OUTPUT_DIR, { recursive: true });
+      // Clean previous generated outputs
       fs.rmSync(OUTPUT_DIR, { recursive: true, force: true });
       fs.mkdirSync(OUTPUT_DIR, { recursive: true });
       const files: string[] = [];
+
+      // Generate the utils file
+      const formattedUtils = await prettier.format(utilsCode, { parser: "typescript" });
+      fs.writeFileSync(path.join(OUTPUT_DIR, "utils.ts"), formattedUtils);
+      files.push("utils"); // store for index.ts
 
       // Iterate over the "states" object in your schema
       for (const [key, stateDef] of Object.entries(schema.states)) {
@@ -211,7 +306,7 @@ export default function generateStatesPlugin(
       fs.writeFileSync(path.join(OUTPUT_DIR, "index.ts"), index);
 
       console.log(
-        `✅ [GenStates] Generated ${files.length} state hooks from ${schemaUrl}`,
+        `✅ [GenStates] Generated ${files.length} files (including utils) from ${schemaUrl}`,
       );
     },
   };

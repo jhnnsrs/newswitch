@@ -18,5 +18,5 @@ export * from './toggleObjective';
 export * from './switchFilter';
 export * from './toggleFilter';
 export * from './acquireMultidimensionalAcquisition';
-export * from './calculateCurrentAffineMatrix';
+export * from './calibrateLightPath';
 export * from './scanRegion';

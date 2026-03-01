@@ -1,11 +1,9 @@
 import { z } from "zod";
-import {
-  buildUseState,
-  type StateDefinition,
-  type UseStateSyncOptions,
-} from "../useStateSync";
+import { buildUseState, type StateDefinition } from "../useStateSync";
 
-// --- Schema ---
+// --- Sub-Schemas ---
+
+// --- Main Schema ---
 export const StageStateSchema = z.object({
   x: z.number(),
   y: z.number(),

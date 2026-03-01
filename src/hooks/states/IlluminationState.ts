@@ -1,27 +1,25 @@
 import { z } from "zod";
-import {
-  buildUseState,
-  type StateDefinition,
-  type UseStateSyncOptions,
-} from "../useStateSync";
+import { buildUseState, type StateDefinition } from "../useStateSync";
 
-// --- Schema ---
+// --- Sub-Schemas ---
+export const IlluminationSchema = z
+  .object({
+    __brand: z.literal("illumination").default("illumination"),
+    kind: z.string(),
+    slot: z.number(),
+    intensity: z.number(),
+    wavelength: z.number(),
+    fartface: z.number(),
+    channel: z.number(),
+    max_intensity: z.number(),
+    min_intensity: z.number(),
+    is_active: z.boolean(),
+  })
+  .brand("illumination");
+
+// --- Main Schema ---
 export const IlluminationStateSchema = z.object({
-  illuminations: z.array(
-    z
-      .object({
-        kind: z.string(),
-        slot: z.number(),
-        intensity: z.number(),
-        wavelength: z.number(),
-        fartface: z.number(),
-        channel: z.number(),
-        max_intensity: z.number(),
-        min_intensity: z.number(),
-        is_active: z.boolean(),
-      })
-      .brand("illumination"),
-  ),
+  illuminations: z.array(IlluminationSchema),
 });
 
 // --- Type ---

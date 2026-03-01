@@ -1,21 +1,22 @@
 import { z } from "zod";
-import {
-  buildUseState,
-  type StateDefinition,
-  type UseStateSyncOptions,
-} from "../useStateSync";
+import { buildUseState, type StateDefinition } from "../useStateSync";
 
-// --- Schema ---
+// --- Sub-Schemas ---
+export const CalibratedLightPathSchema = z
+  .object({
+    __brand: z
+      .literal("calibrated_light_path")
+      .default("calibrated_light_path"),
+    affine_matrix: z.array(z.array(z.number())),
+    fov_width: z.number(),
+    fov_height: z.number(),
+    light_path_hash: z.string(),
+  })
+  .brand("calibrated_light_path");
+
+// --- Main Schema ---
 export const CalibrationStateSchema = z.object({
-  affine_states: z.array(
-    z
-      .object({
-        affine_matrix: z.array(z.array(z.number())),
-        objective_slot: z.number(),
-        detector_slot: z.number(),
-      })
-      .brand("affine_state"),
-  ),
+  calibrated_light_paths: z.array(CalibratedLightPathSchema),
 });
 
 // --- Type ---

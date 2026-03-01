@@ -1,11 +1,9 @@
 import { z } from "zod";
-import {
-  buildUseState,
-  type StateDefinition,
-  type UseStateSyncOptions,
-} from "../useStateSync";
+import { buildUseState, type StateDefinition } from "../useStateSync";
 
-// --- Schema ---
+// --- Sub-Schemas ---
+
+// --- Main Schema ---
 export const SerialStateSchema = z.object({
   active: z.boolean(),
 });

@@ -1,10 +1,11 @@
+import { Light } from "three";
 import "./App.css";
 import {
   MultidimensionalAcquisitionControl,
   SettingsPanel,
   StageControl
 } from "./components/microscope";
-import { CalculateAffineTransformationControl } from "./components/microscope/CalculateAffineTransformationControl";
+import { CalibrateLightPath } from "./components/microscope/CalibrateLightPath";
 import { Expanse } from "./components/stage/Expanse";
 import {
   ResizableHandle,
@@ -13,6 +14,7 @@ import {
 } from "./components/ui/resizable";
 import { Toaster } from "./components/ui/sonner";
 import { TransportProvider } from "./transport";
+import { LightPaths } from "./components/microscope/LightPaths";
 
 // The backend API URL is either injected into the global scope by the
 // electron app or taken from environment variables, allowing for flexibility in different deployment scenarios.
@@ -47,7 +49,8 @@ function MicroscopeControlPanel() {
             <StageControl />
 
             <MultidimensionalAcquisitionControl />
-            <CalculateAffineTransformationControl />
+            <CalibrateLightPath />
+            <LightPaths />
           </div>
         </ResizablePanel>
       </ResizablePanelGroup>

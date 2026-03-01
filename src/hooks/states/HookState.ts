@@ -1,19 +1,17 @@
 import { z } from "zod";
-import {
-  buildUseState,
-  type StateDefinition,
-  type UseStateSyncOptions,
-} from "../useStateSync";
+import { buildUseState, type StateDefinition } from "../useStateSync";
 
-// --- Schema ---
+// --- Sub-Schemas ---
+export const RegisteredHookSchema = z
+  .object({
+    __brand: z.literal("registered_hook").default("registered_hook"),
+    type: z.string(),
+  })
+  .brand("registered_hook");
+
+// --- Main Schema ---
 export const HookStateSchema = z.object({
-  registered_hooks: z.array(
-    z
-      .object({
-        type: z.string(),
-      })
-      .brand("registered_hook"),
-  ),
+  registered_hooks: z.array(RegisteredHookSchema),
 });
 
 // --- Type ---

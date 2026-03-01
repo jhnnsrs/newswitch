@@ -23,7 +23,7 @@ export interface UseStateSyncOptions<T, U = T> {
 }
 
 export interface UseStateSyncResult<U> {
-  data: U | null;
+  data?: U | null;
   loading: boolean;
   error: Error | null;
   refetch: () => Promise<void>;
@@ -85,7 +85,7 @@ export const useStateSync = <T extends Record<string, unknown>, U = T>(
 
       const parsed = schemaRef.current.safeParse(response.state);
       if (!parsed.success) {
-        console.error(`[${definition.key}] Validation Failed:`, parsed.error);
+        console.error(`[${definition.key}] Validation Failed:`, parsed.error, response.state);
         setError(
           definition.key,
           new Error(`Validation failed for ${definition.key}`),
