@@ -122,6 +122,20 @@ export const GenericKubeStateSchema = z
   .object({
     kube_id: z.string(),
     other_metadata: z.record(z.string(), z.string()),
+    /** Affine transformation matrix of the kube */
+    affine_matrix: z
+      .array(z.array(z.number()))
+      .describe('Affine transformation matrix of the kube'),
+    /** Model name of the stage (e.g., 'Stage 100x/0.8 NA') */
+    model_name: z
+      .string()
+      .describe("Model name of the stage (e.g., 'Stage 100x/0.8 NA')")
+      .optional(),
+    /** Path to a file containing the physical model of the stage */
+    model_file: z
+      .string()
+      .describe('Path to a file containing the physical model of the stage')
+      .optional(),
   })
   .brand('generic_kube_state');
 /** Data class representing metadata for a kube, including its ID and affine transformation matrix. */

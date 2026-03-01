@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 
-export type InteractionMode =  "PAN" | "EDIT" | "SCAN" | "MOVE";
+export type InteractionMode =  "PAN" | "EDIT" | "SCAN" | "MOVE" | "META";
 export type DisplayMode = '2D' | '3D';
 
 
@@ -22,6 +22,7 @@ export const interactionModeOptions: InteractionModeOption[] = [
     { label: "Edit Mode", value: "EDIT", description: "Mode for selecting and modifying objects" },
     { label: "Scan Mode", value: "SCAN", description: "Mode for drawing selection boxes and scanning areas" },
     { label: "Move Mode", value: "MOVE", description: "Mode for moving selected objects" },
+    { label: "Meta Mode", value: "META", description: "Mode for accessing meta-level controls and settings" },
 ];
 
 export const displayModeOptions: DisplayModeOption[] = [

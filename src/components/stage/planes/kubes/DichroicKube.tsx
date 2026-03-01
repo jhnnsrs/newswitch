@@ -43,26 +43,7 @@ export const DichroicKubePlane = ({ data }: { data: DichroicData }) => {
 
       </group>
 
-      {/* Floating HTML Label */}
-      <Html position={[0, 45, 0]} center distanceFactor={1.5} zIndexRange={[100, 0]}>
-        <div className="flex flex-col items-center gap-1 pointer-events-none">
-          <div className="bg-slate-900/90 border border-slate-700 p-2 rounded-lg shadow-2xl backdrop-blur-md min-w-[120px]">
-            <div className="text-[10px] font-bold uppercase tracking-widest text-blue-400 border-b border-slate-700 pb-1 mb-1 text-center">
-              Filter Kube
-            </div>
-            <div className="text-[9px] font-mono text-slate-300 flex flex-col gap-0.5">
-              <div className="flex justify-between gap-4">
-                <span className="text-slate-500">Wavelength:</span> 
-                {/* Dynamically display the wavelength or a fallback */}
-                <span style={{ color: filterColor }}>
-                  {data.wavelength ? `${data.wavelength} nm` : 'N/A'}
-                </span>
-              </div>
-            </div>
-          </div>
-          <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[8px] border-t-slate-700"></div>
-        </div>
-      </Html>
+      
     </group>
   );
 };

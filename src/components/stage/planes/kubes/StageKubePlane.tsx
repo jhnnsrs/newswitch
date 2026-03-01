@@ -11,7 +11,10 @@ export const StageKubePlane = ({ data }: { data: StageKubeData }) => {
   
   return (
     <group matrix={matrix} matrixAutoUpdate={false}>
-      
+        <mesh position={[0, 0, -5]} >
+          <boxGeometry args={[100, 100, 4]} />
+          <meshStandardMaterial color="#4b5563" metalness={0.5} roughness={0.7} />
+        </mesh>
 
     </group>
   );

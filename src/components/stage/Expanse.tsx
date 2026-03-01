@@ -25,7 +25,9 @@ import { LivePlane } from "./planes/LivePlane";
 import { StagePlane } from "./planes/StagePlane";
 import { ImageMetadataPanel } from "./panels/ImageMetadata";
 import { CurrentImageLightPathPlane } from "./planes/LightPathStatePlane";
-
+import { KubeStatePanel } from "./panels/KubeStatePanel";
+import { EffectComposer, Outline, Selection } from '@react-three/postprocessing'
+import { useKubeStateStore } from "@/store/kubeStateStore";
 
 
 const DEFAULT_VIDEO_WS = `${window.__agent_ws_url__ || import.meta.env.VITE_WEBSOCKET_URL}/video`;
@@ -77,10 +79,11 @@ const ScaleBar = ({ axis, lengthUm, position, color }: any) => {
 };
 
 export const SceneWrapper = ({ children }) => {
-  const ContextBridge = useContextBridge(PanelContext);
+  const selectedKubeState = useKubeStateStore((s) => s.selectedKubeState);
+  const hasSelection = selectedKubeState !== null;
   return (
     <Canvas>
-      <ContextBridge>{children}</ContextBridge>
+                {children}
     </Canvas>
   );
 };
@@ -166,6 +169,7 @@ export const Expanse = () => {
 
         <ScanRegionPanel />
         <ImageMetadataPanel />
+        <KubeStatePanel />
 
         <SceneOverlay />
       </PanelProvider>

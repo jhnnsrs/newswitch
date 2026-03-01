@@ -72,23 +72,23 @@ export const IlluminationKubePlane = ({ data }: { data: IlluminationData }) => {
         {/* 1. Heat Sink / Base Module (Thick, metallic) */}
         <mesh position={[0, 20, 0]}>
           <cylinderGeometry args={[25, 25, 30, 32]} />
-          <meshStandardMaterial color="#374151" metalness={0.8} roughness={0.4} />
+          <meshStandardMaterial color="#777f8e" />
         </mesh>
 
         {/* 2. Heat Sink Grooves (Visual detail) */}
         <mesh position={[0, 20, 0]}>
           <cylinderGeometry args={[26, 26, 2, 32]} />
-          <meshStandardMaterial color="#1f2937" metalness={0.9} roughness={0.2} />
+          <meshStandardMaterial color="#979797" />
         </mesh>
         <mesh position={[0, 25, 0]}>
           <cylinderGeometry args={[26, 26, 2, 32]} />
-          <meshStandardMaterial color="#1f2937" metalness={0.9} roughness={0.2} />
+          <meshStandardMaterial color="#7c7d7d"  />
         </mesh>
 
         {/* 3. Collimator Housing (Narrower barrel) */}
         <mesh position={[0, -5, 0]}>
           <cylinderGeometry args={[15, 12, 20, 32]} />
-          <meshStandardMaterial color="#111827" metalness={0.9} roughness={0.1} />
+          <meshStandardMaterial color="#6e6e6e"/>
         </mesh>
 
         {/* 4. Glowing Emitter Lens */}

@@ -57,6 +57,9 @@ export const GenericKubeStateSchema = z
     __brand: z.literal("generic_kube_state").default("generic_kube_state"),
     kube_id: z.string(),
     other_metadata: z.record(z.string(), z.string()),
+    affine_matrix: z.array(z.array(z.number())),
+    model_name: z.string().nullable(),
+    model_file: z.string().nullable(),
   })
   .brand("generic_kube_state");
 

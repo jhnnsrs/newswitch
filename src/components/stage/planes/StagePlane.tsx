@@ -27,7 +27,7 @@ export const StagePlane = () => {
       {/* 1. The Solid Base */}
       <mesh position={[0, 0, -1]}>
         <planeGeometry args={[stageRangeX, stageRangeY]} />
-        <meshStandardMaterial color="#0c0c0d" transparent opacity={0.8} />
+        <meshStandardMaterial color="#0c0c0d" transparent opacity={0.1} />
       </mesh>
       
       {/* 2. The Functional Grid Overlay */}
