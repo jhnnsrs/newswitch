@@ -2,13 +2,13 @@
 import { LightPathStateRender } from "@/components/lightpath/LightPathStateRender";
 import { Card } from "@/components/ui/card";
 import { useExpanseState } from "@/hooks/states";
-import { useImageStore } from "@/store/imageStore";
+import { useSelectionStore } from "@/store/imageStore";
 
 export const ImageMetadataPanel = () => {
   // 1. Get Domain Data
 
-  const selectedImageId = useImageStore((s) => s.selectedImageId);
-  const setSelectedImageId = useImageStore((s) => s.setSelectedImageId);
+  const selectedImageId = useSelectionStore((s) => s.selectedImageId);
+  const setSelectedImageId = useSelectionStore((s) => s.setSelectedImageId);
   const { data } = useExpanseState();
   const selectedImage = data?.current_images?.find(
     (img) => img.id === selectedImageId,

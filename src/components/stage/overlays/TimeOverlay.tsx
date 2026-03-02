@@ -1,12 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { useTimeStore } from "@/store/timeStore";
-import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
-import { useExpanseState } from "@/hooks/states";
-import { useImageStore } from "@/store/imageStore";
 import {
   Popover,
   PopoverContent,
@@ -15,11 +9,17 @@ import {
   PopoverTitle,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { Slider } from "@/components/ui/slider";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useExpanseState } from "@/hooks/states";
+import { useSelectionStore } from "@/store/imageStore";
+import { useTimeStore } from "@/store/timeStore";
+import { AnimatePresence, motion } from "framer-motion";
+import { useEffect, useMemo, useState } from "react";
 
 const DEBOUNCE_MS = 180;
 const IMAGE_ZOOM_WINDOW_PERCENT = 16;
@@ -36,7 +36,7 @@ export const TimeOverlay = () => {
   >([0, 100]);
   const [isHovered, setIsHovered] = useState(false);
 
-  const setSelectedImageId = useImageStore((s) => s.setSelectedImageId);
+  const setSelectedImageId = useSelectionStore((s) => s.setSelectedImageId);
 
   const imageTimesMs = useMemo(() => {
     return (currentImages ?? [])

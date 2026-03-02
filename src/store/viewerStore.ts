@@ -14,10 +14,12 @@ interface ViewerState {
   zEnd: number | null;
   tStart: Date | null;
   tEnd: Date | null;
+  debug: boolean; 
   storeBuilder: StoreBuilder;
 
   setZRange: (start: number | null, end: number | null) => void;
   setTRange: (start: Date | null, end: Date | null) => void;
+  setDebug: (debug: boolean) => void;
 }
 
 
@@ -35,7 +37,9 @@ export const useViewerStore = create<ViewerState>((set) => ({
   zEnd: 100,
   tStart: null,
   tEnd: null,
+  debug: false,
   storeBuilder: fetchBuilder, // Default to fetchBuilder, can be switched to localBuilder for testing
   setZRange: (start, end) => set({ zStart: start, zEnd: end }),
   setTRange: (start, end) => set({ tStart: start, tEnd: end }),
+  setDebug: (debug) => set({ debug }),
 }));

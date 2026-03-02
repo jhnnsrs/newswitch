@@ -7,7 +7,7 @@ import { KeyboardModeController } from "./controllers/KeyboardModeController";
 import { RectangleDrawer } from "./interactions/RectangleDrawer";
 import { StagePositioner } from "./interactions/StagePositioner";
 import { SceneOverlay } from "./overlays/SceneOverlay";
-import { TimeOverlay } from "./overlays/TimeOverla";
+import { TimeOverlay } from "./overlays/TimeOverlay";
 import { PanelProvider } from "./PanelProvider";
 import { ImageMetadataPanel } from "./panels/ImageMetadata";
 import { KubeStatePanel } from "./panels/KubeStatePanel";
@@ -19,10 +19,9 @@ import { StageAxis } from "./planes/StageAxis";
 import { StagePlane } from "./planes/StagePlane";
 import { FramesPlane } from "./planes/FramesPlane";
 import { DebugOverlay } from "./overlays/DebugOverlay";
+import { FramePanel } from "./panels/FramePanel";
 
 export const SceneWrapper = ({ children }) => {
-  const selectedKubeState = useKubeStateStore((s) => s.selectedKubeState);
-  const hasSelection = selectedKubeState !== null;
   return <Canvas>{children}</Canvas>;
 };
 
@@ -61,6 +60,8 @@ export const Expanse = () => {
         <ScanRegionPanel />
         <ImageMetadataPanel />
         <KubeStatePanel />
+
+        <FramePanel />
 
         <SceneOverlay />
         <DebugOverlay />

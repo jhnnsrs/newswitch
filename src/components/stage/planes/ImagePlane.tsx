@@ -3,7 +3,7 @@ import { useLoader } from "@react-three/fiber";
 import { TextureLoader, DoubleSide, Mesh, Matrix4 } from "three";
 import type { ExpanseState } from "@/hooks/states/ExpanseState";
 import { useTransport } from "@/transport/TransportProvider";
-import { useImageStore } from "@/store/imageStore";
+import { useSelectionStore } from "@/store/imageStore";
 // import { useTransport } from '../transport/TransportProvider';
 // import type { ExpanseState } from '../store/types';
 
@@ -17,7 +17,7 @@ export const ImagePlane = ({
   const meshRef = useRef<Mesh>(null);
   const { apiEndpoint } = useTransport();
   const [render, setRender] = React.useState(false);
-  const setSelected = useImageStore((s) => s.setSelectedImageId);
+  const setSelectedImageId = useSelectionStore((s) => s.setSelectedImageId);
 
   const baseUrl = apiEndpoint.replace(/\/$/, "");
   const url = `${baseUrl}/files/${encodeURIComponent(image.id)}`;
@@ -70,7 +70,7 @@ export const ImagePlane = ({
     <mesh
       ref={meshRef}
       matrixAutoUpdate={false}
-      onClick={() => setSelected(image.id)}
+      onClick={() => setSelectedImageId(image.id)}
     >
       <planeGeometry args={[1, 1]} />
       <meshBasicMaterial

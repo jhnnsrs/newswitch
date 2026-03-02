@@ -8,6 +8,7 @@ import type { ChunkData } from '../stores/types';
 import { mapDTypeToMinMax } from '../stores/utils';
 import { ChunkMesh } from './ChunkMesh';
 import { redColormap } from '../hooks/zarr/colormaps';
+import { useSelectionStore } from '@/store/imageStore';
 
 
 // --- 2. The Main Frame Plane ---
@@ -16,6 +17,9 @@ export const FrameVolume = ({ frame }: { frame: Frame }) => {
   const [chunks, setChunks] = useState<ChunkData[] | null>(null);
 
   const storeBuilder = useViewerStore((s) => s.storeBuilder);
+
+  const isSelected = useSelectionStore((s) => s.selectedFrameId === frame.id);
+  const setSelectedFrameId = useSelectionStore((s) => s.setSelectedFrameId);
 
   useEffect(() => {
     let isMounted = true;
@@ -103,7 +107,14 @@ export const FrameVolume = ({ frame }: { frame: Frame }) => {
   }
 
   return (
-    <group matrix={affineMatrix} matrixAutoUpdate={false}>
+    <group matrix={affineMatrix} matrixAutoUpdate={false} onClick={(e) => {
+                e.stopPropagation();
+                if (isSelected) {
+                  setSelectedFrameId(null);
+                } else {
+                  setSelectedFrameId(frame.id);
+                }
+              }}>
       {chunks.map((chunk) => (
         <ChunkMesh key={chunk.chunk_key} chunk={chunk} />
       ))}
