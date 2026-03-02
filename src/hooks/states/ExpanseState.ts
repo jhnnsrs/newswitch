@@ -154,6 +154,9 @@ export const MetadataSchema = z
     fov_height: z.number(),
     light_state: LightPathStateSchema,
     acquisition_time: z.string(),
+    colormap: z.string(),
+    min_value: z.number().nullable(),
+    max_value: z.number().nullable(),
   })
   .brand("metadata");
 
@@ -172,6 +175,7 @@ export const ScaleSchema = z
     y: z.number(),
     z: z.number(),
     cached_id: z.string().nullable(),
+    affine_matrix: z.array(z.array(z.number())).nullable(),
   })
   .brand("scale");
 

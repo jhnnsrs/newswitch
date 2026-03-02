@@ -1,0 +1,41 @@
+import type { Frame } from "@/components/stage/hooks/zarr/types";
+import { CachedFetchStore } from "@/components/stage/hooks/zarr/zarr_stores/fetchStore";
+import { TestNoiseZarrStore } from "@/components/stage/hooks/zarr/zarr_stores/noiseStore";
+import type { ZarrStore } from "@/components/stage/hooks/zarr/zarr_stores/type";
+import { create } from "zustand";
+import { BACKEND_API } from "@/constants";
+
+export type StoreBuilder = (frame: Frame) => ZarrStore;
+
+
+interface ViewerState {
+  // We store the combined projection + view matrix
+  zStart: number | null;
+  zEnd: number | null;
+  tStart: Date | null;
+  tEnd: Date | null;
+  storeBuilder: StoreBuilder;
+
+  setZRange: (start: number | null, end: number | null) => void;
+  setTRange: (start: Date | null, end: Date | null) => void;
+}
+
+
+export const localBuilder = (frame: Frame) => {
+  return new TestNoiseZarrStore(frame.id);
+}
+
+export const fetchBuilder = (frame: Frame) => {
+  const url = `${BACKEND_API}/cache/${frame.id}`;
+  return new CachedFetchStore(url);
+}
+
+export const useViewerStore = create<ViewerState>((set) => ({
+  zStart: 0,
+  zEnd: 100,
+  tStart: null,
+  tEnd: null,
+  storeBuilder: fetchBuilder, // Default to fetchBuilder, can be switched to localBuilder for testing
+  setZRange: (start, end) => set({ zStart: start, zEnd: end }),
+  setTRange: (start, end) => set({ tStart: start, tEnd: end }),
+}));

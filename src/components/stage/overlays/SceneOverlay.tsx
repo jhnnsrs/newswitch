@@ -51,6 +51,7 @@ export const SceneOverlay = () => {
       </div>
       <div className="absolute bottom-2 right-2 rounded bg-black/80 p-2 font-mono text-[10px] text-white">
         {expanseState?.current_images?.length ?? 0} IMAGES{" "}
+        {expanseState?.current_frames?.length ?? 0} FRAMES
         <ActionButton
           action={ClearExpanseDefinition}
           args={{}}

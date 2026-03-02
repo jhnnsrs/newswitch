@@ -83,13 +83,13 @@ async function handle_response(
 const global_cache = new LRUCache<string, ArrayBuffer>(500);
 
 export class CachedFetchStore extends FetchStore {
-  private fetch: typeof fetch;
+  private fetchFunc: typeof fetch;
   private cache: LRUCache<string, ArrayBuffer>;
   private lockManager: AsyncLockManager;
 
   constructor(url: string, options: any = {}) {
     super(url, options);
-    this.fetch = fetch
+    this.fetchFunc = window.fetch;
     this.url = url;
     this.cache = global_cache;
     this.lockManager = new AsyncLockManager();
@@ -113,7 +113,7 @@ export class CachedFetchStore extends FetchStore {
       }
 
       const href = resolve(this.url, key).href;
-      const response = await this.fetch(href, { ...options });
+      const response = await fetch(href, { ...options });
       const result = await handle_response(response);
 
       if (result) {

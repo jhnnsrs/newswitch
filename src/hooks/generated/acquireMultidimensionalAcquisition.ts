@@ -597,6 +597,9 @@ export const MetadataSchema = z
       'Data class representing the light path used for an image, including illumination settings.',
     ),
     acquisition_time: z.string(),
+    colormap: z.string().optional(),
+    min_value: z.number().optional(),
+    max_value: z.number().optional(),
   })
   .brand('metadata');
 /** Data class representing metadata for an image, including its ID and affine transformation matrix. */

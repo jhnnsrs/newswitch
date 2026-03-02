@@ -1,6 +1,7 @@
 
 // --- Assuming these are your external imports ---
 import { BACKEND_API } from "@/constants";
+import type { AbsolutePath } from "node_modules/@zarrita/storage/dist/src/types";
 // ------------------------------------------------
 
 export const GLOBAL_CACHE_ENDPOINT = `${BACKEND_API}/cache`;
@@ -13,13 +14,13 @@ export const GLOBAL_CACHE_ENDPOINT = `${BACKEND_API}/cache`;
  * and generates random Uint8 arrays for chunk data requests.
  */
 export class TestNoiseZarrStore {
-  url: string;
+  url: string | URL;
 
-  constructor(url: string) {
+  constructor(url: string | URL) {
     this.url = url;
   }
 
-  async get(key: string): Promise<Uint8Array | undefined> {
+  async get(key: AbsolutePath, options: RequestInit = {}): Promise<Uint8Array | undefined> {
     // 1. Intercept array metadata request
     if (key === "/zarr.json") {
       const mockMetadata = {
@@ -41,8 +42,10 @@ export class TestNoiseZarrStore {
       return new TextEncoder().encode(JSON.stringify(mockMetadata));
     }
 
+    console.log(`TestNoiseZarrStore received get request for key: ${key}`, options);
+
     // 2. Intercept chunk data requests
-    if (key.startsWith("c/")) {
+    if (key.startsWith("/c/")) {
       const chunkSize = 1 * 10 * 64 * 64; // Matches the chunk_shape above
       const noiseData = new Uint8Array(chunkSize);
       for (let i = 0; i < chunkSize; i++) {

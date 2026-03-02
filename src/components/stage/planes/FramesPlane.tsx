@@ -1,15 +1,16 @@
-import { Suspense } from "react";
-import { useCacheStore } from "../stores/cacheStore";
-import FramePlane from "./FramePlane";
+import { useExpanseState } from "@/hooks/states/ExpanseState";
+import { FrameVolume } from "./FrameVolume";
 
 export const FramesPlane = () => {
-  const frames = useCacheStore((s) => s.frames);
+  // 1. Get the descriptors directly from your backend state hook
+  const {data} = useExpanseState();
 
+  // 2. Map over them. React handles all mounting, fetching, and unmounting automatically.
   return (
-    <Suspense fallback={<></>}>
-      {frames?.map((frame, idx) => (
-        <FramePlane key={idx} index={idx} />
+    <group>
+      {data?.current_frames?.map((frame) => (
+        <FrameVolume key={frame.id} frame={frame} />
       ))}
-    </Suspense>
+    </group>
   );
 };
