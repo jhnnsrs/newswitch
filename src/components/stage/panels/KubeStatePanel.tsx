@@ -3,21 +3,37 @@ import { useKubeStateStore } from "@/store/kubeStateStore";
 import { useViewStore } from "@/store/viewStore";
 import { useMemo } from "react";
 import * as THREE from "three";
+import { DetectorKubePanel } from "./kubes/DetectorKubePanel";
 import { DichroicKubePanel } from "./kubes/DichroicKubePanel";
+import { FilterBankKubePanel } from "./kubes/FilterBankKubePanel";
+import { FilterKubePanel } from "./kubes/FilterKubePanel";
+import { GenericKubePanel } from "./kubes/GenericKubePanel";
+import { IlluminationKubePanel } from "./kubes/IlluminationKubePanel";
+import { ObjectiveKubePanel } from "./kubes/ObjectiveKubePanel";
+import { StageKubePanel } from "./kubes/StageKubePanel";
+import { useModeStore } from "@/store/modeStore";
 
 export const KubeStatePanel = () => {
     // 1. Get Domain Data
     const selectedKubeState = useKubeStateStore((s) => s.selectedKubeState);
-    const setSelectedKubeState = useKubeStateStore((s) => s.setSelectedKubeState);
+    const displayMode = useModeStore((s) => s.displayMode);
 
     // 2. Get Camera Data
     const viewProjectionMatrix = useViewStore((s) => s.viewProjectionMatrix);
     const viewportSize = useViewStore((s) => s.viewportSize);
 
+        const hasAffineMatrix =
+            !!selectedKubeState && "affine_matrix" in selectedKubeState;
+
     // 3. Calculate 2D Screen Position
     const screenPos = useMemo(() => {
         if (!selectedKubeState || !viewProjectionMatrix || !viewportSize) return null;
-        if (selectedKubeState.__brand === "stage_kube_state") return null; 
+                if (!hasAffineMatrix) {
+                    return {
+                        x: viewportSize.width / 2,
+                        y: viewportSize.height / 2,
+                    };
+                }
         
         const affine = selectedKubeState.affine_matrix;
         if (!affine || affine.length !== 4 || affine[0].length !== 4) return null;
@@ -46,10 +62,36 @@ export const KubeStatePanel = () => {
             x: (worldVector.x * 0.5 + 0.5) * viewportSize.width,
             y: (worldVector.y * -0.5 + 0.5) * viewportSize.height,
         };
-    }, [selectedKubeState, viewProjectionMatrix, viewportSize]);
+    }, [selectedKubeState, viewProjectionMatrix, viewportSize, hasAffineMatrix]);
 
     // Early returns if data is missing or out of bounds
+    if (displayMode !== "3D") return null;
     if (!selectedKubeState || !screenPos) return null;
+
+        const panel = (() => {
+            switch (selectedKubeState.__brand) {
+                case "objective_kube_state":
+                    return <ObjectiveKubePanel data={selectedKubeState} />;
+                case "detector_kube_state":
+                    return <DetectorKubePanel data={selectedKubeState} />;
+                case "filter_kube_state":
+                    return <FilterKubePanel data={selectedKubeState} />;
+                case "illumination_kube_state":
+                    return <IlluminationKubePanel data={selectedKubeState} />;
+                case "stage_kube_state":
+                    return <StageKubePanel data={selectedKubeState} />;
+                case "dichroic_kube_state":
+                    return <DichroicKubePanel data={selectedKubeState} />;
+                case "filter_bank_kube_state":
+                    return <FilterBankKubePanel data={selectedKubeState} />;
+                case "generic_kube_state":
+                    return <GenericKubePanel data={selectedKubeState} />;
+                default:
+                    return null;
+            }
+        })();
+
+        if (!panel) return null;
 
     return (
         <Card 
@@ -57,7 +99,7 @@ export const KubeStatePanel = () => {
             className="absolute text-xs scale-90 z-20  shadow-2xl backdrop-blur-md p-4 flex flex-col"
             style={{ left: screenPos.x, top: screenPos.y }}
         >
-            {selectedKubeState.__brand == "dichroic_kube_state" && <DichroicKubePanel data={selectedKubeState} />}
+                        {panel}
             
          </Card>
     );

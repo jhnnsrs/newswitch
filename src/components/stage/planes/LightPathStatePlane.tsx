@@ -92,7 +92,11 @@ export const LightPathStatePlane = ({ path }: { path: LightPathState }) => {
               name={kube.kube_id} 
               onClick={(e) => {
                 e.stopPropagation();
+                if (isSelected) {
+                  setKubeState(null);
+                } else {
                 setKubeState(kube);
+                }
               }}
             >
               {/* Drop in the Inverted Hull Wrapper */}

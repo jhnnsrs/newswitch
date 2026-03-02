@@ -1,15 +1,16 @@
-import type { DichroicKubeStateSchema } from "@/hooks/states";
+import type { FilterKubeStateSchema } from "@/hooks/states";
 import { type z } from "zod";
 import { KubePanelLayout } from "./KubePanelLayout";
 
-type DichroicData = z.infer<typeof DichroicKubeStateSchema>;
+type FilterData = z.infer<typeof FilterKubeStateSchema>;
 
-export const DichroicKubePanel = ({ data }: { data: DichroicData }) => {
+export const FilterKubePanel = ({ data }: { data: FilterData }) => {
   return (
     <KubePanelLayout
-      title="Dichroic Mirror"
+      title="Filter"
       kubeId={data.kube_id}
       rows={[
+        { label: "Wavelength", value: data.wavelength },
         { label: "Model", value: data.model_name ?? "—" },
         { label: "Model File", value: data.model_file ?? "—" },
       ]}

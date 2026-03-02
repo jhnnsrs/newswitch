@@ -133,6 +133,7 @@ export const MetadataSchema = z
     detector_id: z.string(),
     affine_matrix: z.array(z.array(z.number())),
     light_state: LightPathStateSchema,
+    acquisition_time: z.string(),
   })
   .brand("metadata");
 

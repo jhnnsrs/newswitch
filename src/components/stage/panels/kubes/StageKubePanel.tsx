@@ -1,13 +1,13 @@
-import type { DichroicKubeStateSchema } from "@/hooks/states";
+import type { StageKubeStateSchema } from "@/hooks/states";
 import { type z } from "zod";
 import { KubePanelLayout } from "./KubePanelLayout";
 
-type DichroicData = z.infer<typeof DichroicKubeStateSchema>;
+type StageData = z.infer<typeof StageKubeStateSchema>;
 
-export const DichroicKubePanel = ({ data }: { data: DichroicData }) => {
+export const StageKubePanel = ({ data }: { data: StageData }) => {
   return (
     <KubePanelLayout
-      title="Dichroic Mirror"
+      title="Stage"
       kubeId={data.kube_id}
       rows={[
         { label: "Model", value: data.model_name ?? "—" },

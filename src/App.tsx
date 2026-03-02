@@ -50,7 +50,6 @@ function MicroscopeControlPanel() {
 
             <MultidimensionalAcquisitionControl />
             <CalibrateLightPath />
-            <LightPaths />
           </div>
         </ResizablePanel>
       </ResizablePanelGroup>

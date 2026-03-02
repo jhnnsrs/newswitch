@@ -1,6 +1,4 @@
-import { ActionButton } from "@/components/ActionButton";
-import {  CalibrateLightPathDefinition } from "@/hooks/generated";
-import { useCalibrationState, useLightPathState } from "@/hooks/states";
+import { useLightPathState } from "@/hooks/states";
 
 export const LightPaths = () => {
   const { data } = useLightPathState({ subscribe: true });

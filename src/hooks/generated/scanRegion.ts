@@ -311,6 +311,7 @@ export const MetadataSchema = z
     light_state: LightPathStateSchema.describe(
       'Data class representing the light path used for an image, including illumination settings.',
     ),
+    acquisition_time: z.string(),
   })
   .brand('metadata');
 /** Data class representing metadata for an image, including its ID and affine transformation matrix. */

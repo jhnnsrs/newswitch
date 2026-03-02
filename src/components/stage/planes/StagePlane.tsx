@@ -1,4 +1,5 @@
 import { useStageState } from "@/hooks/states/StageState";
+import { useModeStore } from "@/store/modeStore";
 
 /**
  * StagePlane
@@ -7,8 +8,10 @@ import { useStageState } from "@/hooks/states/StageState";
  */
 export const StagePlane = () => {
   const { data: stageState } = useStageState({ subscribe: true });
+  const interactionMode = useModeStore((s) => s.interactionMode);
 
   if (!stageState) return null;
+  if (interactionMode === "META") return null;
 
   const stageRangeX = Math.max(
     200,
