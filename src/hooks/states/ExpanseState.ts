@@ -89,12 +89,30 @@ export const FilterBankKubeStateSchema = z
       .literal("filter_bank_kube_state")
       .default("filter_bank_kube_state"),
     kube_id: z.string(),
-    active_wavelength: z.number(),
+    slot_id: z.number(),
+    center_wavelength: z.number(),
+    bandwidth: z.number(),
+    transmission: z.number(),
     affine_matrix: z.array(z.array(z.number())),
     model_name: z.string().nullable(),
     model_file: z.string().nullable(),
   })
   .brand("filter_bank_kube_state");
+
+export const ObjectiveTurretKubeStateSchema = z
+  .object({
+    __brand: z
+      .literal("objective_turret_kube_state")
+      .default("objective_turret_kube_state"),
+    kube_id: z.string(),
+    slot: z.number(),
+    magnification: z.number(),
+    numerical_aperture: z.number(),
+    affine_matrix: z.array(z.array(z.number())),
+    model_name: z.string().nullable(),
+    model_file: z.string().nullable(),
+  })
+  .brand("objective_turret_kube_state");
 
 export const KubeUnionSchema = createIndexedUnion([
   ObjectiveKubeStateSchema,
@@ -105,6 +123,7 @@ export const KubeUnionSchema = createIndexedUnion([
   StageKubeStateSchema,
   DichroicKubeStateSchema,
   FilterBankKubeStateSchema,
+  ObjectiveTurretKubeStateSchema,
 ]);
 
 export const LightEdgeStateSchema = z
@@ -123,15 +142,16 @@ export const LightPathStateSchema = z
     hash: z.string(),
     kubes: z.array(KubeUnionSchema),
     edges: z.array(LightEdgeStateSchema),
+    transformation_hash: z.string(),
   })
   .brand("light_path_state");
 
 export const MetadataSchema = z
   .object({
     __brand: z.literal("metadata").default("metadata"),
-    objective_id: z.string(),
-    detector_id: z.string(),
     affine_matrix: z.array(z.array(z.number())),
+    fov_width: z.number(),
+    fov_height: z.number(),
     light_state: LightPathStateSchema,
     acquisition_time: z.string(),
   })

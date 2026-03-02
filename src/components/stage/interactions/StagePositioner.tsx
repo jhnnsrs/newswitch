@@ -105,41 +105,41 @@ const ClickWidget = ({
  * Decouples interaction from the visual stage mesh.
  */
 export const StagePositioner = () => {
-    const interactionMode = useModeStore((s) => s.interactionMode);
-    const [clickPoint, setClickPoint] = useState<Vector3 | null>(null);
-    const { data: stageState } = useStageState({ subscribe: true });
-    const { call: moveToPosition } = useMoveStage();
+  const interactionMode = useModeStore((s) => s.interactionMode);
+  const [clickPoint, setClickPoint] = useState<Vector3 | null>(null);
+  const { data: stageState } = useStageState({ subscribe: true });
+  const { call: moveToPosition } = useMoveStage();
 
-    if (interactionMode !== 'MOVE') return null;
+  if (interactionMode !== "MOVE") return null;
 
-    return (
-        <group>
-        {/* Invisible Catch-All Plane for Pointer Events */}
-        <mesh
-            position={[0, 0, -2]} // Placed safely below the stage and grid
-            onClick={async (e) => {
-            e.stopPropagation();
-            setClickPoint(e.point);
-                moveToPosition({
-                x: (stageState?.x || 0) - e.point.x,
-                y: (stageState?.y || 0) - e.point.y,
-                z: 0,
-                is_absolute: true,
-                step_size: 10,
-                })
-            }}
-        >
-            {/* A massive plane to ensure you can click anywhere in the expanse */}
-            <planeGeometry args={[10000, 10000]} />
-            <meshBasicMaterial visible={false} />
-        </mesh>
+  return (
+    <group>
+      {/* Invisible Catch-All Plane for Pointer Events */}
+      <mesh
+        position={[0, 0, -2]} // Placed safely below the stage and grid
+        onClick={async (e) => {
+          e.stopPropagation();
+          setClickPoint(e.point);
+          moveToPosition({
+            x: (stageState?.x || 0) - e.point.x,
+            y: (stageState?.y || 0) - e.point.y,
+            z: 0,
+            is_absolute: true,
+            step_size: 10,
+          });
+        }}
+      >
+        {/* A massive plane to ensure you can click anywhere in the expanse */}
+        <planeGeometry args={[10000, 10000]} />
+        <meshBasicMaterial visible={false} />
+      </mesh>
 
-        {/* Render the targeting UI if a point is selected */}
-        {clickPoint && (
-            <>
-            <SelectionCrosshair position={clickPoint} />
-            </>
-        )}
-        </group>
-    );
+      {/* Render the targeting UI if a point is selected */}
+      {clickPoint && (
+        <>
+          <SelectionCrosshair position={clickPoint} />
+        </>
+      )}
+    </group>
+  );
 };

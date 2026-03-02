@@ -69,7 +69,7 @@ export function createIndexedUnion<T extends [z.ZodTypeAny, ...z.ZodTypeAny[]]>(
 const mapToZod = (
   port: Port,
   subSchemas: Map<string, string>,
-  fallbackName: string = "Unknown"
+  fallbackName: string = "Unknown",
 ): string => {
   let base = "z.any()";
 
@@ -114,7 +114,11 @@ const mapToZod = (
         const childFallback = nodeName.endsWith("s")
           ? nodeName.slice(0, -1)
           : `${nodeName}Item`;
-        const elementType = mapToZod(port.children[0], subSchemas, childFallback);
+        const elementType = mapToZod(
+          port.children[0],
+          subSchemas,
+          childFallback,
+        );
         base = `z.array(${elementType})`;
       } else {
         base = "z.array(z.any())";
@@ -137,16 +141,15 @@ const mapToZod = (
 
       if (!subSchemas.has(modelName)) {
         let fieldsCode = "";
-        
+
         // Inject a runtime brand into the Zod object using a literal with a default
         const injectedBrand = `__brand: z.literal('${brandName}').default('${brandName}')`;
 
         if (port.children && port.children.length > 0) {
-          const fields = port.children
-            .map(
-              (child) =>
-                `  ${child.key}: ${mapToZod(child, subSchemas, child.key)}`
-            );
+          const fields = port.children.map(
+            (child) =>
+              `  ${child.key}: ${mapToZod(child, subSchemas, child.key)}`,
+          );
           fieldsCode = `{\n  ${injectedBrand},\n${fields.join(",\n")}\n}`;
         } else {
           fieldsCode = `{ \n  ${injectedBrand}\n}`;
@@ -159,7 +162,7 @@ const mapToZod = (
         // Save the standalone schema definition
         subSchemas.set(
           modelName,
-          `export const ${modelName} = z.object(${fieldsCode})${brandSuffix};`
+          `export const ${modelName} = z.object(${fieldsCode})${brandSuffix};`,
         );
       }
       base = modelName;
@@ -174,12 +177,12 @@ const mapToZod = (
       if (!subSchemas.has(unionName)) {
         if (port.children && port.children.length > 0) {
           const types = port.children.map((child, index) =>
-            mapToZod(child, subSchemas, `${nodeName}Variant${index + 1}`)
+            mapToZod(child, subSchemas, `${nodeName}Variant${index + 1}`),
           );
           // Save the indexed union definition
           subSchemas.set(
             unionName,
-            `export const ${unionName} = createIndexedUnion([\n  ${types.join(",\n  ")}\n]);`
+            `export const ${unionName} = createIndexedUnion([\n  ${types.join(",\n  ")}\n]);`,
           );
         } else {
           base = "z.any()";
@@ -286,7 +289,9 @@ export default function generateStatesPlugin(
       const files: string[] = [];
 
       // Generate the utils file
-      const formattedUtils = await prettier.format(utilsCode, { parser: "typescript" });
+      const formattedUtils = await prettier.format(utilsCode, {
+        parser: "typescript",
+      });
       fs.writeFileSync(path.join(OUTPUT_DIR, "utils.ts"), formattedUtils);
       files.push("utils"); // store for index.ts
 

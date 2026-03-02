@@ -1,13 +1,6 @@
-import {
-  useCameraState
-} from "@/hooks/states";
+import { useCameraState } from "@/hooks/states";
 import { useKubeStateStore } from "@/store/kubeStateStore";
 import { Canvas } from "@react-three/fiber";
-import {
-  CanvasTexture,
-  LinearFilter,
-  SRGBColorSpace
-} from "three";
 import { CameraMatrixSync } from "./CameraMatrixSync";
 import { CameraController } from "./cameras/CameraController";
 import { KeyboardModeController } from "./controllers/KeyboardModeController";
@@ -25,24 +18,14 @@ import { LivePlane } from "./planes/LivePlane";
 import { StageAxis } from "./planes/StageAxis";
 import { StagePlane } from "./planes/StagePlane";
 
-
-
-
 export const SceneWrapper = ({ children }) => {
   const selectedKubeState = useKubeStateStore((s) => s.selectedKubeState);
   const hasSelection = selectedKubeState !== null;
-  return (
-    <Canvas>
-                {children}
-    </Canvas>
-  );
+  return <Canvas>{children}</Canvas>;
 };
 
 export const Expanse = () => {
   const { data: cameraState } = useCameraState({ subscribe: true });
-  
-
-  
 
   return (
     <div className="relative h-full w-full overflow-hidden rounded-lg bg-black">
@@ -54,8 +37,6 @@ export const Expanse = () => {
           <pointLight position={[100, 100, 100]} />
           <CameraMatrixSync />
 
-          
-
           <CurrentImageLightPathPlane />
 
           <StageAxis />
@@ -65,13 +46,11 @@ export const Expanse = () => {
           <CameraController />
 
           {/* The Live Video Feed */}
-          {cameraState?.is_acquiring && (
-            <LivePlane />
-          )}
+          {cameraState?.is_acquiring && <LivePlane />}
 
           <ImagesPlane />
 
-          <StagePositioner/>
+          <StagePositioner />
           <RectangleDrawer />
         </SceneWrapper>
 

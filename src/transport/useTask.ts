@@ -43,7 +43,7 @@ export const useTask = <TArgs = unknown, TReturn = unknown>(
 
   // Get from cache first
   const cachedTask = taskId
-    ? transport.getCachedTask<TArgs, TReturn>(taskId)
+    ? transport.getCachedTask(taskId) as Task<TArgs, TReturn> | null
     : undefined;
 
   const task = localTask ?? cachedTask ?? null;
@@ -97,7 +97,7 @@ export const useTask = <TArgs = unknown, TReturn = unknown>(
   }, [pollingInterval, taskId, transport.isConnected, status, refresh]);
 
   return {
-    task,
+    task ,
     status,
     result,
     error,

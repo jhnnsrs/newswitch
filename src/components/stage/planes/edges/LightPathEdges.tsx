@@ -12,10 +12,22 @@ const toCenterPoint = (affineMatrix: number[][]): THREE.Vector3 => {
   const flat = affineMatrix.flat();
 
   matrix.set(
-    flat[0], flat[1], flat[2], flat[3],
-    flat[4], flat[5], flat[6], flat[7],
-    flat[8], flat[9], flat[10], flat[11],
-    flat[12], flat[13], flat[14], flat[15],
+    flat[0],
+    flat[1],
+    flat[2],
+    flat[3],
+    flat[4],
+    flat[5],
+    flat[6],
+    flat[7],
+    flat[8],
+    flat[9],
+    flat[10],
+    flat[11],
+    flat[12],
+    flat[13],
+    flat[14],
+    flat[15],
   );
 
   const position = new THREE.Vector3();
@@ -32,7 +44,9 @@ const normalizeIntensity = (value: number | null): number => {
   return THREE.MathUtils.clamp(normalized, 0, 1);
 };
 
-const hasAffineMatrix = (kube: LightPathState["kubes"][number]): kube is KubeWithAffine => {
+const hasAffineMatrix = (
+  kube: LightPathState["kubes"][number],
+): kube is KubeWithAffine => {
   return "affine_matrix" in kube;
 };
 
@@ -92,7 +106,9 @@ export const LightPathEdges = ({ path }: { path: LightPathState }) => {
           position={edge.midpoint}
           quaternion={edge.quaternion}
         >
-          <cylinderGeometry args={[edge.radius, edge.radius, edge.length, 16]} />
+          <cylinderGeometry
+            args={[edge.radius, edge.radius, edge.length, 16]}
+          />
           <meshStandardMaterial
             color="#dadada"
             transparent

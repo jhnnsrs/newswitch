@@ -16,8 +16,8 @@ import { useKubeStateStore } from "@/store/kubeStateStore";
 export const InvertedHullOutline = ({
   children,
   color = "#10b981", // Emerald Glow
-  thickness = 1.05,  // Inflate the hull by 5%
-  enabled = true
+  thickness = 1.05, // Inflate the hull by 5%
+  enabled = true,
 }: {
   children: React.ReactNode;
   color?: string;
@@ -43,16 +43,16 @@ export const InvertedHullOutline = ({
         outlineMesh.material = new THREE.MeshBasicMaterial({
           color: color,
           side: THREE.BackSide, // The magic trick: renders only the inside!
-          depthWrite: true,     // Occludes properly behind other objects
+          depthWrite: true, // Occludes properly behind other objects
         });
 
         // Inflate the mesh slightly
         outlineMesh.scale.copy(child.scale).multiplyScalar(thickness);
-        
+
         // Match the original position and rotation
         outlineMesh.position.copy(child.position);
         outlineMesh.rotation.copy(child.rotation);
-        
+
         // Tag it so we don't accidentally clone it again
         outlineMesh.userData.isOutline = true;
 
@@ -84,18 +84,20 @@ export const LightPathStatePlane = ({ path }: { path: LightPathState }) => {
     <>
       <LightPathEdges path={path} />
       {path.kubes.map((kube) => {
-        const isSelected = selectedKubeState?.kube_id === kube.kube_id || selectedKubeState?.id === kube.kube_id;
+        const isSelected =
+          selectedKubeState?.kube_id === kube.kube_id ||
+          selectedKubeState?.id === kube.kube_id;
 
         return (
           <Suspense key={kube.kube_id} fallback={<></>}>
-            <group 
-              name={kube.kube_id} 
+            <group
+              name={kube.kube_id}
               onClick={(e) => {
                 e.stopPropagation();
                 if (isSelected) {
                   setKubeState(null);
                 } else {
-                setKubeState(kube);
+                  setKubeState(kube);
                 }
               }}
             >
@@ -116,7 +118,7 @@ export const LightPathStatePlane = ({ path }: { path: LightPathState }) => {
                     case "dichroic_kube_state":
                       return <DichroicKubePlane data={kube} />;
                     case "generic_kube_state":
-                      return null; 
+                      return null;
                     default:
                       return null;
                   }

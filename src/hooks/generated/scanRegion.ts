@@ -195,7 +195,10 @@ export type DichroicKubeState = z.infer<typeof DichroicKubeStateSchema>;
 export const FilterBankKubeStateSchema = z
   .object({
     kube_id: z.string(),
-    active_wavelength: z.number(),
+    slot_id: z.number(),
+    center_wavelength: z.number(),
+    bandwidth: z.number(),
+    transmission: z.number(),
     /** Affine transformation matrix of the kube */
     affine_matrix: z
       .array(z.array(z.number()))
@@ -207,17 +210,49 @@ export const FilterBankKubeStateSchema = z
         "Model name of the filter bank (e.g., 'Filter Bank 405/488/561/640 nm')",
       )
       .optional(),
-    /** Path to a file containing the physical model of the filter bank */
+    /** Path to a file containing the physical model of the objective lens */
     model_file: z
       .string()
       .describe(
-        'Path to a file containing the physical model of the filter bank',
+        'Path to a file containing the physical model of the objective lens',
       )
       .optional(),
   })
   .brand('filter_bank_kube_state');
 /** Data class representing metadata for a kube, including its ID and affine transformation matrix. */
 export type FilterBankKubeState = z.infer<typeof FilterBankKubeStateSchema>;
+
+/** Data class representing metadata for a kube, including its ID and affine transformation matrix. */
+export const ObjectiveTurretKubeStateSchema = z
+  .object({
+    kube_id: z.string(),
+    slot: z.number(),
+    magnification: z.number(),
+    numerical_aperture: z.number(),
+    /** Affine transformation matrix of the kube */
+    affine_matrix: z
+      .array(z.array(z.number()))
+      .describe('Affine transformation matrix of the kube'),
+    /** Model name of the objective turret (e.g., 'Objective Turret 40x/0.6 NA') */
+    model_name: z
+      .string()
+      .describe(
+        "Model name of the objective turret (e.g., 'Objective Turret 40x/0.6 NA')",
+      )
+      .optional(),
+    /** Path to a file containing the physical model of the objective turret */
+    model_file: z
+      .string()
+      .describe(
+        'Path to a file containing the physical model of the objective turret',
+      )
+      .optional(),
+  })
+  .brand('objective_turret_kube_state');
+/** Data class representing metadata for a kube, including its ID and affine transformation matrix. */
+export type ObjectiveTurretKubeState = z.infer<
+  typeof ObjectiveTurretKubeStateSchema
+>;
 
 /** Data class representing the light path used for an image, including illumination settings. */
 export const LightEdgeStateSchema = z
@@ -281,6 +316,9 @@ export const LightPathStateSchema = z
           FilterBankKubeStateSchema.describe(
             'Data class representing metadata for a kube, including its ID and affine transformation matrix.',
           ),
+          ObjectiveTurretKubeStateSchema.describe(
+            'Data class representing metadata for a kube, including its ID and affine transformation matrix.',
+          ),
         ]),
       )
       .describe(
@@ -296,6 +334,13 @@ export const LightPathStateSchema = z
       .describe(
         'List of edges representing the light path from source to sample',
       ),
+    /** Hash indicating if the kube is affecting the transformation from sample to pixel coordinates, which is used to determine if we can reuse the affine matrix from a previous image */
+    transformation_hash: z
+      .string()
+      .describe(
+        'Hash indicating if the kube is affecting the transformation from sample to pixel coordinates, which is used to determine if we can reuse the affine matrix from a previous image',
+      )
+      .optional(),
   })
   .brand('light_path_state');
 /** Data class representing the light path used for an image, including illumination settings. */
@@ -304,9 +349,9 @@ export type LightPathState = z.infer<typeof LightPathStateSchema>;
 /** Data class representing metadata for an image, including its ID and affine transformation matrix. */
 export const MetadataSchema = z
   .object({
-    objective_id: z.string(),
-    detector_id: z.string(),
     affine_matrix: z.array(z.array(z.number())),
+    fov_width: z.number(),
+    fov_height: z.number(),
     /** Data class representing the light path used for an image, including illumination settings. */
     light_state: LightPathStateSchema.describe(
       'Data class representing the light path used for an image, including illumination settings.',
@@ -364,6 +409,7 @@ export const ScanRegionArgsSchema = z.object({
   end_x: z.number(),
   end_y: z.number(),
   overlap: z.number().optional(),
+  detector_slot: z.number().optional(),
 });
 export const ScanRegionReturnSchema = z.object({
   /** List of acquired images with metadata. */

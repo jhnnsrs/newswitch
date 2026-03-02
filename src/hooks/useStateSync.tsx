@@ -85,7 +85,11 @@ export const useStateSync = <T extends Record<string, unknown>, U = T>(
 
       const parsed = schemaRef.current.safeParse(response.state);
       if (!parsed.success) {
-        console.error(`[${definition.key}] Validation Failed:`, parsed.error, response.state);
+        console.error(
+          `[${definition.key}] Validation Failed:`,
+          parsed.error,
+          response.state,
+        );
         setError(
           definition.key,
           new Error(`Validation failed for ${definition.key}`),

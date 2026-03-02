@@ -6,7 +6,11 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { Separator } from "@/components/ui/separator";
-import { useClearExpanse, useStartLiveView, useStopLiveView } from "@/hooks/generated";
+import {
+  useClearExpanse,
+  useStartLiveView,
+  useStopLiveView,
+} from "@/hooks/generated";
 import { useCameraState, useObjectiveState } from "@/hooks/states";
 import { useCaptureAndDownload } from "@/hooks/useCaptureAndDownload";
 import { cn } from "@/lib/utils";
@@ -90,9 +94,7 @@ export function SettingsPanel() {
     isLocked: isCaptureLocked,
   } = useCaptureAndDownload();
 
-  const {
-    call: reset
-  } = useClearExpanse();
+  const { call: reset } = useClearExpanse();
 
   const isLive = cameraState?.is_acquiring ?? false;
 
@@ -148,7 +150,7 @@ export function SettingsPanel() {
           <Button
             variant="secondary"
             size="icon"
-            onClick={async () => await reset({ })}
+            onClick={async () => await reset({})}
             className="gap-1.5 flex-1"
           >
             <RefreshCcw className="h-3 w-3" />

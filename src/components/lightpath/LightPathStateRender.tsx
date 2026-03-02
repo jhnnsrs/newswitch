@@ -34,7 +34,7 @@ export const LightPathStateRender: React.FC<OpticalPathViewerProps> = ({
     // 1. Create initial React Flow Nodes, linking schema data and brand type
     const initialNodes: Node[] = kubes.map((kube) => ({
       id: kube.kube_id,
-      type: kube.__brand, 
+      type: kube.__brand,
       position: { x: 0, y: 0 }, // Dagre overwrites this instantly
       data: kube,
     }));
@@ -57,7 +57,7 @@ export const LightPathStateRender: React.FC<OpticalPathViewerProps> = ({
     const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
       initialNodes,
       initialEdges,
-      "LR"
+      "LR",
     );
 
     setNodes(layoutedNodes);
@@ -79,7 +79,7 @@ export const LightPathStateRender: React.FC<OpticalPathViewerProps> = ({
         nodeTypes={nodeTypes}
         fitView
         proOptions={{
-            hideAttribution: true
+          hideAttribution: true,
         }}
       >
         <Background gap={16} size={1} />

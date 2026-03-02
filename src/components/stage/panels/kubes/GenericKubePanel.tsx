@@ -17,7 +17,10 @@ export const GenericKubePanel = ({ data }: { data: GenericData }) => {
         metadata.length > 0 ? (
           <div className="space-y-1.5">
             {metadata.map(([key, value]) => (
-              <div key={key} className="flex items-center justify-between gap-2">
+              <div
+                key={key}
+                className="flex items-center justify-between gap-2"
+              >
                 <Badge variant="outline" className="font-normal">
                   {key}
                 </Badge>

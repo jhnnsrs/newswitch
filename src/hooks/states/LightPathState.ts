@@ -30,7 +30,6 @@ export const FilterKubeSchema = z
     __brand: z.literal("filter_kube").default("filter_kube"),
     kube_id: z.string(),
     wavelength: z.number(),
-    slot_id: z.number(),
     affine_matrix: z.array(z.array(z.number())),
     model_name: z.string().nullable(),
     model_file: z.string().nullable(),
@@ -81,6 +80,28 @@ export const DichroicKubeSchema = z
   })
   .brand("dichroic_kube");
 
+export const FilterBankKubeSchema = z
+  .object({
+    __brand: z.literal("filter_bank_kube").default("filter_bank_kube"),
+    kube_id: z.string(),
+    affine_matrix: z.array(z.array(z.number())),
+    model_name: z.string().nullable(),
+    model_file: z.string().nullable(),
+  })
+  .brand("filter_bank_kube");
+
+export const ObjectiveTurretKubeSchema = z
+  .object({
+    __brand: z
+      .literal("objective_turret_kube")
+      .default("objective_turret_kube"),
+    kube_id: z.string(),
+    affine_matrix: z.array(z.array(z.number())),
+    model_name: z.string().nullable(),
+    model_file: z.string().nullable(),
+  })
+  .brand("objective_turret_kube");
+
 export const KubeUnionSchema = createIndexedUnion([
   ObjectiveKubeSchema,
   DetectorKubeSchema,
@@ -89,6 +110,8 @@ export const KubeUnionSchema = createIndexedUnion([
   GenericKubeSchema,
   StageKubeSchema,
   DichroicKubeSchema,
+  FilterBankKubeSchema,
+  ObjectiveTurretKubeSchema,
 ]);
 
 export const LightEdgeSchema = z
@@ -103,7 +126,7 @@ export const LightEdgeSchema = z
 export const LightPathSchema = z
   .object({
     __brand: z.literal("light_path").default("light_path"),
-    hash: z.string(),
+    detector: z.number(),
     kubes: z.array(KubeUnionSchema),
     edges: z.array(LightEdgeSchema),
   })

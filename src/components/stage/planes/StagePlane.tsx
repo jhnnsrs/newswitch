@@ -23,7 +23,7 @@ export const StagePlane = () => {
   );
 
   const gridSize = Math.max(stageRangeX, stageRangeY);
-  const divisions = 20; 
+  const divisions = 20;
 
   return (
     <group position={[stageState.x, stageState.y, -0.5]}>
@@ -32,14 +32,14 @@ export const StagePlane = () => {
         <planeGeometry args={[stageRangeX, stageRangeY]} />
         <meshStandardMaterial color="#0c0c0d" transparent opacity={0.1} />
       </mesh>
-      
+
       {/* 2. The Functional Grid Overlay */}
       <gridHelper
         args={[gridSize, divisions, "#475569", "#1e293b"]}
         rotation={[Math.PI / 2, 0, 0]}
-        position={[0, 0, -0.95]} 
+        position={[0, 0, -0.95]}
       />
-      
+
       {/* 3. The Wireframe Boundary */}
       <mesh position={[0, 0, -0.9]}>
         <planeGeometry args={[stageRangeX, stageRangeY]} />

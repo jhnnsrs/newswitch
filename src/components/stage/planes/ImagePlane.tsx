@@ -68,7 +68,11 @@ export const ImagePlane = ({
   }, [image.metadata?.affine_matrix]);
 
   return (
-    <mesh ref={meshRef} matrixAutoUpdate={false} onClick={() => setSelected(image.id)}>
+    <mesh
+      ref={meshRef}
+      matrixAutoUpdate={false}
+      onClick={() => setSelected(image.id)}
+    >
       <planeGeometry args={[1, 1]} />
       <meshBasicMaterial
         map={texture}

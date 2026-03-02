@@ -7,10 +7,7 @@ import {
 // --- Shared Models ---
 
 // --- Schemas ---
-export const CaptureImageArgsSchema = z.object({
-  /** Detector slot number */
-  slot: z.number().describe('Detector slot number').optional(),
-});
+export const CaptureImageArgsSchema = z.object({});
 export const CaptureImageReturnSchema = z.object({
   return0: z.string(),
 });

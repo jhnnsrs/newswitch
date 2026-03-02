@@ -10,7 +10,7 @@ export const CalibratedLightPathSchema = z
     affine_matrix: z.array(z.array(z.number())),
     fov_width: z.number(),
     fov_height: z.number(),
-    light_path_hash: z.string(),
+    light_path_state_hash: z.string(),
   })
   .brand("calibrated_light_path");
 

@@ -6,7 +6,7 @@ import {
 
 // --- Shared Models ---
 
-/** List of acquired images with metadata. */
+/** Shared state for affine transformation parameters. */
 export const CalibratedLightPathSchema = z
   .object({
     /** 4x4 affine transformation matrix for mapping between coordinate systems */
@@ -26,7 +26,7 @@ export const CalibratedLightPathSchema = z
       .describe('Field of view height in micrometers')
       .optional(),
     /** Hash of the light path configuration this affine matrix corresponds to */
-    light_path_hash: z
+    light_path_state_hash: z
       .string()
       .describe(
         'Hash of the light path configuration this affine matrix corresponds to',
@@ -34,16 +34,20 @@ export const CalibratedLightPathSchema = z
       .optional(),
   })
   .brand('calibrated_light_path');
-/** List of acquired images with metadata. */
+/** Shared state for affine transformation parameters. */
 export type CalibratedLightPath = z.infer<typeof CalibratedLightPathSchema>;
 
 // --- Schemas ---
 export const CalibrateLightPathArgsSchema = z.object({});
 export const CalibrateLightPathReturnSchema = z.object({
   /** List of acquired images with metadata. */
-  return0: CalibratedLightPathSchema.describe(
-    'List of acquired images with metadata.',
-  ),
+  return0: z
+    .array(
+      CalibratedLightPathSchema.describe(
+        'Shared state for affine transformation parameters.',
+      ),
+    )
+    .describe('List of acquired images with metadata.'),
 });
 
 // --- Types ---
@@ -63,7 +67,7 @@ export const CalibrateLightPathDefinition: ActionDefinition<
   description: '',
   argsSchema: CalibrateLightPathArgsSchema,
   returnSchema: CalibrateLightPathReturnSchema,
-  lockKeys: ['camera_parameters', 'objective', 'stage_position'],
+  lockKeys: ['camera_parameters', 'stage_position'],
 };
 
 /**

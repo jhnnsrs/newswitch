@@ -8,7 +8,9 @@ type FilterData = z.infer<typeof FilterKubeStateSchema>;
 
 // Helper function to approximate a visible wavelength (380nm - 780nm) to an RGB hex color
 function wavelengthToHex(wavelength: number): string {
-  let r = 0, g = 0, b = 0;
+  let r = 0,
+    g = 0,
+    b = 0;
 
   if (wavelength >= 380 && wavelength < 440) {
     r = -(wavelength - 440) / (440 - 380);
@@ -36,15 +38,15 @@ function wavelengthToHex(wavelength: number): string {
     b = 0;
   } else {
     // Fallback for non-visible wavelengths (e.g., UV or IR)
-    return "#cbd5e1"; 
+    return "#cbd5e1";
   }
 
   // Intensity modulation to fade out the edges of the visible spectrum
   let factor = 1.0;
   if (wavelength >= 380 && wavelength < 420) {
-    factor = 0.3 + 0.7 * (wavelength - 380) / (420 - 380);
+    factor = 0.3 + (0.7 * (wavelength - 380)) / (420 - 380);
   } else if (wavelength >= 700 && wavelength <= 780) {
-    factor = 0.3 + 0.7 * (780 - wavelength) / (780 - 700);
+    factor = 0.3 + (0.7 * (780 - wavelength)) / (780 - 700);
   }
 
   const toHex = (c: number) => {
@@ -57,40 +59,41 @@ function wavelengthToHex(wavelength: number): string {
 
 export const FilterKubePlane = ({ data }: { data: FilterData }) => {
   const matrix = useThreeAffine(data.affine_matrix);
-  
+
   // Calculate the color based on the wavelength, defaulting to clear/gray if undefined
-  const filterColor = data.wavelength ? wavelengthToHex(data.wavelength) : "#e2e8f0";
+  const filterColor = data.wavelength
+    ? wavelengthToHex(data.wavelength)
+    : "#e2e8f0";
 
   return (
     <group matrix={matrix} matrixAutoUpdate={false}>
-      
       {/* Inner group rotates the filter to point down the Z-axis by default */}
       <group rotation={[Math.PI / 2, 0, 0]}>
-        
         {/* 1. Outer Filter Ring / Housing (Dark Metal) */}
         <mesh rotation={[Math.PI / 2, 0, 0]}>
           {/* A torus provides a smooth, rounded rim. args: [radius, tube, radialSegments, tubularSegments] */}
           <torusGeometry args={[30, 4, 16, 64]} />
-          <meshStandardMaterial color="#1f2937" metalness={0.7} roughness={0.3} />
+          <meshStandardMaterial
+            color="#1f2937"
+            metalness={0.7}
+            roughness={0.3}
+          />
         </mesh>
 
         {/* 2. The Transparent Glass Element */}
         <mesh>
           {/* A thin cylinder sits inside the torus to act as the glass pane */}
           <cylinderGeometry args={[29, 29, 1.5, 32]} />
-          <meshStandardMaterial 
-            color={filterColor} 
-            metalness={0.1} 
-            roughness={0.05} 
-            transparent 
-            opacity={0.65} 
+          <meshStandardMaterial
+            color={filterColor}
+            metalness={0.1}
+            roughness={0.05}
+            transparent
+            opacity={0.65}
             side={THREE.DoubleSide}
           />
         </mesh>
-
       </group>
-
-      
     </group>
   );
 };

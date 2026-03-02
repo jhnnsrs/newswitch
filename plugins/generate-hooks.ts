@@ -119,11 +119,13 @@ const appendValidators = (
   })`;
 };
 
-
 const mapChoicesToZodEnum = (choices: Choice[]): string => {
-  const values = choices.map((opt) => `z.literal(${JSON.stringify(opt.value)}).describe(${JSON.stringify(opt.description || opt.value)})`);
+  const values = choices.map(
+    (opt) =>
+      `z.literal(${JSON.stringify(opt.value)}).describe(${JSON.stringify(opt.description || opt.value)})`,
+  );
   return `z.union([${values.join(", ")}])`;
-}
+};
 
 const mapToZod = (arg: SchemaArg, ctx: GeneratorContext): string => {
   let base = "z.any()";
@@ -202,7 +204,6 @@ const mapToZod = (arg: SchemaArg, ctx: GeneratorContext): string => {
         }
         break;
       case "ENUM":
-        console.log(arg)
         if (arg.choices && arg.choices.length > 0) {
           base = mapChoicesToZodEnum(arg.choices);
         } else {
