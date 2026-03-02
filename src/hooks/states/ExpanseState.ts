@@ -165,9 +165,30 @@ export const ImageSchema = z
   })
   .brand("image");
 
+export const ScaleSchema = z
+  .object({
+    __brand: z.literal("scale").default("scale"),
+    x: z.number(),
+    y: z.number(),
+    z: z.number(),
+    cached_id: z.string().nullable(),
+  })
+  .brand("scale");
+
+export const FrameSchema = z
+  .object({
+    __brand: z.literal("frame").default("frame"),
+    id: z.string(),
+    scales: z.array(ScaleSchema),
+    metadata: MetadataSchema,
+  })
+  .brand("frame");
+
 // --- Main Schema ---
 export const ExpanseStateSchema = z.object({
+  current_id: z.string(),
   current_images: z.array(ImageSchema),
+  current_frames: z.array(FrameSchema),
 });
 
 // --- Type ---

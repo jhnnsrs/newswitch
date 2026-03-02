@@ -3,7 +3,6 @@ import { useLoader } from "@react-three/fiber";
 import { TextureLoader, DoubleSide, Mesh, Matrix4 } from "three";
 import type { ExpanseState } from "@/hooks/states/ExpanseState";
 import { useTransport } from "@/transport/TransportProvider";
-import { set } from "zod";
 import { useImageStore } from "@/store/imageStore";
 // import { useTransport } from '../transport/TransportProvider';
 // import type { ExpanseState } from '../store/types';

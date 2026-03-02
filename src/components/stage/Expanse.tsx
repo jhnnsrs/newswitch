@@ -17,6 +17,8 @@ import { CurrentImageLightPathPlane } from "./planes/LightPathStatePlane";
 import { LivePlane } from "./planes/LivePlane";
 import { StageAxis } from "./planes/StageAxis";
 import { StagePlane } from "./planes/StagePlane";
+import { FramesPlane } from "./planes/FramesPlane";
+import { DebugOverlay } from "./overlays/DebugOverlay";
 
 export const SceneWrapper = ({ children }) => {
   const selectedKubeState = useKubeStateStore((s) => s.selectedKubeState);
@@ -41,6 +43,8 @@ export const Expanse = () => {
 
           <StageAxis />
 
+          <FramesPlane />
+
           <StagePlane />
 
           <CameraController />
@@ -59,6 +63,7 @@ export const Expanse = () => {
         <KubeStatePanel />
 
         <SceneOverlay />
+        <DebugOverlay />
         <TimeOverlay />
       </PanelProvider>
     </div>
