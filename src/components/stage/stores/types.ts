@@ -2,8 +2,14 @@
 
 import type { AbsolutePath } from "@zarrita/storage"
 import type { ZarrStore } from "../hooks/zarr/zarr_stores/type";
-import type { Metadata } from "@/hooks/generated";
+import type { ArrayMetadataSchema, MetadataSchema} from "@/hooks/states/ExpanseState";
 import * as THREE from "three";
+import { z } from "zod";
+
+
+export type ArrayMetadata = z.infer<typeof ArrayMetadataSchema>;
+export type Metadata = z.infer<typeof MetadataSchema>;
+
 
 export type ChunkData = {
   frame_id: string;
@@ -15,5 +21,6 @@ export type ChunkData = {
   min_value: number;
   max_value: number;
   metadata: Metadata
+  array_metadata: ArrayMetadata;
   colormapTexture: THREE.Texture | null;
 };

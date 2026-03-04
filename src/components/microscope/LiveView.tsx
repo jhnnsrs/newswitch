@@ -38,8 +38,6 @@ export function LiveView() {
           )}
           {cameraState && (
             <Badge variant="secondary" className="text-xs">
-              {cameraState.exposure_time?.toFixed(1)}ms | Gain{" "}
-              {cameraState.gain?.toFixed(1)}
             </Badge>
           )}
         </div>
@@ -54,14 +52,6 @@ export function LiveView() {
           )}
         </div>
 
-        {/* Frame counter */}
-        {cameraState?.frame_number !== undefined && (
-          <div className="absolute bottom-2 right-2">
-            <Badge variant="outline" className="text-xs font-mono bg-black/50">
-              Frame #{cameraState.frame_number}
-            </Badge>
-          </div>
-        )}
       </div>
     </div>
   );

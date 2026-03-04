@@ -1,17 +1,16 @@
 import type { LightPathState } from "@/components/lightpath/LightPathStateRender";
+import { useKubeStateStore } from "@/store/kubeStateStore";
+import { useModeStore } from "@/store/modeStore";
 import { Suspense, useEffect, useRef } from "react";
 import * as THREE from "three";
-import { useSelectedImage } from "../hooks/useSelectedImage";
+import { useSelectedFrame } from "../hooks/useSelectedFrame";
+import { LightPathEdges } from "./edges/LightPathEdges";
 import { DetectorKubePlane } from "./kubes/DetectorKubePlane";
-import { ObjectiveKubePlane } from "./kubes/ObjectiveKubePlane";
+import { DichroicKubePlane } from "./kubes/DichroicKube";
 import { FilterKubePlane } from "./kubes/FilterKubePlane";
 import { IlluminationKubePlane } from "./kubes/IlluminationKubePlane";
+import { ObjectiveKubePlane } from "./kubes/ObjectiveKubePlane";
 import { StageKubePlane } from "./kubes/StageKubePlane";
-import { DichroicKubePlane } from "./kubes/DichroicKube";
-import { LightPathEdges } from "./edges/LightPathEdges";
-import { useModeStore } from "@/store/modeStore";
-import { useKubeStateStore } from "@/store/kubeStateStore";
-import { useSelectedFrame } from "../hooks/useSelectedFrame";
 
 // --- The High-Performance Outline Wrapper ---
 export const InvertedHullOutline = ({

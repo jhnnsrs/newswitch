@@ -11,6 +11,11 @@ export const FramePanel = () => {
   const selectedFrameId = useSelectionStore((s) => s.selectedFrameId);
   const selectedFrame = useExpanseState().data?.current_frames?.find((f) => f.id === selectedFrameId);
   const displayMode = useModeStore((s) => s.displayMode);
+  const interactionMode = useModeStore((s) => s.interactionMode);
+
+
+
+
 
   // 2. Get Camera Data
   const viewProjectionMatrix = useViewStore((s) => s.viewProjectionMatrix);
@@ -74,6 +79,7 @@ export const FramePanel = () => {
 
   // Early returns if data is missing or out of bounds
   if (displayMode !== "3D") return null;
+  if (interactionMode === "META") return null;
   if (!selectedFrame || !screenPos) return null;
 
 

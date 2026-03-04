@@ -6,7 +6,7 @@ import * as THREE from 'three';
 import type { Frame } from '../hooks/zarr/types';
 import type { ChunkData } from '../stores/types';
 import { mapDTypeToMinMax } from '../stores/utils';
-import { ChunkVolume } from './ChunkVolume';
+import { ChunkMesh } from './ChunkVolume';
 import { redColormap } from '../hooks/zarr/colormaps';
 import { useSelectionStore } from '@/store/imageStore';
 
@@ -75,7 +75,7 @@ const InvertedHullOutline = ({
 
 // --- 2. The Main Frame Plane ---
 
-export const FrameVolume = ({ frame }: { frame: Frame }) => {
+export const FramePlane = ({ frame }: { frame: Frame }) => {
   const [chunks, setChunks] = useState<ChunkData[] | null>(null);
 
   const storeBuilder = useViewerStore((s) => s.storeBuilder);
@@ -180,7 +180,7 @@ export const FrameVolume = ({ frame }: { frame: Frame }) => {
               }}>
       <InvertedHullOutline enabled={isSelected}>
         {chunks.map((chunk) => (
-          <ChunkVolume key={chunk.chunk_key} chunk={chunk} />
+          <ChunkMesh key={chunk.chunk_key} chunk={chunk} />
         ))}
       </InvertedHullOutline>
     </group>

@@ -1,12 +1,10 @@
-import React from "react";
-import { useModeStore, type SceneMode } from "@/store/modeStore";
-import { useExpanseState } from "@/hooks/states/ExpanseState";
 import { ActionButton } from "@/components/ActionButton";
-import { ClearExpanseDefinition } from "@/hooks/generated/clearExpanse";
-import { RefreshCwIcon } from "lucide-react";
-import { Card } from "@/components/ui/card";
-import { ButtonGroup } from "@/components/ui/button-group";
 import { Button } from "@/components/ui/button";
+import { ButtonGroup } from "@/components/ui/button-group";
+import { ClearExpanseDefinition } from "@/hooks/generated/clearExpanse";
+import { useExpanseState } from "@/hooks/states/ExpanseState";
+import { useModeStore } from "@/store/modeStore";
+import { RefreshCwIcon } from "lucide-react";
 
 export const SceneOverlay = () => {
   const displayMode = useModeStore((s) => s.displayMode);

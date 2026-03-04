@@ -25,7 +25,7 @@ function getTextureConfig(rawData: any) {
 }
 
 // --- 1. Individual Chunk Renderer with Volumetric Shader ---
-export const ChunkMesh = ({ chunk }: { chunk: ChunkData }) => {
+export const ChunkVolume = ({ chunk }: { chunk: ChunkData }) => {
   const [texture, setTexture] = useState<THREE.Data3DTexture | null>(null);
   const [dataScale, setDataScale] = useState<number>(1.0);
   const isDebug = useViewerStore((s) => s.debug);
@@ -140,8 +140,8 @@ export const ChunkMesh = ({ chunk }: { chunk: ChunkData }) => {
             colormapTexture: { value: createColormapTexture(
               Array.from({ length: 256 }, (_, i) => [i / 255, 0, 0]),
             ) },
-            minValue: { value: 0 },
-            maxValue: { value: 18 },
+            minValue: { value: chunk.array_metadata?.min_value },
+            maxValue: { value: chunk.array_metadata?.max_value  },
             opacity: { value: 1.0 }, 
             gamma: { value: 1.0 },   
             useDiscrete: { value: 0.0 },
@@ -173,9 +173,13 @@ export const ChunkMesh = ({ chunk }: { chunk: ChunkData }) => {
             uniform float useDiscrete;
             uniform float dataScale; 
             
-            // Explicitly declare the output color for GLSL 3
             out vec4 FragColor;
             
+            // Pseudo-random generator for jittering
+            float rand(vec2 co) {
+              return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
+            }
+
             vec2 hitBox(vec3 orig, vec3 dir) {
               vec3 box_min = vec3(-0.5);
               vec3 box_max = vec3(0.5);
@@ -199,12 +203,22 @@ export const ChunkMesh = ({ chunk }: { chunk: ChunkData }) => {
               
               vec3 p = vOrigin + bounds.x * rayDir;
               vec3 inc = 1.0 / abs(rayDir);
-              float delta = min(inc.x, min(inc.y, inc.z)) / 200.0; 
+              
+              // OPTIMIZATION: Reduced step count to 100
+              float delta = min(inc.x, min(inc.y, inc.z)) / 100.0; 
               vec3 step = rayDir * delta;
+              
+              // OPTIMIZATION: Jitter the starting point to hide stepping artifacts
+              float jitter = rand(gl_FragCoord.xy);
+              p += step * jitter;
               
               float maxVal = 0.0;
               
-              for (int i = 0; i < 400; i++) {
+              // OPTIMIZATION: Early exit threshold based on your max contrast limit
+              float earlyExitThreshold = (maxValue / dataScale) * 0.99;
+              
+              // OPTIMIZATION: Reduced max loop to 200
+              for (int i = 0; i < 200; i++) {
                 float d = distance(vOrigin, p);
                 if (d > bounds.y) break; 
                 
@@ -213,6 +227,9 @@ export const ChunkMesh = ({ chunk }: { chunk: ChunkData }) => {
                 
                 float val = texture(colorTexture, uvw).r;
                 maxVal = max(maxVal, val); 
+                
+                // OPTIMIZATION: Early Ray Termination (ERT)
+                if (maxVal >= earlyExitThreshold) break;
                 
                 p += step;
               }
@@ -231,7 +248,6 @@ export const ChunkMesh = ({ chunk }: { chunk: ChunkData }) => {
               
               if (color.a * normalized < 0.01) discard; 
               
-              // Write to our new output variable instead of gl_FragColor
               FragColor = vec4(color.rgb, color.a * opacity * normalized);
             }
           `}

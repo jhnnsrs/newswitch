@@ -1,25 +1,24 @@
 import { useCameraState } from "@/hooks/states";
-import { useKubeStateStore } from "@/store/kubeStateStore";
 import { Canvas } from "@react-three/fiber";
 import { CameraMatrixSync } from "./CameraMatrixSync";
 import { CameraController } from "./cameras/CameraController";
 import { KeyboardModeController } from "./controllers/KeyboardModeController";
 import { RectangleDrawer } from "./interactions/RectangleDrawer";
 import { StagePositioner } from "./interactions/StagePositioner";
+import { DebugOverlay } from "./overlays/DebugOverlay";
 import { SceneOverlay } from "./overlays/SceneOverlay";
 import { TimeOverlay } from "./overlays/TimeOverlay";
 import { PanelProvider } from "./PanelProvider";
+import { FramePanel } from "./panels/FramePanel";
 import { ImageMetadataPanel } from "./panels/ImageMetadata";
 import { KubeStatePanel } from "./panels/KubeStatePanel";
 import { ScanRegionPanel } from "./panels/ScanRegionPanel";
+import { FramesPlane } from "./planes/FramesPlane";
 import { ImagesPlane } from "./planes/ImagesPlane";
-import { CurrentImageLightPathPlane } from "./planes/LightPathStatePlane";
-import { LivePlane } from "./planes/LivePlane";
+import { CurrentFrameLightPathPlane } from "./planes/LightPathStatePlane";
+import { LivesPlane } from "./planes/LivesPlane";
 import { StageAxis } from "./planes/StageAxis";
 import { StagePlane } from "./planes/StagePlane";
-import { FramesPlane } from "./planes/FramesPlane";
-import { DebugOverlay } from "./overlays/DebugOverlay";
-import { FramePanel } from "./panels/FramePanel";
 
 export const SceneWrapper = ({ children }) => {
   return <Canvas>{children}</Canvas>;
@@ -36,9 +35,11 @@ export const Expanse = () => {
           <color attach="background" args={["#020617"]} />
           <ambientLight intensity={0.7} />
           <pointLight position={[100, 100, 100]} />
+
+          {/* The Camera Matrix Sync ensures that we can access the view matrix outside in html world */}
           <CameraMatrixSync />
 
-          <CurrentImageLightPathPlane />
+          <CurrentFrameLightPathPlane />
 
           <StageAxis />
 
@@ -49,7 +50,7 @@ export const Expanse = () => {
           <CameraController />
 
           {/* The Live Video Feed */}
-          {cameraState?.is_acquiring && <LivePlane />}
+          <LivesPlane />
 
           <ImagesPlane />
 

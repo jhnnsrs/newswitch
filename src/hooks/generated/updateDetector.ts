@@ -23,6 +23,8 @@ export const DetectorSchema = z
     min_exposure_time: z.number().optional(),
     max_gain: z.number().optional(),
     min_gain: z.number().optional(),
+    is_acquiring: z.boolean().optional(),
+    data_type: z.string().optional(),
   })
   .brand('detector');
 /** Shared state for detector parameters. */

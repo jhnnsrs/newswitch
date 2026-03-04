@@ -179,12 +179,21 @@ export const ScaleSchema = z
   })
   .brand("scale");
 
+export const ArrayMetadataSchema = z
+  .object({
+    __brand: z.literal("array_metadata").default("array_metadata"),
+    min_value: z.number(),
+    max_value: z.number(),
+  })
+  .brand("array_metadata");
+
 export const FrameSchema = z
   .object({
     __brand: z.literal("frame").default("frame"),
     id: z.string(),
     scales: z.array(ScaleSchema),
     metadata: MetadataSchema,
+    array_metadata: ArrayMetadataSchema,
   })
   .brand("frame");
 
