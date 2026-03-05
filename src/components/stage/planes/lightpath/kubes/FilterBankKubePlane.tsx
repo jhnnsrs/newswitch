@@ -1,9 +1,9 @@
-import type { FilterKubeStateSchema } from "@/hooks/states/ExpanseState";
-import { type z } from "zod";
+import { useFilterBankState, type FilterBankKubeSchema } from "@/hooks/states";
 import * as THREE from "three";
+import { type z } from "zod";
 import { useThreeAffine } from "./useThreeAffine";
 
-type FilterData = z.infer<typeof FilterKubeStateSchema>;
+type FilterBankKubeData = z.infer<typeof FilterBankKubeSchema>;
 
 // Helper function to approximate a visible wavelength (380nm - 780nm) to an RGB hex color
 function wavelengthToHex(wavelength: number): string {
@@ -56,12 +56,16 @@ function wavelengthToHex(wavelength: number): string {
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 }
 
-export const FilterKubePlane = ({ data }: { data: FilterData }) => {
+export const FilterBankKubePlane = ({ data }: { data: FilterBankKubeData }) => {
+  const {data: filterbank} = useFilterBankState()
   const matrix = useThreeAffine(data.affine_matrix);
 
+
+  const currentWavelength =  filterbank?.filters.find((f) => f.slot === filterbank.current_slot)?.wavelength;
+
   // Calculate the color based on the wavelength, defaulting to clear/gray if undefined
-  const filterColor = data.wavelength
-    ? wavelengthToHex(data.wavelength)
+  const filterColor = currentWavelength
+    ? wavelengthToHex(currentWavelength)
     : "#e2e8f0";
 
   return (

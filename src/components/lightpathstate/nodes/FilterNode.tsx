@@ -3,9 +3,8 @@ import { Handle, Position, type Node, type NodeProps } from "@xyflow/react";
 import { type z } from "zod";
 import type { FilterKubeStateSchema } from "@/hooks/states/ExpanseState";
 import { NodeHeader, nodeStyle } from "./NodeHeader";
-import type { FilterKubeSchema } from "@/hooks/states";
 
-type FilterData = z.infer<typeof FilterKubeSchema>;
+type FilterData = z.infer<typeof FilterKubeStateSchema>;
 type CustomNodeProps = NodeProps<Node<FilterData>>;
 
 export const FilterNode: React.FC<CustomNodeProps> = ({ data }) => {

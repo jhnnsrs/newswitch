@@ -1,9 +1,7 @@
-import type { LightPathState } from "@/components/lightpath/LightPathStateRender";
 import { useKubeStateStore } from "@/store/kubeStateStore";
 import { useModeStore } from "@/store/modeStore";
 import { Suspense, useEffect, useRef } from "react";
 import * as THREE from "three";
-import { useSelectedFrame } from "../hooks/useSelectedFrame";
 import { LightPathEdges } from "./edges/LightPathEdges";
 import { DetectorKubePlane } from "./kubes/DetectorKubePlane";
 import { DichroicKubePlane } from "./kubes/DichroicKube";
@@ -11,6 +9,14 @@ import { FilterKubePlane } from "./kubes/FilterKubePlane";
 import { IlluminationKubePlane } from "./kubes/IlluminationKubePlane";
 import { ObjectiveKubePlane } from "./kubes/ObjectiveKubePlane";
 import { StageKubePlane } from "./kubes/StageKubePlane";
+import { LightPathSchema, ObjectiveKubeSchema, useLightPathState } from "@/hooks/states";
+import { type z } from "zod";
+import { useKubeStore } from "@/store/kubeStore";
+import { ObjectiveTurretKubePlane } from "../kubes/ObjectiveTurretKubePlane";
+import { FilterBankKubePanel } from "../../panels/kubes/FilterBankKubePanel";
+import { FilterBankKubePlane } from "./kubes/FilterBankKubePlane";
+
+export type LightPath = z.infer<typeof LightPathSchema>;
 
 // --- The High-Performance Outline Wrapper ---
 export const InvertedHullOutline = ({
@@ -76,17 +82,16 @@ export const InvertedHullOutline = ({
 };
 
 // --- Main Light Path Plane Component ---
-export const LightPathStatePlane = ({ path }: { path: LightPathState }) => {
-  const selectedKubeState = useKubeStateStore((s) => s.selectedKubeState);
-  const setKubeState = useKubeStateStore((s) => s.setSelectedKubeState);
+export const LightPathPlane = ({ path }: { path:  LightPath }) => {
+  const selectedKube = useKubeStore((s) => s.selectedKube);
+  const setSelectedKube = useKubeStore((s) => s.setSelectedKube);
 
   return (
     <>
       <LightPathEdges path={path} />
       {path.kubes.map((kube) => {
         const isSelected =
-          selectedKubeState?.kube_id === kube.kube_id ||
-          selectedKubeState?.id === kube.kube_id;
+          selectedKube?.kube_id === kube.kube_id 
 
         return (
           <Suspense key={kube.kube_id} fallback={<></>}>
@@ -95,9 +100,9 @@ export const LightPathStatePlane = ({ path }: { path: LightPathState }) => {
               onClick={(e) => {
                 e.stopPropagation();
                 if (isSelected) {
-                  setKubeState(null);
+                  setSelectedKube(null);
                 } else {
-                  setKubeState(kube);
+                  setSelectedKube(kube);
                 }
               }}
             >
@@ -105,19 +110,25 @@ export const LightPathStatePlane = ({ path }: { path: LightPathState }) => {
               <InvertedHullOutline enabled={isSelected}>
                 {(() => {
                   switch (kube.__brand) {
-                    case "objective_kube_state":
+
+                    case "objective_turret_kube":
+                      return <ObjectiveTurretKubePlane data={kube} />; 
+
+                    case "objective_kube":
                       return <ObjectiveKubePlane data={kube} />;
-                    case "detector_kube_state":
+                    case "detector_kube":
                       return <DetectorKubePlane data={kube} />;
-                    case "filter_kube_state":
+                    case "filter_kube":
                       return <FilterKubePlane data={kube} />;
-                    case "illumination_kube_state":
+                    case "filter_bank_kube":
+                      return <FilterBankKubePlane data={kube} />;
+                    case "illumination_kube":
                       return <IlluminationKubePlane data={kube} />;
-                    case "stage_kube_state":
+                    case "stage_kube":
                       return <StageKubePlane data={kube} />;
-                    case "dichroic_kube_state":
+                    case "dichroic_kube":
                       return <DichroicKubePlane data={kube} />;
-                    case "generic_kube_state":
+                    case "generic_kube":
                       return null;
                     default:
                       return null;
@@ -133,17 +144,19 @@ export const LightPathStatePlane = ({ path }: { path: LightPathState }) => {
 };
 
 // --- Scene View Toggle ---
-export const CurrentFrameLightPathPlane = () => {
-  const selectedFrame = useSelectedFrame();
+export const CurrentLightPathPlane = () => {
+  const {data: lightpath} = useLightPathState();
   const currentMode = useModeStore((state) => state.interactionMode);
   const displayMode = useModeStore((state) => state.displayMode);
+
+  const randomlySelectedLightPath = lightpath?.light_paths.at(0); // Light Path should be more generic (not dtector specific)
 
   if (currentMode !== "META" || displayMode !== "3D") return null;
 
   return (
     <Suspense fallback={<></>}>
-      {selectedFrame?.metadata?.light_state && (
-        <LightPathStatePlane path={selectedFrame.metadata.light_state} />
+      {randomlySelectedLightPath && (
+        <LightPathPlane path={randomlySelectedLightPath} />
       )}
     </Suspense>
   );

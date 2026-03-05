@@ -1,5 +1,5 @@
 // Shadcn UI Imports
-import { LightPathStateRender } from "@/components/lightpath/LightPathStateRender";
+import { LightPathStateRender } from "@/components/lightpathstate/LightPathStateRender";
 import { Card } from "@/components/ui/card";
 import { useExpanseState } from "@/hooks/states";
 import { useSelectionStore } from "@/store/imageStore";

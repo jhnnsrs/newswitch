@@ -1,9 +1,9 @@
-import type { DichroicKubeStateSchema } from "@/hooks/states";
+import type { DichroicKubeSchema } from "@/hooks/states";
 import * as THREE from "three";
 import { type z } from "zod";
 import { useThreeAffine } from "./useThreeAffine";
 
-type DichroicData = z.infer<typeof DichroicKubeStateSchema>;
+type DichroicData = z.infer<typeof DichroicKubeSchema>;
 
 export const DichroicKubePlane = ({ data }: { data: DichroicData }) => {
   const matrix = useThreeAffine(data.affine_matrix);

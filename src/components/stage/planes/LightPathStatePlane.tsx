@@ -1,4 +1,4 @@
-import type { LightPathState } from "@/components/lightpath/LightPathStateRender";
+import type { LightPathState } from "@/components/lightpathstate/LightPathStateRender";
 import { Suspense, useEffect, useRef } from "react";
 import * as THREE from "three";
 import { useSelectedImage } from "../hooks/useSelectedImage";

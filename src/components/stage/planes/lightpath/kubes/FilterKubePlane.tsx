@@ -1,9 +1,10 @@
 import type { FilterKubeStateSchema } from "@/hooks/states/ExpanseState";
-import { type z } from "zod";
 import * as THREE from "three";
+import { type z } from "zod";
 import { useThreeAffine } from "./useThreeAffine";
+import type { FilterKubeSchema } from "@/hooks/states";
 
-type FilterData = z.infer<typeof FilterKubeStateSchema>;
+type FilterData = z.infer<typeof FilterKubeSchema>;
 
 // Helper function to approximate a visible wavelength (380nm - 780nm) to an RGB hex color
 function wavelengthToHex(wavelength: number): string {

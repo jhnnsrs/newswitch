@@ -19,6 +19,7 @@ import { CurrentFrameLightPathPlane } from "./planes/LightPathStatePlane";
 import { LivesPlane } from "./planes/LivesPlane";
 import { StageAxis } from "./planes/StageAxis";
 import { StagePlane } from "./planes/StagePlane";
+import { CurrentLightPathPlane, LightPathPlane } from "./planes/lightpath/LightPathPlane";
 
 export const SceneWrapper = ({ children }) => {
   return <Canvas>{children}</Canvas>;
@@ -51,6 +52,10 @@ export const Expanse = () => {
 
           {/* The Live Video Feed */}
           <LivesPlane />
+
+          <CurrentLightPathPlane/>
+
+          
 
           <ImagesPlane />
 

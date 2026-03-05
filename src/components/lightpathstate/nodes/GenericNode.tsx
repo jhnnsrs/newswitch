@@ -3,9 +3,8 @@ import { Handle, Position, type Node, type NodeProps } from "@xyflow/react";
 import { type z } from "zod";
 import type { GenericKubeStateSchema } from "@/hooks/states/ExpanseState";
 import { NodeHeader, nodeStyle } from "./NodeHeader";
-import type { GenericKubeSchema } from "@/hooks/states";
 
-type GenericData = z.infer<typeof GenericKubeSchema>;
+type GenericData = z.infer<typeof GenericKubeStateSchema>;
 type CustomNodeProps = NodeProps<Node<GenericData>>;
 
 export const GenericNode: React.FC<CustomNodeProps> = ({ data }) => {
