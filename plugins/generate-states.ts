@@ -11,6 +11,10 @@ const IMPORT_PATH_TO_SYNC = "../useStateSync"; // Relative path
 export interface GenerateStatesPluginOptions {
   /** URL to fetch the states schema from */
   schemaUrl?: string;
+  /** If provided, only these state keys will be generated */
+  whitelist?: string[];
+  /** If provided, these state keys will be skipped */
+  blacklist?: string[];
 }
 
 interface ChoiceInput {
@@ -36,6 +40,17 @@ const toCamel = (s: string) =>
 const toPascal = (s: string) => {
   const c = toCamel(s);
   return c.charAt(0).toUpperCase() + c.slice(1);
+};
+
+const shouldGenerateState = (
+  key: string,
+  whitelist?: string[],
+  blacklist?: string[],
+) => {
+  const isAllowed = whitelist ? whitelist.includes(key) : true;
+  const isBlocked = blacklist ? blacklist.includes(key) : false;
+
+  return isAllowed && !isBlocked;
 };
 
 // --- CODE SNIPPETS ---
@@ -251,7 +266,7 @@ export const ${hookName} = buildUseState<${typeName}>(${defName});
 export default function generateStatesPlugin(
   options: GenerateStatesPluginOptions = {},
 ): Plugin {
-  const { schemaUrl } = options;
+  const { schemaUrl, whitelist, blacklist } = options;
 
   return {
     name: "vite-plugin-generate-states",
@@ -295,20 +310,54 @@ export default function generateStatesPlugin(
       fs.writeFileSync(path.join(OUTPUT_DIR, "utils.ts"), formattedUtils);
       files.push("utils"); // store for index.ts
 
+      const generatedStateNames: string[] = [];
+
       // Iterate over the "states" object in your schema
       for (const [key, stateDef] of Object.entries(schema.states)) {
+        if (!shouldGenerateState(key, whitelist, blacklist)) {
+          continue;
+        }
+
         const code = generateContent(key, stateDef);
         const formatted = await prettier.format(code, { parser: "typescript" });
 
         // File name: StageState.ts
-        const fname = `${toPascal(key)}.ts`;
+        const stateName = toPascal(key);
+        const fname = `${stateName}.ts`;
         fs.writeFileSync(path.join(OUTPUT_DIR, fname), formatted);
-        files.push(toPascal(key)); // store for index.ts
+        files.push(stateName); // store for index.ts
+        generatedStateNames.push(stateName);
       }
 
-      // Generate Barrel file
-      const index = files.map((f) => `export * from './${f}';`).join("\n");
-      fs.writeFileSync(path.join(OUTPUT_DIR, "index.ts"), index);
+      const stateDefinitionImports = generatedStateNames
+        .map(
+          (stateName) =>
+            `import { ${stateName}Definition } from './${stateName}';`,
+        )
+        .join("\n");
+
+      const stateDefinitionEntries = generatedStateNames
+        .map((stateName) => `  ${stateName}: ${stateName}Definition,`)
+        .join("\n");
+
+      // Generate Barrel file + global state definition registry
+      const indexCode = `
+import type { StateDefinition } from '../useStateSync';
+${stateDefinitionImports}
+
+${files.map((f) => `export * from './${f}';`).join("\n")}
+
+export const globalStateDefinition = {
+${stateDefinitionEntries}
+} satisfies Record<string, StateDefinition<unknown>>;
+
+// Backwards-compatible alias for the requested misspelling.
+export const globalStateDefintiion = globalStateDefinition;
+`;
+      const formattedIndex = await prettier.format(indexCode, {
+        parser: "typescript",
+      });
+      fs.writeFileSync(path.join(OUTPUT_DIR, "index.ts"), formattedIndex);
 
       console.log(
         `✅ [GenStates] Generated ${files.length} files (including utils) from ${schemaUrl}`,
