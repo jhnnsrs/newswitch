@@ -25,7 +25,7 @@ import { useState } from "react";
 import { ProgressDisplay } from "../TaskDisplay";
 
 export function StageControl() {
-  const { data: stageState, loading: stateLoading } = useStageState({
+  const { data: stageState, loading: stateLoading, revision: stageRevision } = useStageState({
     subscribe: true,
   });
 
@@ -77,7 +77,7 @@ export function StageControl() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Move className="h-4 w-4" />
-          <span className="text-sm font-medium">Stage Control</span>
+          <span className="text-sm font-medium">Stage Control {stageRevision}</span>
         </div>
         {stateLoading && (
           <Badge variant="outline" className="text-xs">

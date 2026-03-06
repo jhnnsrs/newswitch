@@ -27,6 +27,7 @@ export interface UseStateSyncResult<U> {
   loading: boolean;
   error: Error | null;
   refetch: () => Promise<void>;
+  revision: number;
 }
 
 // --- The Factory Function ---
@@ -56,6 +57,7 @@ export const useStateSync = <T extends Record<string, unknown>, U = T>(
 
   // 1. Get raw state
   const rawData = useGlobalStateStore(selectState<T>(definition.key)) ?? null;
+  const revision = useGlobalStateStore((state) => state.stateRevisions[definition.key] ?? 0);
 
   // 2. Apply selector logic
   // If rawData exists and selector exists, use selector.
@@ -126,5 +128,5 @@ export const useStateSync = <T extends Record<string, unknown>, U = T>(
     };
   }, [subscribe, definition.key]);
 
-  return { data, loading, error, refetch };
+  return { data, loading, error, refetch, revision };
 };

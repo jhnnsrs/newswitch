@@ -1,31 +1,49 @@
+import { CameraMatrixSync } from "@/components/stage/CameraMatrixSync";
+import { CameraController } from "@/components/stage/cameras/CameraController";
+import { KeyboardModeController } from "@/components/stage/controllers/KeyboardModeController";
+import { SceneWrapper } from "@/components/stage/Expanse";
+import { SceneOverlay } from "@/components/stage/overlays/SceneOverlay";
+import { PanelProvider } from "@/components/stage/PanelProvider";
+import { FramePanel } from "@/components/stage/panels/FramePanel";
+import { KubeStatePanel } from "@/components/stage/panels/KubeStatePanel";
+import { CurrentLightPathPlane } from "@/components/stage/planes/lightpath/LightPathPlane";
+
+
+
+
+
+
+
 export function ReplayPage() {
   return (
-    <div className="h-screen bg-background text-foreground dark">
-      <div className="mx-auto flex h-full max-w-5xl flex-col justify-center gap-6 px-6 py-12">
-        <div className="space-y-3">
-          <p className="text-sm uppercase tracking-[0.3em] text-muted-foreground">
-            Replay
-          </p>
-          <h1 className="text-4xl font-semibold tracking-tight">
-            Replay sessions and recorded runs
-          </h1>
-          <p className="max-w-2xl text-muted-foreground">
-            This page is ready for replay-specific controls and visualizations.
-            The existing microscope control view now lives on the index route.
-          </p>
-        </div>
+    <div className="h-screen bg-background text-foreground dark w-screen overflow-hidden">
+       <PanelProvider>
+              <KeyboardModeController />
+              <SceneWrapper>
+                <color attach="background" args={["#020617"]} />
+                <ambientLight intensity={0.7} />
+                <pointLight position={[100, 100, 100]} />
+      
+                {/* The Camera Matrix Sync ensures that we can access the view matrix outside in html world */}
+                <CameraMatrixSync />
+      
+                
+                <CurrentLightPathPlane/>
+      
+                
 
-        <div className="rounded-xl border border-border bg-card/70 p-6 shadow-sm backdrop-blur-sm">
-          <div className="space-y-2">
-            <h2 className="text-lg font-medium">Next steps</h2>
-            <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
-              <li>Add replay transport hooks or playback state.</li>
-              <li>Render recorded frames, metadata, or task timelines.</li>
-              <li>Keep navigation available to jump back to the live index view.</li>
-            </ul>
+                        <CameraController />
+      
+                
+              </SceneWrapper>
+
+
+              <KubeStatePanel />
+      
+              <FramePanel />
+      
+              <SceneOverlay />
+            </PanelProvider>
           </div>
-        </div>
-      </div>
-    </div>
   );
 }
