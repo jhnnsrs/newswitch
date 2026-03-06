@@ -15,6 +15,7 @@ export * from './stopLiveView';
 export * from './activateDetector';
 export * from './deactivateDetector';
 export * from './updateDetector';
+export * from './neverEndingFunction';
 export * from './switchObjective';
 export * from './toggleObjective';
 export * from './switchFilter';

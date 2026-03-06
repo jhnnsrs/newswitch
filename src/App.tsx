@@ -1,17 +1,15 @@
 import "./App.css";
-import {
-  MultidimensionalAcquisitionControl,
-  SettingsPanel,
-  StageControl,
-} from "./components/microscope";
-import { CalibrateLightPath } from "./components/microscope/CalibrateLightPath";
-import { Expanse } from "./components/stage/Expanse";
-import {
-  ResizableHandle,
-  ResizablePanel,
-  ResizablePanelGroup,
-} from "./components/ui/resizable";
+import { Activity, PlaySquare } from "lucide-react";
+import { NavLink, Navigate, Route, Routes } from "react-router-dom";
+import { buttonVariants } from "./components/ui/button";
 import { Toaster } from "./components/ui/sonner";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "./components/ui/tooltip";
+import { cn } from "./lib/utils";
+import { IndexPage, ReplayPage } from "./pages";
 import { TransportProvider } from "./transport";
 
 // The backend API URL is either injected into the global scope by the
@@ -20,37 +18,49 @@ const BACKEND_API = window.__agent_url__ || import.meta.env.VITE_BACKEND_URL;
 const BACKEND_WS =
   window.__agent_ws_url__ || import.meta.env.VITE_WEBSOCKET_URL;
 
-function MicroscopeControlPanel() {
+function AppNavigation() {
+  const items = [
+    {
+      to: "/",
+      label: "Index",
+      icon: Activity,
+    },
+    {
+      to: "/replay",
+      label: "Replay",
+      icon: PlaySquare,
+    },
+  ];
+
   return (
-    <div className="h-screen flex flex-col bg-background text-foreground dark">
-      {/* Main Layout: Resizable Left Panel + Center View + Right Panel */}
-      <ResizablePanelGroup direction="horizontal" className="flex-1">
-        {/* Left Settings Panel */}
-        <ResizablePanel defaultSize={15} minSize={10} maxSize={30}>
-          <SettingsPanel />
-        </ResizablePanel>
-
-        <ResizableHandle withHandle />
-
-        {/* Center Live View */}
-        <ResizablePanel defaultSize={55}>
-          <div className="h-full flex flex-col overflow-hidden bg-muted/30">
-            <Expanse />
-          </div>
-        </ResizablePanel>
-
-        <ResizableHandle withHandle />
-
-        {/* Right Stage Control Panel */}
-        <ResizablePanel defaultSize={30} minSize={15} maxSize={40}>
-          <div className="h-full overflow-y-auto p-4 flex flex-col gap-4">
-            <StageControl />
-
-            <MultidimensionalAcquisitionControl />
-            <CalibrateLightPath />
-          </div>
-        </ResizablePanel>
-      </ResizablePanelGroup>
+    <div className="pointer-events-none fixed right-4 bottom-4 z-50 -translate-y-1/2">
+      <div className="pointer-events-auto flex flex-row items-center gap-2 rounded-2xl border border-border bg-background/85 p-2 shadow-lg backdrop-blur-sm dark">
+        {items.map(({ to, label, icon: Icon }) => (
+          <Tooltip key={to}>
+            <TooltipTrigger asChild>
+              <NavLink
+                to={to}
+                end={to === "/"}
+                aria-label={label}
+                className={({ isActive }) =>
+                  cn(
+                    buttonVariants({
+                      variant: isActive ? "default" : "ghost",
+                      size: "icon",
+                    }),
+                    "rounded-xl",
+                  )
+                }
+              >
+                <Icon className="size-4" />
+              </NavLink>
+            </TooltipTrigger>
+            <TooltipContent side="right" sideOffset={10}>
+              {label}
+            </TooltipContent>
+          </Tooltip>
+        ))}
+      </div>
     </div>
   );
 }
@@ -64,7 +74,12 @@ function App() {
         wsEndpoint: BACKEND_WS,
       }}
     >
-      <MicroscopeControlPanel />
+      <AppNavigation />
+      <Routes>
+        <Route path="/" element={<IndexPage />} />
+        <Route path="/replay" element={<ReplayPage />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
       <Toaster position="bottom-right" richColors />
     </TransportProvider>
   );

@@ -55,6 +55,7 @@ export const GenericKubeSchema = z
     affine_matrix: z.array(z.array(z.number())),
     model_name: z.string().nullable(),
     model_file: z.string().nullable(),
+    state_accessor: z.string().nullable(),
   })
   .brand("generic_kube");
 

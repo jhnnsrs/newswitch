@@ -26,7 +26,7 @@ export const StagePlane = () => {
   const divisions = 20;
 
   return (
-    <group position={[stageState.x, stageState.y, -0.5]}>
+    <group position={[stageState.x, stageState.y, stageState.z]}>
       {/* 1. The Solid Base */}
       <mesh position={[0, 0, -1]}>
         <planeGeometry args={[stageRangeX, stageRangeY]} />
