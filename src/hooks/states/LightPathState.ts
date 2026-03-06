@@ -143,7 +143,10 @@ export const LightPathStateSchema = z.object({
 export type LightPathState = z.infer<typeof LightPathStateSchema>;
 
 // --- Definition ---
-export const LightPathStateDefinition: StateDefinition<LightPathState> = {
+export const LightPathStateDefinition: StateDefinition<
+  LightPathState,
+  "LightPathState"
+> = {
   key: "LightPathState", // The ID used by the backend
   schema: LightPathStateSchema,
 };

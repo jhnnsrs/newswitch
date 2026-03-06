@@ -26,7 +26,10 @@ export const ObjectiveStateSchema = z.object({
 export type ObjectiveState = z.infer<typeof ObjectiveStateSchema>;
 
 // --- Definition ---
-export const ObjectiveStateDefinition: StateDefinition<ObjectiveState> = {
+export const ObjectiveStateDefinition: StateDefinition<
+  ObjectiveState,
+  "ObjectiveState"
+> = {
   key: "ObjectiveState", // The ID used by the backend
   schema: ObjectiveStateSchema,
 };

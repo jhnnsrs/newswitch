@@ -19,7 +19,7 @@ export interface GenerateStatesPluginOptions {
 
 interface ChoiceInput {
   key: string;
-  value: any;
+  value: unknown;
   description?: string;
 }
 
@@ -28,11 +28,15 @@ interface Port {
   key: string;
   kind: string;
   nullable: boolean;
-  default?: any;
+  default?: unknown;
   children?: Port[];
   choices: ChoiceInput[];
   identifier?: string;
   description?: string;
+}
+
+interface StatesSchema {
+  states: Record<string, unknown>;
 }
 
 const toCamel = (s: string) =>
@@ -51,6 +55,27 @@ const shouldGenerateState = (
   const isBlocked = blacklist ? blacklist.includes(key) : false;
 
   return isAllowed && !isBlocked;
+};
+
+type ExportEntry = {
+  kind: "value" | "type";
+  name: string;
+};
+
+const getExportEntries = (code: string): ExportEntry[] => {
+  const exportEntries = new Map<string, ExportEntry>();
+
+  for (const match of code.matchAll(
+    /export\s+(const|type|function)\s+(\w+)/g,
+  )) {
+    const [, rawKind, name] = match;
+    exportEntries.set(name, {
+      name,
+      kind: rawKind === "type" ? "type" : "value",
+    });
+  }
+
+  return Array.from(exportEntries.values());
 };
 
 // --- CODE SNIPPETS ---
@@ -216,7 +241,8 @@ const mapToZod = (
 };
 
 // --- CONTENT GENERATOR ---
-const generateContent = (key: string, stateDef: any) => {
+const generateContent = (key: string, stateDef: unknown) => {
+  const typedStateDef = stateDef as { ports: Port[] };
   const hookName = `use${toPascal(key)}`; // useStageState
   const schemaName = `${toPascal(key)}Schema`;
   const typeName = `${toPascal(key)}`; // StageState (Type)
@@ -226,7 +252,7 @@ const generateContent = (key: string, stateDef: any) => {
 
   // 1. Generate Zod Schema fields from 'ports' and populate subSchemas
   // Pass down the port's actual key as the top-level fallback
-  const fields = stateDef.ports
+  const fields = typedStateDef.ports
     .map((p: Port) => `  ${p.key}: ${mapToZod(p, subSchemas, p.key)}`)
     .join(",\n");
 
@@ -250,7 +276,7 @@ ${mainSchemaCode}
 export type ${typeName} = z.infer<typeof ${schemaName}>;
 
 // --- Definition ---
-export const ${defName}: StateDefinition<${typeName}> = {
+export const ${defName}: StateDefinition<${typeName}, "${key}"> = {
   key: "${key}", // The ID used by the backend
   schema: ${schemaName},
 };
@@ -278,7 +304,7 @@ export default function generateStatesPlugin(
         return;
       }
 
-      let schema: any;
+      let schema: StatesSchema | undefined;
       try {
         const response = await fetch(schemaUrl);
         if (!response.ok) {
@@ -287,7 +313,7 @@ export default function generateStatesPlugin(
           );
           return;
         }
-        schema = await response.json();
+        schema = (await response.json()) as StatesSchema;
       } catch (error) {
         console.error(
           `❌ [GenStates] Error fetching schema from ${schemaUrl}:`,
@@ -302,6 +328,7 @@ export default function generateStatesPlugin(
       fs.rmSync(OUTPUT_DIR, { recursive: true, force: true });
       fs.mkdirSync(OUTPUT_DIR, { recursive: true });
       const files: string[] = [];
+      const fileExports = new Map<string, ExportEntry[]>();
 
       // Generate the utils file
       const formattedUtils = await prettier.format(utilsCode, {
@@ -309,6 +336,7 @@ export default function generateStatesPlugin(
       });
       fs.writeFileSync(path.join(OUTPUT_DIR, "utils.ts"), formattedUtils);
       files.push("utils"); // store for index.ts
+      fileExports.set("utils", getExportEntries(formattedUtils));
 
       const generatedStateNames: string[] = [];
 
@@ -327,6 +355,7 @@ export default function generateStatesPlugin(
         fs.writeFileSync(path.join(OUTPUT_DIR, fname), formatted);
         files.push(stateName); // store for index.ts
         generatedStateNames.push(stateName);
+        fileExports.set(stateName, getExportEntries(formatted));
       }
 
       const stateDefinitionImports = generatedStateNames
@@ -340,16 +369,63 @@ export default function generateStatesPlugin(
         .map((stateName) => `  ${stateName}: ${stateName}Definition,`)
         .join("\n");
 
+      const exportCounts = new Map<string, number>();
+      for (const exportEntries of fileExports.values()) {
+        for (const { name } of exportEntries) {
+          exportCounts.set(name, (exportCounts.get(name) ?? 0) + 1);
+        }
+      }
+
+      const barrelExports = Array.from(fileExports.entries())
+        .map(([fileName, exportEntries]) => {
+          const uniqueExportEntries = exportEntries.filter(
+            ({ name }) => exportCounts.get(name) === 1,
+          );
+
+          if (uniqueExportEntries.length === 0) {
+            return null;
+          }
+
+          const valueExports = uniqueExportEntries
+            .filter(({ kind }) => kind === "value")
+            .map(({ name }) => name);
+          const typeExports = uniqueExportEntries
+            .filter(({ kind }) => kind === "type")
+            .map(({ name }) => name);
+
+          const exportLines = [
+            valueExports.length > 0
+              ? `export { ${valueExports.join(", ")} } from './${fileName}';`
+              : null,
+            typeExports.length > 0
+              ? `export type { ${typeExports.join(", ")} } from './${fileName}';`
+              : null,
+          ].filter((line): line is string => line !== null);
+
+          return exportLines.join("\n");
+        })
+        .filter((line): line is string => line !== null)
+        .join("\n");
+
       // Generate Barrel file + global state definition registry
       const indexCode = `
 import type { StateDefinition } from '../useStateSync';
 ${stateDefinitionImports}
 
-${files.map((f) => `export * from './${f}';`).join("\n")}
+${barrelExports}
 
 export const globalStateDefinition = {
 ${stateDefinitionEntries}
 } satisfies Record<string, StateDefinition<unknown>>;
+
+type InferStateDefinition<TDefinition> =
+  TDefinition extends StateDefinition<infer TState, string> ? TState : never;
+
+export type GlobalStateDefinition = typeof globalStateDefinition;
+export type GlobalStateKey = keyof GlobalStateDefinition;
+export type GlobalStateShape = {
+  [K in GlobalStateKey]: InferStateDefinition<GlobalStateDefinition[K]>;
+};
 
 // Backwards-compatible alias for the requested misspelling.
 export const globalStateDefintiion = globalStateDefinition;

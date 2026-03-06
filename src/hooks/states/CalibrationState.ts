@@ -23,7 +23,10 @@ export const CalibrationStateSchema = z.object({
 export type CalibrationState = z.infer<typeof CalibrationStateSchema>;
 
 // --- Definition ---
-export const CalibrationStateDefinition: StateDefinition<CalibrationState> = {
+export const CalibrationStateDefinition: StateDefinition<
+  CalibrationState,
+  "CalibrationState"
+> = {
   key: "CalibrationState", // The ID used by the backend
   schema: CalibrationStateSchema,
 };

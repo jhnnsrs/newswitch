@@ -1,9 +1,14 @@
 // src/store/stateStore.ts
 import { applyPatch, type Operation } from "fast-json-patch";
+import type { GlobalStateKey, GlobalStateShape } from "@/hooks/states";
 import { createStore } from "zustand/vanilla";
 import { subscribeWithSelector } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
 import { createScopedStoreHooks } from "./createScopedStore";
+
+type GlobalStateRecord = Partial<GlobalStateShape> & Record<string, unknown>;
+type StateMetaRecord<TValue> = Partial<Record<GlobalStateKey, TValue>> &
+  Record<string, TValue | undefined>;
 
 export interface Envelope {
   state_name: string;
@@ -16,19 +21,25 @@ export interface Envelope {
 // State shape: { [stateName]: stateValue }
 export interface GlobalStateStore {
   /** All states keyed by their name */
-  states: Record<string, unknown>;
-  stateRevisions: Record<string, number>;
+  states: GlobalStateRecord;
+  stateRevisions: StateMetaRecord<number>;
 
   /** Loading states for each key */
-  loading: Record<string, boolean>;
+  loading: StateMetaRecord<boolean>;
 
   locks: Record<string, string | undefined>;
 
   /** Error states for each key */
-  errors: Record<string, Error | null>;
+  errors: StateMetaRecord<Error | null>;
 
   /** Set a state value */
-  setState: (key: string, value: unknown) => void;
+  setState: {
+    <TKey extends GlobalStateKey>(
+      key: TKey,
+      value: GlobalStateShape[TKey],
+    ): void;
+    (key: string, value: unknown): void;
+  };
 
   setLock: (key: string, value: string | undefined) => void;
 
@@ -36,16 +47,19 @@ export interface GlobalStateStore {
   applyEnvelope: (envelope: Envelope) => void;
 
   /** Set loading state */
-  setLoading: (key: string, loading: boolean) => void;
+  setLoading: (key: GlobalStateKey | string, loading: boolean) => void;
 
   /** Set error state */
-  setError: (key: string, error: Error | null) => void;
+  setError: (key: GlobalStateKey | string, error: Error | null) => void;
 
   /** Get a specific state value */
-  getState: <T = unknown>(key: string) => T | undefined;
+  getState: {
+    <TKey extends GlobalStateKey>(key: TKey): GlobalStateShape[TKey] | undefined;
+    <T = unknown>(key: string): T | undefined;
+  };
 
   /** Clear a state */
-  clearState: (key: string) => void;
+  clearState: (key: GlobalStateKey | string) => void;
 
   /** Clear all states */
   clearAll: () => void;
@@ -61,7 +75,7 @@ export const createGlobalStateStore = () =>
       errors: {},
       locks: {},
 
-      setState: (key, value) => {
+      setState: (key: string, value: unknown) => {
         set((state) => {
           state.states[key] = value;
           state.errors[key] = null;
@@ -155,10 +169,15 @@ const {
 export { GlobalStateStoreContext, useGlobalStateStore, useGlobalStateStoreApi };
 
 // Selector helpers for subscribing to specific state paths
-export const selectState =
-  <T = unknown>(key: string) =>
-  (store: GlobalStateStore) =>
-    store.states[key] as T | undefined;
+export function selectState<TKey extends GlobalStateKey>(
+  key: TKey,
+): (store: GlobalStateStore) => GlobalStateShape[TKey] | undefined;
+export function selectState<T = unknown>(
+  key: string,
+): (store: GlobalStateStore) => T | undefined;
+export function selectState(key: string) {
+  return (store: GlobalStateStore) => store.states[key];
+}
 
 export const selectLock =
   <T = unknown>(key: string) =>

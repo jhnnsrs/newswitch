@@ -18,7 +18,7 @@ export const HookStateSchema = z.object({
 export type HookState = z.infer<typeof HookStateSchema>;
 
 // --- Definition ---
-export const HookStateDefinition: StateDefinition<HookState> = {
+export const HookStateDefinition: StateDefinition<HookState, "HookState"> = {
   key: "HookState", // The ID used by the backend
   schema: HookStateSchema,
 };

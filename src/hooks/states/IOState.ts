@@ -12,7 +12,7 @@ export const IOStateSchema = z.object({
 export type IOState = z.infer<typeof IOStateSchema>;
 
 // --- Definition ---
-export const IOStateDefinition: StateDefinition<IOState> = {
+export const IOStateDefinition: StateDefinition<IOState, "IOState"> = {
   key: "IOState", // The ID used by the backend
   schema: IOStateSchema,
 };

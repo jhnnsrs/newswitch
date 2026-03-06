@@ -12,7 +12,10 @@ export const SerialStateSchema = z.object({
 export type SerialState = z.infer<typeof SerialStateSchema>;
 
 // --- Definition ---
-export const SerialStateDefinition: StateDefinition<SerialState> = {
+export const SerialStateDefinition: StateDefinition<
+  SerialState,
+  "SerialState"
+> = {
   key: "SerialState", // The ID used by the backend
   schema: SerialStateSchema,
 };

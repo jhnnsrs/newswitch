@@ -24,7 +24,10 @@ export const FilterBankStateSchema = z.object({
 export type FilterBankState = z.infer<typeof FilterBankStateSchema>;
 
 // --- Definition ---
-export const FilterBankStateDefinition: StateDefinition<FilterBankState> = {
+export const FilterBankStateDefinition: StateDefinition<
+  FilterBankState,
+  "FilterBankState"
+> = {
   key: "FilterBankState", // The ID used by the backend
   schema: FilterBankStateSchema,
 };

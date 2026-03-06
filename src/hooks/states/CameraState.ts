@@ -34,7 +34,10 @@ export const CameraStateSchema = z.object({
 export type CameraState = z.infer<typeof CameraStateSchema>;
 
 // --- Definition ---
-export const CameraStateDefinition: StateDefinition<CameraState> = {
+export const CameraStateDefinition: StateDefinition<
+  CameraState,
+  "CameraState"
+> = {
   key: "CameraState", // The ID used by the backend
   schema: CameraStateSchema,
 };

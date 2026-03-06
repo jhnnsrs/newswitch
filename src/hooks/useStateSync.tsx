@@ -11,8 +11,8 @@ import { useTransport } from "../transport/transport-context";
 
 // --- Interfaces ---
 
-export interface StateDefinition<T> {
-  key: string;
+export interface StateDefinition<T, TKey extends string = string> {
+  key: TKey;
   schema: ZodType<T>;
 }
 

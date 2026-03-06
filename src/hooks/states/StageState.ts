@@ -24,7 +24,7 @@ export const StageStateSchema = z.object({
 export type StageState = z.infer<typeof StageStateSchema>;
 
 // --- Definition ---
-export const StageStateDefinition: StateDefinition<StageState> = {
+export const StageStateDefinition: StateDefinition<StageState, "StageState"> = {
   key: "StageState", // The ID used by the backend
   schema: StageStateSchema,
 };

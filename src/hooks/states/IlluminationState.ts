@@ -26,7 +26,10 @@ export const IlluminationStateSchema = z.object({
 export type IlluminationState = z.infer<typeof IlluminationStateSchema>;
 
 // --- Definition ---
-export const IlluminationStateDefinition: StateDefinition<IlluminationState> = {
+export const IlluminationStateDefinition: StateDefinition<
+  IlluminationState,
+  "IlluminationState"
+> = {
   key: "IlluminationState", // The ID used by the backend
   schema: IlluminationStateSchema,
 };

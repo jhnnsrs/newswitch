@@ -208,7 +208,10 @@ export const ExpanseStateSchema = z.object({
 export type ExpanseState = z.infer<typeof ExpanseStateSchema>;
 
 // --- Definition ---
-export const ExpanseStateDefinition: StateDefinition<ExpanseState> = {
+export const ExpanseStateDefinition: StateDefinition<
+  ExpanseState,
+  "ExpanseState"
+> = {
   key: "ExpanseState", // The ID used by the backend
   schema: ExpanseStateSchema,
 };
