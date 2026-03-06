@@ -2,6 +2,16 @@
 import "./immer";
 
 export {
+  getBlockingLock,
+  selectLock,
+  useBlockingLock,
+  useLockStore,
+  useLockStoreApi,
+} from "./lockStore";
+export type { BlockingLockState, LockStore } from "./lockStore";
+export { LockStoreProvider } from "./LockStoreProvider";
+
+export {
   selectError,
   selectLoading,
   selectPath,

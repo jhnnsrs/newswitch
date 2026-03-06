@@ -3,13 +3,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { z, ZodType } from "zod";
 import {
+  getBlockingLock,
   selectTask,
-  useGlobalStateStore,
-  useGlobalStateStoreApi,
+  useBlockingLock,
+  useLockStoreApi,
   useTransportStore,
-  useTransportStoreApi,
 } from "../store";
-import { useTransport } from "./transport-context";
+import { useAction } from "./action-context";
 import type { AssignOptions, Task, TaskStatus } from "./types";
 
 export interface ActionDefinition<TArgs, TReturn> {
@@ -79,9 +79,8 @@ export const useTransportAction = <TArgs, TReturn>(
     onProgress,
   } = options;
 
-  const transport = useTransport();
-  const transportStoreApi = useTransportStoreApi();
-  const globalStateStoreApi = useGlobalStateStoreApi();
+  const action = useAction();
+  const lockStoreApi = useLockStoreApi();
 
   // Track strictly by reference
   const [currentReference, setCurrentReference] = useState<string | null>(null);
@@ -111,12 +110,12 @@ export const useTransportAction = <TArgs, TReturn>(
 
   const task = useTransportStore(taskSelector) ?? null;
 
-  const locks = useGlobalStateStore((state) => state.locks);
-  const blockingLockKey = definition.lockKeys?.find(
-    (key) => locks[key] != null,
-  );
-  const isLocked = !!blockingLockKey;
-  const lockedBy = blockingLockKey ? (locks[blockingLockKey] ?? null) : null;
+  const {
+    isLocked,
+    lockKey: blockingLockKey,
+    lockingTaskId,
+  } = useBlockingLock(definition.lockKeys);
+  const lockedBy = lockingTaskId ?? null;
 
   // --- Derived State ---
   const currentTaskId = task?.id; // Will be the server ID if setAssignationID was called by transport, or fallback reference
@@ -144,16 +143,12 @@ export const useTransportAction = <TArgs, TReturn>(
   useEffect(() => {
     if (!autoSubscribe || !currentReference) return;
 
-    // Use Zustand's native subscribe capability directly
-    const unsubscribe = transportStoreApi.subscribe(
-      selectTask(currentReference),
-      (updatedTask) => {
-        if (updatedTask) handleTaskUpdate(updatedTask as Task);
-      },
-    );
+    const unsubscribe = action.subscribeToTask(currentReference, (updatedTask) => {
+      handleTaskUpdate(updatedTask as Task);
+    });
 
     return () => unsubscribe();
-  }, [currentReference, autoSubscribe, handleTaskUpdate, transportStoreApi]);
+  }, [action, autoSubscribe, currentReference, handleTaskUpdate]);
 
   // --- Core Execution Logic ---
   const execute = useCallback(
@@ -163,13 +158,14 @@ export const useTransportAction = <TArgs, TReturn>(
     ): Promise<Task<TArgs, TReturn>> => {
       setValidationError(null);
 
-      const currentLocks = globalStateStoreApi.getState().locks;
-      const blockingKey = definition.lockKeys?.find(
-        (key) => currentLocks[key] != null,
+      const { lockKey, lockingTaskId: currentLockingTaskId } = getBlockingLock(
+        lockStoreApi.getState().locks,
+        definition.lockKeys,
       );
-      if (blockingKey) {
+
+      if (lockKey) {
         throw new Error(
-          `Action is locked by task ${currentLocks[blockingKey]} (lock: ${blockingKey})`,
+          `Action is locked by task ${currentLockingTaskId} (lock: ${lockKey})`,
         );
       }
 
@@ -179,14 +175,12 @@ export const useTransportAction = <TArgs, TReturn>(
         throw parsed.error;
       }
 
-      const reference =
-        opts?.reference ||
-        `local-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      const reference = opts?.reference || action.createReference();
       setCurrentReference(reference);
 
       // The transport.assign method is now strictly responsible for calling setAssignationID
       // internally once it receives the server response.
-      const newTask = await transport.assign<TArgs, TReturn>(
+      const newTask = await action.assign<TArgs, TReturn>(
         definition.name,
         parsed.data,
         { ...opts, reference },
@@ -194,7 +188,7 @@ export const useTransportAction = <TArgs, TReturn>(
 
       return newTask;
     },
-    [definition, transport, globalStateStoreApi],
+    [action, definition, lockStoreApi],
   );
 
   // --- Public Methods ---
@@ -207,61 +201,34 @@ export const useTransportAction = <TArgs, TReturn>(
 
   const call = useCallback(
     async (args: TArgs, opts?: AssignOptions): Promise<TReturn> => {
-      const reference =
-        opts?.reference ||
-        `local-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      const reference = opts?.reference || action.createReference();
 
-      return new Promise<TReturn>((resolve, reject) => {
-        // 1. Subscribe using Zustand's native selector mechanism
-        const unsubscribe = transportStoreApi.subscribe(
-          selectTask<TArgs, TReturn>(reference),
-          (taskState) => {
-            if (!taskState) return;
+      await execute(args, { ...opts, reference });
 
-            if (taskState.status === "completed") {
-              unsubscribe();
-              const parsed = definition.returnSchema.safeParse(
-                taskState.result,
-              );
-              if (!parsed.success) {
-                reject(
-                  new Error(
-                    `Return value failed schema validation: ${parsed.error.message}`,
-                  ),
-                );
-                return;
-              }
-              resolve(parsed.data);
-            } else if (taskState.status === "failed") {
-              unsubscribe();
-              reject(new Error(taskState.error || "Task failed"));
-            } else if (taskState.status === "cancelled") {
-              unsubscribe();
-              reject(new Error("Task was cancelled"));
-            }
-          },
+      const taskState = await action.waitForTask<TArgs, TReturn>(reference);
+      const parsed = definition.returnSchema.safeParse(taskState.result);
+
+      if (!parsed.success) {
+        throw new Error(
+          `Return value failed schema validation: ${parsed.error.message}`,
         );
+      }
 
-        // 2. Trigger execution
-        execute(args, { ...opts, reference }).catch((err) => {
-          unsubscribe();
-          reject(err);
-        });
-      });
+      return parsed.data;
     },
-    [execute, definition.returnSchema, transportStoreApi],
+    [action, definition.returnSchema, execute],
   );
 
   const refresh = useCallback(async (): Promise<void> => {
     // We send the resolved currentTaskId to the server, as it needs its own assignation ID
     if (!currentTaskId) return;
-    await transport.getTask(currentTaskId);
-  }, [currentTaskId, transport]);
+    await action.getTask(currentTaskId);
+  }, [action, currentTaskId]);
 
   const cancel = useCallback(async (): Promise<void> => {
     if (!currentTaskId) return;
-    await transport.cancelTask(currentTaskId);
-  }, [currentTaskId, transport]);
+    await action.cancelTask(currentTaskId);
+  }, [action, currentTaskId]);
 
   const clear = useCallback((): void => {
     setCurrentReference(null);

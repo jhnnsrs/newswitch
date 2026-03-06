@@ -6,8 +6,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { useGlobalStateStore } from "@/store";
-import { useTransport } from "@/transport/transport-context";
+import { useBlockingLock } from "@/store";
+import { useAction } from "@/transport/action-context";
 import { type AssignOptions } from "@/transport/types";
 import { type ActionDefinition } from "@/transport/useTransportAction";
 import { type VariantProps } from "class-variance-authority";
@@ -43,15 +43,10 @@ export function ActionButton<TArgs, TReturn>({
   disabled,
   ...props
 }: ActionButtonProps<TArgs, TReturn>) {
-  // Check all lockKeys to see if any have an active task
-  const locks = useGlobalStateStore((state) => state.locks);
+  const { isLocked, lockKey: blockingLock, lockingTaskId: blockingTaskId } =
+    useBlockingLock(action.lockKeys);
 
-  // Find the first lockKey that has a task blocking it
-  const blockingLock = action.lockKeys?.find((key) => locks[key] !== undefined);
-  const blockingTaskId = blockingLock ? locks[blockingLock] : undefined;
-  const isLocked = !!blockingTaskId;
-
-  const transport = useTransport();
+  const actionApi = useAction();
 
   const handleClick = async (e: React.MouseEvent<HTMLButtonElement>) => {
     onClick?.(e);
@@ -77,7 +72,7 @@ export function ActionButton<TArgs, TReturn>({
         "reference:",
         reference,
       );
-      const task = await transport.assign(action.name, args, {
+      const task = await actionApi.assign(action.name, args, {
         ...assignOptions,
         reference,
         step,

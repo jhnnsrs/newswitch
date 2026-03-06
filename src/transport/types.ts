@@ -443,9 +443,41 @@ export interface TransportConfig {
 }
 
 export interface TransportContextValue {
+  /** The API endpoint URL */
+  apiEndpoint: string;
+  /** The resolved WebSocket endpoint URL */
+  wsUrl: string;
+  /** Instance ID used for assignment requests */
+  instanceId: string;
+  /** Ping interval for the websocket manager */
+  pingInterval: number;
+  /** Reconnect settings for the websocket manager */
+  reconnect: Required<NonNullable<TransportConfig["reconnect"]>>;
+  /** Submit an action assign request */
+  assignAction: <TArgs>(
+    actionName: string,
+    args: TArgs,
+    options?: AssignOptions,
+  ) => Promise<AssignResponse>;
+  /** Get current state of a task by ID (fetches from server) */
+  fetchTask: <TArgs = unknown, TReturn = unknown>(
+    taskId: string,
+  ) => Promise<Task<TArgs, TReturn>>;
+  /** Cancel a task */
+  cancelTaskRequest: (taskId: string) => Promise<void>;
+  pauseTaskRequest: (taskId: string) => Promise<void>;
+  unpauseTaskRequest: (taskId: string) => Promise<void>;
+  stepTaskRequest: (taskId: string) => Promise<void>;
+  /** Fetch a state from the server */
+  fetchState: <T = unknown>(stateName: string) => Promise<T>;
+  /** Fetch all active locks from the server */
+  fetchLocks: () => Promise<Record<string, { task_id: string }>>;
+}
+
+export interface ActionContextValue {
   /** Whether the WebSocket is connected */
   isConnected: boolean;
-  /** Whether the transport is attempting to reconnect */
+  /** Whether the action layer is attempting to reconnect */
   isReconnecting: boolean;
   /** Current reconnect attempt number */
   reconnectAttempt: number;
@@ -453,7 +485,9 @@ export interface TransportContextValue {
   apiEndpoint: string;
   /** All tracked tasks */
   tasks: Map<string, Task>;
-  /** Assign an action with args, returns task_id */
+  /** Create a stable local reference for a new task lifecycle */
+  createReference: () => string;
+  /** Assign an action with args, returns the contextual task */
   assign: <TArgs, TReturn>(
     actionName: string,
     args: TArgs,
@@ -475,10 +509,10 @@ export interface TransportContextValue {
     taskId: string,
     callback: (task: Task) => void,
   ) => () => void;
-  /** Fetch a state from the server */
-  fetchState: <T = unknown>(stateName: string) => Promise<T>;
-  /** Get a state from Zustand store cache */
-  getCachedState: <T = unknown>(stateName: string) => T | undefined;
+  /** Wait until a tracked task reaches a terminal state */
+  waitForTask: <TArgs = unknown, TReturn = unknown>(
+    taskId: string,
+  ) => Promise<Task<TArgs, TReturn>>;
   /** Manually reconnect the WebSocket */
   reconnect: () => void;
   /** Disconnect the WebSocket */

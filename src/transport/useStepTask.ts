@@ -1,7 +1,7 @@
 // src/transport/useTask.ts
 
 import { useCallback } from "react";
-import { useTransport } from "./transport-context";
+import { useAction } from "./action-context";
 
 export interface UseCancelTaskOptions {
   /** Whether to fetch from server on mount */
@@ -13,18 +13,16 @@ export type UseCancelTaskResults = (taskId: string) => Promise<void>;
 /**
  * Hook to subscribe to a specific task by ID
  */
-export const useStepTask = (
-  options: UseCancelTaskOptions = {},
-): UseCancelTaskResults => {
-  const transport = useTransport();
+export const useStepTask = (): UseCancelTaskResults => {
+  const action = useAction();
 
   // Step task
   const step = useCallback(
     async (taskId: string): Promise<void> => {
       if (!taskId) return;
-      await transport.stepTask(taskId);
+      await action.stepTask(taskId);
     },
-    [transport],
+    [action],
   );
 
   return step;

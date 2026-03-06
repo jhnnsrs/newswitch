@@ -1,6 +1,5 @@
-// src/hooks/useStateSync.ts
-import { selectLock } from "@/store/stateStore";
-import { useGlobalStateStore } from "../store";
+// src/hooks/useLockSync.ts
+import { useBlockingLock } from "../store";
 
 // --- The Definition Interface ---
 export interface LockDefinition<T extends string> {
@@ -15,18 +14,24 @@ export interface UseLockSyncOptions {
 }
 
 export interface UseLockSyncResult {
-  /** The current state data */
+  /** Whether the resource is currently locked */
+  isLocked: boolean;
+  /** The lock key currently blocking the resource */
+  lockKey: string | null;
+  /** The active task holding the lock */
   lockingTaskId: string | undefined;
 }
 
 export const useLockSync = <T extends string>(
   definition: LockDefinition<T>,
   options: UseLockSyncOptions = {},
-): string | undefined => {
-  // Use Zustand selectors for state subscription
-  // Direct selector without useShallow - Zustand will properly detect changes
-  const lockingTaskId =
-    useGlobalStateStore(selectLock<T>(definition.key)) ?? undefined;
+): UseLockSyncResult => {
+  void options;
+  const blockingLock = useBlockingLock([definition.key]);
 
-  return lockingTaskId;
+  return {
+    isLocked: blockingLock.isLocked,
+    lockKey: blockingLock.lockKey,
+    lockingTaskId: blockingLock.lockingTaskId,
+  };
 };

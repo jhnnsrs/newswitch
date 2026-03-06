@@ -6,7 +6,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { useGlobalStateStore } from "@/store";
+import { useBlockingLock } from "@/store";
 import { Lock } from "lucide-react";
 import * as React from "react";
 
@@ -20,13 +20,8 @@ export function LockedSlider({
   disabled,
   ...props
 }: LockedSliderProps) {
-  // Check all lockKeys sto see if any have an active task
-  const locks = useGlobalStateStore((state) => state.locks);
-
-  // Find the first lockKey that has a task blocking it
-  const blockingLock = lockKeys.find((key) => locks[key] !== undefined);
-  const blockingTaskId = blockingLock ? locks[blockingLock] : undefined;
-  const isLocked = !!blockingTaskId;
+  const { isLocked, lockKey: blockingLock, lockingTaskId: blockingTaskId } =
+    useBlockingLock(lockKeys);
 
   const slider = (
     <div className={cn("relative", isLocked && "opacity-60")}>

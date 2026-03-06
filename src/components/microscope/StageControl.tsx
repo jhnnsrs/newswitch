@@ -29,7 +29,7 @@ export function StageControl() {
     subscribe: true,
   });
 
-  const activeTaskId = useStagePositionLock();
+  const activeTaskId = useStagePositionLock().lockingTaskId;
 
   // Use registered step sizes from state, or fallback
   const stepSizes = stageState?.registered_step_sizes?.length

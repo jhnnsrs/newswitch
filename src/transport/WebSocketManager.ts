@@ -1,6 +1,7 @@
 // src/transport/WebSocketManager.ts
 import { toast } from "sonner";
 import type { StoreApi } from "zustand/vanilla";
+import type { LockStore } from "../store/lockStore";
 import type { GlobalStateStore } from "../store/stateStore";
 import type { TransportStore } from "../store/transportStore";
 import { FromAgentMessageType, type FromAgentMessage } from "./types";
@@ -9,6 +10,7 @@ export interface WebSocketConfig {
   wsUrl: string;
   pingInterval: number;
   globalStateStore: StoreApi<GlobalStateStore>;
+  lockStore: StoreApi<LockStore>;
   reconnect: {
     maxAttempts: number;
     initialDelay: number;
@@ -202,6 +204,7 @@ export class WebSocketManager {
       const message: FromAgentMessage = JSON.parse(event.data);
       const transportStore = this.config.transportStore.getState();
       const globalStateStore = this.config.globalStateStore.getState();
+      const lockStore = this.config.lockStore.getState();
 
       switch (message.type) {
         case FromAgentMessageType.PROGRESS: {
@@ -222,7 +225,7 @@ export class WebSocketManager {
         }
 
         case FromAgentMessageType.LOCK: {
-          globalStateStore.setLock(message.key, message.assignation);
+          lockStore.setLock(message.key, message.assignation);
           console.log(
             `[WebSocketManager] Locked state "${message.key}" with assigniation ID "${message.assignation}"`,
           );
@@ -230,7 +233,7 @@ export class WebSocketManager {
         }
 
         case FromAgentMessageType.UNLOCK: {
-          globalStateStore.setLock(message.key, undefined);
+          lockStore.setLock(message.key, undefined);
           console.log(`[WebSocketManager] Unlocked state "${message.key}"`);
           break;
         }

@@ -67,12 +67,10 @@ export const useStateSync = <T extends Record<string, unknown>, U = T>(
 
   const loading = useGlobalStateStore(selectLoading(definition.key));
   const error = useGlobalStateStore(selectError(definition.key));
-
   const { setState, setLoading, setError } = useGlobalStateStore();
   const { fetchState } = useTransport();
 
   const hasFetchedRef = useRef(false);
-  // Keep schema ref stable
   const schemaRef = useRef(definition.schema);
 
   const fetchData = useCallback(async () => {
@@ -80,7 +78,6 @@ export const useStateSync = <T extends Record<string, unknown>, U = T>(
       setLoading(definition.key, true);
       setError(definition.key, null);
 
-      // Just fetch; the store update happens via setState
       const response = await fetchState<{ state: T; revision: number }>(
         definition.key,
       );
@@ -104,7 +101,7 @@ export const useStateSync = <T extends Record<string, unknown>, U = T>(
     } finally {
       setLoading(definition.key, false);
     }
-  }, [fetchState, definition.key, setState, setLoading, setError]);
+  }, [fetchState, definition.key, setError, setLoading, setState]);
 
   const refetch = useCallback(async () => {
     await fetchData();

@@ -27,8 +27,6 @@ export interface GlobalStateStore {
   /** Loading states for each key */
   loading: StateMetaRecord<boolean>;
 
-  locks: Record<string, string | undefined>;
-
   /** Error states for each key */
   errors: StateMetaRecord<Error | null>;
 
@@ -40,8 +38,6 @@ export interface GlobalStateStore {
     ): void;
     (key: string, value: unknown): void;
   };
-
-  setLock: (key: string, value: string | undefined) => void;
 
   /** Apply a JSON patch to a state (RFC 6902 format) */
   applyEnvelope: (envelope: Envelope) => void;
@@ -73,19 +69,12 @@ export const createGlobalStateStore = () =>
       stateRevisions: {},
       loading: {},
       errors: {},
-      locks: {},
 
       setState: (key: string, value: unknown) => {
         set((state) => {
           state.states[key] = value;
           state.errors[key] = null;
           state.stateRevisions[key] = 0;
-        });
-      },
-
-      setLock: (key, value) => {
-        set((state) => {
-          state.locks[key] = value;
         });
       },
 
@@ -178,11 +167,6 @@ export function selectState<T = unknown>(
 export function selectState(key: string) {
   return (store: GlobalStateStore) => store.states[key];
 }
-
-export const selectLock =
-  <T = unknown>(key: string) =>
-  (store: GlobalStateStore) =>
-    store.locks[key] as T | undefined;
 
 export const selectLoading = (key: string) => (store: GlobalStateStore) =>
   store.loading[key] ?? false;

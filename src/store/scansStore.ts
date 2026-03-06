@@ -3,7 +3,6 @@ import { immer } from "zustand/middleware/immer";
 import * as THREE from "three";
 import { z } from "zod";
 import { ScanRegionArgsSchema } from "@/hooks/generated";
-import { getOptionsFromZod } from "@/hooks/zodToChoices";
 import { createScopedStoreHooks } from "./createScopedStore";
 
 export type ScanPattern = z.infer<typeof ScanRegionArgsSchema>["scan_order"];

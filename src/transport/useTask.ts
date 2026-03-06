@@ -1,7 +1,8 @@
 // src/transport/useTask.ts
 
-import { useCallback, useEffect, useState } from "react";
-import { useTransport } from "./transport-context";
+import { useCallback, useEffect, useMemo } from "react";
+import { selectTask, useTransportStore } from "../store";
+import { useAction } from "./action-context";
 import type { Task, TaskStatus } from "./types";
 
 export interface UseTaskOptions {
@@ -34,19 +35,17 @@ export const useTask = <TArgs = unknown, TReturn = unknown>(
 ): UseTaskResult<TArgs, TReturn> => {
   const {
     fetchOnMount = true,
-    autoSubscribe = true,
     pollingInterval,
   } = options;
 
-  const transport = useTransport();
-  const [localTask, setLocalTask] = useState<Task<TArgs, TReturn> | null>(null);
+  void options.autoSubscribe;
 
-  // Get from cache first
-  const cachedTask = taskId
-    ? transport.getCachedTask(taskId) as Task<TArgs, TReturn> | null
-    : undefined;
-
-  const task = localTask ?? cachedTask ?? null;
+  const action = useAction();
+  const taskSelector = useMemo(
+    () => (taskId ? selectTask<TArgs, TReturn>(taskId) : () => undefined),
+    [taskId],
+  );
+  const task = useTransportStore(taskSelector) ?? null;
 
   // Derived state
   const status = task?.status ?? null;
@@ -58,52 +57,42 @@ export const useTask = <TArgs = unknown, TReturn = unknown>(
   // Fetch task from server
   const refresh = useCallback(async (): Promise<void> => {
     if (!taskId) return;
-    const fetched = await transport.getTask<TArgs, TReturn>(taskId);
-    setLocalTask(fetched);
-  }, [taskId, transport]);
+    await action.getTask<TArgs, TReturn>(taskId);
+  }, [action, taskId]);
 
   // Cancel task
   const cancel = useCallback(async (): Promise<void> => {
     if (!taskId) return;
-    await transport.cancelTask(taskId);
-  }, [taskId, transport]);
+    await action.cancelTask(taskId);
+  }, [action, taskId]);
 
   // Fetch on mount
   useEffect(() => {
-    if (fetchOnMount && taskId && !cachedTask) {
-      refresh();
+    if (fetchOnMount && taskId && !task) {
+      queueMicrotask(() => {
+        void refresh();
+      });
     }
-  }, [fetchOnMount, taskId, cachedTask, refresh]);
-
-  // Subscribe to updates
-  useEffect(() => {
-    if (!autoSubscribe || !taskId) return;
-
-    const unsubscribe = transport.subscribeToTask(taskId, (updated) => {
-      setLocalTask(updated as Task<TArgs, TReturn>);
-    });
-
-    return unsubscribe;
-  }, [autoSubscribe, taskId, transport]);
+  }, [fetchOnMount, refresh, task, taskId]);
 
   // Polling fallback when disconnected
   useEffect(() => {
-    if (!pollingInterval || !taskId || transport.isConnected) return;
+    if (!pollingInterval || !taskId || action.isConnected) return;
     if (status === "completed" || status === "failed" || status === "cancelled")
       return;
 
     const interval = setInterval(refresh, pollingInterval);
     return () => clearInterval(interval);
-  }, [pollingInterval, taskId, transport.isConnected, status, refresh]);
+  }, [action.isConnected, pollingInterval, refresh, status, taskId]);
 
   return {
-    task ,
+    task,
     status,
     result,
     error,
     progress,
     isLoading,
-    isConnected: transport.isConnected,
+    isConnected: action.isConnected,
     refresh,
     cancel,
   };
