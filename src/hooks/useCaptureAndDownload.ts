@@ -1,4 +1,4 @@
-import { useTransport } from "@/transport/TransportProvider";
+import { useTransport } from "@/transport/transport-context";
 import { useCallback, useState } from "react";
 import { useCaptureImage } from "./generated";
 

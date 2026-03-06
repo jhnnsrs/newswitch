@@ -1,7 +1,8 @@
 import type { KubeUnionSchema } from "@/hooks/states/ExpanseState";
-import { create } from "zustand";
+import { createStore } from "zustand/vanilla";
 import { immer } from "zustand/middleware/immer";
 import { z } from "zod";
+import { createScopedStoreHooks } from "./createScopedStore";
 
 export type KubeState = z.infer<typeof KubeUnionSchema>;
 
@@ -10,7 +11,8 @@ interface KubeStateStore {
   setSelectedKubeState: (id: KubeState | null) => void;
 }
 
-export const useKubeStateStore = create<KubeStateStore>()(
+export const createKubeStateStore = () =>
+  createStore<KubeStateStore>()(
   immer((set) => ({
     selectedKubeState: null,
     setSelectedKubeState: (id) =>
@@ -19,3 +21,11 @@ export const useKubeStateStore = create<KubeStateStore>()(
       }),
   })),
 );
+
+const {
+  StoreContext: KubeStateStoreContext,
+  useScopedStore: useKubeStateStore,
+  useStoreApi: useKubeStateStoreApi,
+} = createScopedStoreHooks<KubeStateStore>("KubeStateStore");
+
+export { KubeStateStoreContext, useKubeStateStore, useKubeStateStoreApi };

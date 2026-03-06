@@ -1,7 +1,7 @@
 // src/transport/useTask.ts
 
 import { useCallback } from "react";
-import { useTransport } from "./TransportProvider";
+import { useTransport } from "./transport-context";
 
 export interface UseCancelTaskOptions {
   /** Whether to fetch from server on mount */

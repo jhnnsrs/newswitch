@@ -1,15 +1,14 @@
-import { create } from "zustand";
+import { createStore } from "zustand/vanilla";
 import { immer } from "zustand/middleware/immer";
 import * as THREE from "three";
 import { z } from "zod";
 import { ScanRegionArgsSchema } from "@/hooks/generated";
 import { getOptionsFromZod } from "@/hooks/zodToChoices";
+import { createScopedStoreHooks } from "./createScopedStore";
 
 export type ScanPattern = z.infer<typeof ScanRegionArgsSchema>["scan_order"];
 
-export const scanPatternOptions = getOptionsFromZod(
-  ScanRegionArgsSchema.shape.scan_order,
-);
+
 
 export interface ScanRegion {
   id: string;
@@ -28,7 +27,8 @@ interface ScansState {
   setSelectedRegionId: (id: string | null) => void;
 }
 
-export const useScansStore = create<ScansState>()(
+export const createScansStore = () =>
+  createStore<ScansState>()(
   immer((set) => ({
     regions: [],
     selectedRegionId: null,
@@ -58,3 +58,11 @@ export const useScansStore = create<ScansState>()(
       }),
   })),
 );
+
+const {
+  StoreContext: ScansStoreContext,
+  useScopedStore: useScansStore,
+  useStoreApi: useScansStoreApi,
+} = createScopedStoreHooks<ScansState>("ScansStore");
+
+export { ScansStoreContext, useScansStore, useScansStoreApi };

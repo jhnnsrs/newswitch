@@ -1,4 +1,5 @@
 import "./App.css";
+import type { ReactNode } from "react";
 import { Activity, PlaySquare } from "lucide-react";
 import { NavLink, Navigate, Route, Routes } from "react-router-dom";
 import { buttonVariants } from "./components/ui/button";
@@ -10,6 +11,7 @@ import {
 } from "./components/ui/tooltip";
 import { cn } from "./lib/utils";
 import { IndexPage, ReplayPage } from "./pages";
+import { StoreProvider } from "./store";
 import { TransportProvider } from "./transport";
 
 // The backend API URL is either injected into the global scope by the
@@ -17,6 +19,28 @@ import { TransportProvider } from "./transport";
 const BACKEND_API = window.__agent_url__ || import.meta.env.VITE_BACKEND_URL;
 const BACKEND_WS =
   window.__agent_ws_url__ || import.meta.env.VITE_WEBSOCKET_URL;
+
+function ScopedRoute({
+  children,
+  scope,
+}: {
+  children: ReactNode;
+  scope: string;
+}) {
+  return (
+    <StoreProvider scope={scope}>
+      <TransportProvider
+        config={{
+          instanceId: `microscope-control-panel-${scope}`,
+          apiEndpoint: BACKEND_API,
+          wsEndpoint: BACKEND_WS,
+        }}
+      >
+        {children}
+      </TransportProvider>
+    </StoreProvider>
+  );
+}
 
 function AppNavigation() {
   const items = [
@@ -67,21 +91,29 @@ function AppNavigation() {
 
 function App() {
   return (
-    <TransportProvider
-      config={{
-        instanceId: "microscope-control-panel",
-        apiEndpoint: BACKEND_API,
-        wsEndpoint: BACKEND_WS,
-      }}
-    >
+    <>
       <AppNavigation />
       <Routes>
-        <Route path="/" element={<IndexPage />} />
-        <Route path="/replay" element={<ReplayPage />} />
+        <Route
+          path="/"
+          element={
+            <ScopedRoute scope="index">
+              <IndexPage />
+            </ScopedRoute>
+          }
+        />
+        <Route
+          path="/replay"
+          element={
+            <ScopedRoute scope="replay">
+              <ReplayPage />
+            </ScopedRoute>
+          }
+        />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       <Toaster position="bottom-right" richColors />
-    </TransportProvider>
+    </>
   );
 }
 

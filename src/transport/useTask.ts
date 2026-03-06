@@ -1,7 +1,7 @@
 // src/transport/useTask.ts
 
 import { useCallback, useEffect, useState } from "react";
-import { useTransport } from "./TransportProvider";
+import { useTransport } from "./transport-context";
 import type { Task, TaskStatus } from "./types";
 
 export interface UseTaskOptions {

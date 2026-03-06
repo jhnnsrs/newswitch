@@ -1,8 +1,9 @@
 // src/store/transportStore.ts
-import { create } from "zustand";
+import { createStore } from "zustand/vanilla";
 import { subscribeWithSelector } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
 import type { Task, TaskStatus } from "../transport/types";
+import { createScopedStoreHooks } from "./createScopedStore";
 
 export interface TransportStore {
   /** Connection state */
@@ -52,7 +53,8 @@ export interface TransportStore {
   clearTasks: () => void;
 }
 
-export const useTransportStore = create<TransportStore>()(
+export const createTransportStore = () =>
+  createStore<TransportStore>()(
   subscribeWithSelector(
     immer((set, get) => ({
       isConnected: false,
@@ -235,6 +237,17 @@ export const useTransportStore = create<TransportStore>()(
   ),
 );
 
+const {
+  StoreContext: TransportStoreContext,
+  useScopedStore: useTransportStore,
+  useStoreApi: useTransportStoreApi,
+} = createScopedStoreHooks<
+  TransportStore,
+  ReturnType<typeof createTransportStore>
+>("TransportStore");
+
+export { TransportStoreContext, useTransportStore, useTransportStoreApi };
+
 // Selectors
 export const selectTask =
   <TArgs = unknown, TReturn = unknown>(referenceOrId: string) =>
@@ -261,10 +274,14 @@ export const selectReconnectAttempt = (store: TransportStore) =>
 
 // Convenience hook for accessing the store outside of React
 export const transportStore = {
-  get getState() {
-    return useTransportStore.getState;
+  getState: () => {
+    throw new Error(
+      "transportStore.getState is no longer available outside StoreProvider context.",
+    );
   },
-  get subscribe() {
-    return useTransportStore.subscribe;
+  subscribe: () => {
+    throw new Error(
+      "transportStore.subscribe is no longer available outside StoreProvider context.",
+    );
   },
 };

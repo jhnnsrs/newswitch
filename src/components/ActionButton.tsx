@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { useGlobalStateStore } from "@/store";
-import { useTransport } from "@/transport/TransportProvider";
+import { useTransport } from "@/transport/transport-context";
 import { type AssignOptions } from "@/transport/types";
 import { type ActionDefinition } from "@/transport/useTransportAction";
 import { type VariantProps } from "class-variance-authority";

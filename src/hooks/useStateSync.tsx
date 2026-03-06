@@ -7,7 +7,7 @@ import {
   selectState,
   useGlobalStateStore,
 } from "../store";
-import { useTransport } from "../transport/TransportProvider";
+import { useTransport } from "../transport/transport-context";
 
 // --- Interfaces ---
 

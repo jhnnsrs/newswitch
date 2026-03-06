@@ -2,8 +2,9 @@ import type { Frame } from "@/components/stage/hooks/zarr/types";
 import { CachedFetchStore } from "@/components/stage/hooks/zarr/zarr_stores/fetchStore";
 import { TestNoiseZarrStore } from "@/components/stage/hooks/zarr/zarr_stores/noiseStore";
 import type { ZarrStore } from "@/components/stage/hooks/zarr/zarr_stores/type";
-import { create } from "zustand";
+import { createStore } from "zustand/vanilla";
 import { BACKEND_API } from "@/constants";
+import { createScopedStoreHooks } from "./createScopedStore";
 
 export type StoreBuilder = (frame: Frame) => ZarrStore;
 
@@ -32,14 +33,23 @@ export const fetchBuilder = (frame: Frame) => {
   return new CachedFetchStore(url);
 }
 
-export const useViewerStore = create<ViewerState>((set) => ({
-  zStart: 0,
-  zEnd: 100,
-  tStart: null,
-  tEnd: null,
-  debug: false,
-  storeBuilder: fetchBuilder, // Default to fetchBuilder, can be switched to localBuilder for testing
-  setZRange: (start, end) => set({ zStart: start, zEnd: end }),
-  setTRange: (start, end) => set({ tStart: start, tEnd: end }),
-  setDebug: (debug) => set({ debug }),
-}));
+export const createViewerStore = () =>
+  createStore<ViewerState>((set) => ({
+    zStart: 0,
+    zEnd: 100,
+    tStart: null,
+    tEnd: null,
+    debug: false,
+    storeBuilder: fetchBuilder, // Default to fetchBuilder, can be switched to localBuilder for testing
+    setZRange: (start, end) => set({ zStart: start, zEnd: end }),
+    setTRange: (start, end) => set({ tStart: start, tEnd: end }),
+    setDebug: (debug) => set({ debug }),
+  }));
+
+const {
+  StoreContext: ViewerStoreContext,
+  useScopedStore: useViewerStore,
+  useStoreApi: useViewerStoreApi,
+} = createScopedStoreHooks<ViewerState>("ViewerStore");
+
+export { ViewerStoreContext, useViewerStore, useViewerStoreApi };

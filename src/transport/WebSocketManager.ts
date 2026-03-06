@@ -1,18 +1,21 @@
 // src/transport/WebSocketManager.ts
 import { toast } from "sonner";
-import { useGlobalStateStore } from "../store/stateStore";
-import { useTransportStore } from "../store/transportStore";
+import type { StoreApi } from "zustand/vanilla";
+import type { GlobalStateStore } from "../store/stateStore";
+import type { TransportStore } from "../store/transportStore";
 import { FromAgentMessageType, type FromAgentMessage } from "./types";
 
 export interface WebSocketConfig {
   wsUrl: string;
   pingInterval: number;
+  globalStateStore: StoreApi<GlobalStateStore>;
   reconnect: {
     maxAttempts: number;
     initialDelay: number;
     maxDelay: number;
     backoffMultiplier: number;
   };
+  transportStore: StoreApi<TransportStore>;
 }
 
 /**
@@ -35,7 +38,7 @@ export class WebSocketManager {
   }
 
   connect() {
-    const transportStore = useTransportStore.getState();
+    const transportStore = this.config.transportStore.getState();
 
     // Don't connect if already unconnectable
     if (transportStore.isUnconnectable) {
@@ -61,7 +64,7 @@ export class WebSocketManager {
 
       this.ws.onopen = () => {
         console.log("[WebSocketManager] Connected");
-        const store = useTransportStore.getState();
+        const store = this.config.transportStore.getState();
         store.setConnected(true);
         store.resetReconnect();
 
@@ -73,7 +76,7 @@ export class WebSocketManager {
 
       this.ws.onclose = (event) => {
         console.log("[WebSocketManager] Closed:", event.code, event.reason);
-        const store = useTransportStore.getState();
+        const store = this.config.transportStore.getState();
         store.setConnected(false);
 
         this.stopPingInterval();
@@ -97,7 +100,7 @@ export class WebSocketManager {
     this.shouldReconnect = false;
     this.cleanup();
 
-    const store = useTransportStore.getState();
+    const store = this.config.transportStore.getState();
     store.setConnected(false);
     store.setReconnecting(false);
   }
@@ -110,7 +113,7 @@ export class WebSocketManager {
 
     // 2. Reset state
     this.shouldReconnect = true;
-    const store = useTransportStore.getState();
+    const store = this.config.transportStore.getState();
     store.setReconnectAttempt(0);
     store.setUnconnectable(false);
     store.setReconnecting(false);
@@ -163,7 +166,7 @@ export class WebSocketManager {
   }
 
   private scheduleReconnect() {
-    const store = useTransportStore.getState();
+    const store = this.config.transportStore.getState();
     const nextAttempt = store.incrementReconnectAttempt();
 
     if (nextAttempt <= this.config.reconnect.maxAttempts) {
@@ -174,7 +177,7 @@ export class WebSocketManager {
       );
 
       this.reconnectTimeoutId = setTimeout(() => {
-        const currentStore = useTransportStore.getState();
+        const currentStore = this.config.transportStore.getState();
         if (this.shouldReconnect && !currentStore.isUnconnectable) {
           this.connect();
         }
@@ -197,8 +200,8 @@ export class WebSocketManager {
     try {
       console.log("[WebSocketManager] Message:", event.data);
       const message: FromAgentMessage = JSON.parse(event.data);
-      const transportStore = useTransportStore.getState();
-      const globalStateStore = useGlobalStateStore.getState();
+      const transportStore = this.config.transportStore.getState();
+      const globalStateStore = this.config.globalStateStore.getState();
 
       switch (message.type) {
         case FromAgentMessageType.PROGRESS: {

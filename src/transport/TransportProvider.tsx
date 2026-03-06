@@ -1,27 +1,28 @@
 // src/transport/TransportProvider.tsx
 
 import React, {
-  createContext,
   useCallback,
-  useContext,
   useEffect,
   useMemo,
   useRef,
 } from "react";
-import { selectTask, useGlobalStateStore, useTransportStore } from "../store";
+import {
+  selectTask,
+  useGlobalStateStore,
+  useGlobalStateStoreApi,
+  useTransportStore,
+  useTransportStoreApi,
+} from "../store";
 import {
   type AssignInput,
   type AssignOptions,
   type AssignResponse,
   type Task,
   type TransportConfig,
-  type TransportContextValue,
 } from "./types";
+import type { TransportContextValue } from "./types";
 import { WebSocketManager } from "./WebSocketManager";
-
-export const TransportContext = createContext<TransportContextValue | null>(
-  null,
-);
+import { TransportContext } from "./transport-context";
 
 const DEFAULT_RECONNECT_CONFIG = {
   maxAttempts: 5,
@@ -41,7 +42,9 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
   children,
   config,
 }) => {
-  const globalStateStore = useGlobalStateStore();
+  const globalStateStoreApi = useGlobalStateStoreApi();
+  const transportStoreApi = useTransportStoreApi();
+  const setGlobalState = useGlobalStateStore((s) => s.setState);
 
   // Subscribe only to primitives/maps needed for rendering to prevent re-rendering on every task update
   const isConnected = useTransportStore((s) => s.isConnected);
@@ -82,6 +85,8 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
       wsUrl,
       pingInterval,
       reconnect: reconnectConfig,
+      globalStateStore: globalStateStoreApi,
+      transportStore: transportStoreApi,
     });
 
     managerRef.current = manager;
@@ -91,7 +96,13 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
       manager.disconnect();
       managerRef.current = null;
     };
-  }, [wsUrl, pingInterval, reconnectConfig]);
+  }, [
+    wsUrl,
+    pingInterval,
+    reconnectConfig,
+    globalStateStoreApi,
+    transportStoreApi,
+  ]);
 
   // Fetch locks when connected
   useEffect(() => {
@@ -114,7 +125,7 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
           await response.json();
 
         // Update global state store with all locks
-        const globalState = useGlobalStateStore.getState();
+        const globalState = globalStateStoreApi.getState();
         Object.entries(locks.locks).forEach(([key, lock]) => {
           console.log(
             `[TransportProvider] Setting lock ${key} to task ${lock.task_id}`,
@@ -129,7 +140,7 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
     };
 
     fetchLocks();
-  }, [isConnected, config.apiEndpoint]);
+  }, [isConnected, config.apiEndpoint, globalStateStoreApi]);
 
   // Reconnect function
   const reconnect = useCallback(() => {
@@ -198,9 +209,11 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
         updateTask(reference, { status: data.status });
 
         return getTaskFromStore<TArgs, TReturn>(reference)!;
-      } catch (error: any) {
+      } catch (error: unknown) {
         // Clean up and mark as failed if the network request bombs out
-        updateTask(reference, { status: "failed", error: error.message });
+        const message =
+          error instanceof Error ? error.message : "Unknown transport error";
+        updateTask(reference, { status: "failed", error: message });
         throw error;
       }
     },
@@ -342,16 +355,16 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
   // Subscribe to task updates using Zustand's native subscribe
   const subscribeToTask = useCallback(
     (taskId: string, callback: (task: Task) => void): (() => void) => {
-      return useTransportStore.subscribe(selectTask(taskId), (task) => {
+      return transportStoreApi.subscribe(selectTask(taskId), (task) => {
         if (task) callback(task as Task);
       });
     },
-    [],
+    [transportStoreApi],
   );
 
   // Fetch state from server
   const fetchState = useCallback(
-    async (stateName: string): Promise<unknown> => {
+    async <T = unknown,>(stateName: string): Promise<T> => {
       const url = `${config.apiEndpoint.replace(/\/$/, "")}/states/${stateName}`;
 
       const response = await fetch(url);
@@ -363,20 +376,20 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
         );
       }
 
-      const data = await response.json();
-      globalStateStore.setState(stateName, data);
+      const data = (await response.json()) as T;
+      setGlobalState(stateName, data);
 
       return data;
     },
-    [config.apiEndpoint, globalStateStore],
+    [config.apiEndpoint, setGlobalState],
   );
 
   // Get cached state
   const getCachedState = useCallback(
     <T = unknown,>(stateName: string): T | undefined => {
-      return globalStateStore.getState<T>(stateName);
+      return globalStateStoreApi.getState().getState<T>(stateName);
     },
-    [globalStateStore],
+    [globalStateStoreApi],
   );
 
   // Convert tasks record to Map for backward compatibility
@@ -517,14 +530,6 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
       {children}
     </TransportContext.Provider>
   );
-};
-
-export const useTransport = (): TransportContextValue => {
-  const context = useContext(TransportContext);
-  if (!context) {
-    throw new Error("useTransport must be used within a TransportProvider");
-  }
-  return context;
 };
 
 export default TransportProvider;

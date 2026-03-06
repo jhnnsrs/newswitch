@@ -7,6 +7,7 @@ export {
   selectPath,
   selectState,
   useGlobalStateStore,
+  useGlobalStateStoreApi,
 } from "./stateStore";
 export type { GlobalStateStore } from "./stateStore";
 
@@ -20,5 +21,8 @@ export {
   selectTasksByAction,
   transportStore,
   useTransportStore,
+  useTransportStoreApi,
 } from "./transportStore";
 export type { TransportStore } from "./transportStore";
+
+export { StoreProvider } from "./provider";

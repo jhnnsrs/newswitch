@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useExpanseState } from "@/hooks/states";
 import { useSelectionStore } from "@/store/imageStore";
-import { useTimeStore } from "@/store/timeStore";
+import { useTimeStoreApi } from "@/store/timeStore";
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useMemo, useState } from "react";
 
@@ -37,6 +37,7 @@ export const TimeOverlay = () => {
   const [isHovered, setIsHovered] = useState(false);
 
   const setSelectedImageId = useSelectionStore((s) => s.setSelectedImageId);
+  const timeStoreApi = useTimeStoreApi();
 
   const imageTimesMs = useMemo(() => {
     return (currentImages ?? [])
@@ -110,8 +111,8 @@ export const TimeOverlay = () => {
 
   useEffect(() => {
     if (!timeBounds) return;
-    useTimeStore.getState().setRange(timeBounds.from, timeBounds.to);
-  }, [timeBounds]);
+    timeStoreApi.getState().setRange(timeBounds.from, timeBounds.to);
+  }, [timeBounds, timeStoreApi]);
 
   useEffect(() => {
     if (!timeBounds) return;
@@ -121,10 +122,10 @@ export const TimeOverlay = () => {
     const toTime =
       timeBounds.from.getTime() +
       (timeBounds.spanMs * debouncedSliderValue[1]) / 100;
-    useTimeStore
+    timeStoreApi
       .getState()
       .setInterval(new Date(fromTime), new Date(Math.max(fromTime, toTime)));
-  }, [debouncedSliderValue, timeBounds]);
+  }, [debouncedSliderValue, timeBounds, timeStoreApi]);
 
   if (!timeBounds) return null;
 

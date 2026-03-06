@@ -1,8 +1,9 @@
 // src/store/stateStore.ts
 import { applyPatch, type Operation } from "fast-json-patch";
-import { create } from "zustand";
+import { createStore } from "zustand/vanilla";
 import { subscribeWithSelector } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
+import { createScopedStoreHooks } from "./createScopedStore";
 
 export interface Envelope {
   state_name: string;
@@ -50,7 +51,8 @@ export interface GlobalStateStore {
   clearAll: () => void;
 }
 
-export const useGlobalStateStore = create<GlobalStateStore>()(
+export const createGlobalStateStore = () =>
+  createStore<GlobalStateStore>()(
   subscribeWithSelector(
     immer((set, get) => ({
       states: {},
@@ -140,6 +142,17 @@ export const useGlobalStateStore = create<GlobalStateStore>()(
     })),
   ),
 );
+
+const {
+  StoreContext: GlobalStateStoreContext,
+  useScopedStore: useGlobalStateStore,
+  useStoreApi: useGlobalStateStoreApi,
+} = createScopedStoreHooks<
+  GlobalStateStore,
+  ReturnType<typeof createGlobalStateStore>
+>("GlobalStateStore");
+
+export { GlobalStateStoreContext, useGlobalStateStore, useGlobalStateStoreApi };
 
 // Selector helpers for subscribing to specific state paths
 export const selectState =

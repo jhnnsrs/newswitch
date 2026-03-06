@@ -1,14 +1,16 @@
-import { create } from "zustand";
+import { createStore } from "zustand/vanilla";
 import { immer } from "zustand/middleware/immer";
+import { createScopedStoreHooks } from "./createScopedStore";
 
-interface SelectionState {
+export interface SelectionState {
   selectedImageId: string | null;
   setSelectedImageId: (id: string | null) => void;
   selectedFrameId: string | null;
   setSelectedFrameId: (id: string | null) => void;
 }
 
-export const useSelectionStore = create<SelectionState>()(
+export const createSelectionStore = () =>
+  createStore<SelectionState>()(
   immer((set) => ({
     selectedImageId: null,
     setSelectedImageId: (id) =>
@@ -22,3 +24,11 @@ export const useSelectionStore = create<SelectionState>()(
       }),
   })),
 );
+
+const {
+  StoreContext: SelectionStoreContext,
+  useScopedStore: useSelectionStore,
+  useStoreApi: useSelectionStoreApi,
+} = createScopedStoreHooks<SelectionState>("SelectionStore");
+
+export { SelectionStoreContext, useSelectionStore, useSelectionStoreApi };

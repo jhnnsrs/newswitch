@@ -1,5 +1,4 @@
 import {
-  scanPatternOptions,
   useScansStore,
   type ScanPattern,
 } from "@/store/scansStore";
@@ -23,6 +22,12 @@ import {
   useScanRegion,
 } from "@/hooks/generated";
 import { ActionButton } from "@/components/ActionButton";
+import { getOptionsFromZod } from "@/hooks/zodToChoices";
+
+ const scanPatternOptions = getOptionsFromZod(
+  ScanRegionArgsSchema.shape.scan_order,
+);
+
 
 export const ScanRegionPanel = () => {
   // 1. Get Domain Data

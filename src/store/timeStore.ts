@@ -1,7 +1,8 @@
-import { create } from "zustand";
+import { createStore } from "zustand/vanilla";
 import { immer } from "zustand/middleware/immer";
+import { createScopedStoreHooks } from "./createScopedStore";
 
-interface TimeState {
+export interface TimeState {
   from: Date | null;
   to: Date | null;
   rangeFrom: Date | null;
@@ -12,7 +13,8 @@ interface TimeState {
   resetInterval: () => void;
 }
 
-export const useTimeStore = create<TimeState>()(
+export const createTimeStore = () =>
+  createStore<TimeState>()(
   immer((set) => ({
     from: null,
     to: null,
@@ -40,3 +42,11 @@ export const useTimeStore = create<TimeState>()(
       }),
   })),
 );
+
+const {
+  StoreContext: TimeStoreContext,
+  useScopedStore: useTimeStore,
+  useStoreApi: useTimeStoreApi,
+} = createScopedStoreHooks<TimeState>("TimeStore");
+
+export { TimeStoreContext, useTimeStore, useTimeStoreApi };

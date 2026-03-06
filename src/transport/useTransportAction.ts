@@ -2,8 +2,14 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { z, ZodType } from "zod";
-import { selectTask, useGlobalStateStore, useTransportStore } from "../store";
-import { useTransport } from "./TransportProvider";
+import {
+  selectTask,
+  useGlobalStateStore,
+  useGlobalStateStoreApi,
+  useTransportStore,
+  useTransportStoreApi,
+} from "../store";
+import { useTransport } from "./transport-context";
 import type { AssignOptions, Task, TaskStatus } from "./types";
 
 export interface ActionDefinition<TArgs, TReturn> {
@@ -74,6 +80,8 @@ export const useTransportAction = <TArgs, TReturn>(
   } = options;
 
   const transport = useTransport();
+  const transportStoreApi = useTransportStoreApi();
+  const globalStateStoreApi = useGlobalStateStoreApi();
 
   // Track strictly by reference
   const [currentReference, setCurrentReference] = useState<string | null>(null);
@@ -137,7 +145,7 @@ export const useTransportAction = <TArgs, TReturn>(
     if (!autoSubscribe || !currentReference) return;
 
     // Use Zustand's native subscribe capability directly
-    const unsubscribe = useTransportStore.subscribe(
+    const unsubscribe = transportStoreApi.subscribe(
       selectTask(currentReference),
       (updatedTask) => {
         if (updatedTask) handleTaskUpdate(updatedTask as Task);
@@ -145,7 +153,7 @@ export const useTransportAction = <TArgs, TReturn>(
     );
 
     return () => unsubscribe();
-  }, [currentReference, autoSubscribe, handleTaskUpdate]);
+  }, [currentReference, autoSubscribe, handleTaskUpdate, transportStoreApi]);
 
   // --- Core Execution Logic ---
   const execute = useCallback(
@@ -155,7 +163,7 @@ export const useTransportAction = <TArgs, TReturn>(
     ): Promise<Task<TArgs, TReturn>> => {
       setValidationError(null);
 
-      const currentLocks = useGlobalStateStore.getState().locks;
+      const currentLocks = globalStateStoreApi.getState().locks;
       const blockingKey = definition.lockKeys?.find(
         (key) => currentLocks[key] != null,
       );
@@ -186,7 +194,7 @@ export const useTransportAction = <TArgs, TReturn>(
 
       return newTask;
     },
-    [definition, transport],
+    [definition, transport, globalStateStoreApi],
   );
 
   // --- Public Methods ---
@@ -205,7 +213,7 @@ export const useTransportAction = <TArgs, TReturn>(
 
       return new Promise<TReturn>((resolve, reject) => {
         // 1. Subscribe using Zustand's native selector mechanism
-        const unsubscribe = useTransportStore.subscribe(
+        const unsubscribe = transportStoreApi.subscribe(
           selectTask<TArgs, TReturn>(reference),
           (taskState) => {
             if (!taskState) return;
@@ -241,7 +249,7 @@ export const useTransportAction = <TArgs, TReturn>(
         });
       });
     },
-    [execute, definition.returnSchema],
+    [execute, definition.returnSchema, transportStoreApi],
   );
 
   const refresh = useCallback(async (): Promise<void> => {

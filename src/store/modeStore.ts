@@ -1,5 +1,6 @@
-import { create } from "zustand";
+import { createStore } from "zustand/vanilla";
 import { immer } from "zustand/middleware/immer";
+import { createScopedStoreHooks } from "./createScopedStore";
 
 export type InteractionMode = "PAN" | "EDIT" | "SCAN" | "MOVE" | "META";
 export type DisplayMode = "2D" | "3D";
@@ -58,8 +59,9 @@ export interface ModeState {
   setDisplayMode: (mode: DisplayMode) => void;
 }
 
-export const useModeStore = create<ModeState>()(
-  immer((set) => ({
+export const createModeStore = () =>
+  createStore<ModeState>()(
+    immer((set) => ({
     interactionMode: "PAN", // Default starting mode
     displayMode: "2D", // Active when holding a modifier key
     interactionModeOptions,
@@ -72,5 +74,13 @@ export const useModeStore = create<ModeState>()(
       set((state) => {
         state.displayMode = mode;
       }),
-  })),
-);
+    })),
+  );
+
+const {
+  StoreContext: ModeStoreContext,
+  useScopedStore: useModeStore,
+  useStoreApi: useModeStoreApi,
+} = createScopedStoreHooks<ModeState>("ModeStore");
+
+export { ModeStoreContext, useModeStore, useModeStoreApi };

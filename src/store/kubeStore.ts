@@ -1,8 +1,8 @@
 import type { KubeUnionSchema } from "@/hooks/states/LightPathState";
-import { create } from "zustand";
+import { createStore } from "zustand/vanilla";
 import { immer } from "zustand/middleware/immer";
 import { z } from "zod";
-import type { KubeState } from "./kubeStateStore";
+import { createScopedStoreHooks } from "./createScopedStore";
 
 export type Kube = z.infer<typeof KubeUnionSchema>;
 
@@ -11,7 +11,8 @@ interface KubeStore {
   setSelectedKube: (id: Kube | null) => void;
 }
 
-export const useKubeStore = create<KubeStore>()(
+export const createKubeStore = () =>
+  createStore<KubeStore>()(
   immer((set) => ({
     selectedKube: null,
     setSelectedKube: (id) =>
@@ -20,3 +21,11 @@ export const useKubeStore = create<KubeStore>()(
       }),
   })),
 );
+
+const {
+  StoreContext: KubeStoreContext,
+  useScopedStore: useKubeStore,
+  useStoreApi: useKubeStoreApi,
+} = createScopedStoreHooks<KubeStore>("KubeStore");
+
+export { KubeStoreContext, useKubeStore, useKubeStoreApi };
