@@ -1,4 +1,4 @@
-import type { KubeUnionSchema } from "@/hooks/states/ExpanseState";
+import type { KubeUnionSchema } from "@/apps/default/hooks/states/ExpanseState";
 import { createStore } from "zustand/vanilla";
 import { immer } from "zustand/middleware/immer";
 import { z } from "zod";

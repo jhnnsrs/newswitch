@@ -1,8 +1,8 @@
 import { ActionButton } from "@/components/ActionButton";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
-import { ClearExpanseDefinition } from "@/hooks/generated/clearExpanse";
-import { useExpanseState } from "@/hooks/states/ExpanseState";
+import { ClearExpanseDefinition } from "@/apps/default/hooks/actions/clearExpanse";
+import { useExpanseState } from "@/apps/default/hooks/states/ExpanseState";
 import { useModeStore } from "@/store/modeStore";
 import { RefreshCwIcon } from "lucide-react";
 

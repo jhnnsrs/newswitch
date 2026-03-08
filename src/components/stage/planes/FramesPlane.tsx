@@ -1,4 +1,4 @@
-import { useExpanseState } from "@/hooks/states/ExpanseState";
+import { useExpanseState } from "@/apps/default/hooks/states/ExpanseState";
 import { FrameVolume } from "./FrameVolume";
 import { useMemo } from "react";
 

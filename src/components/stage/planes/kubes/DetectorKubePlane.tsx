@@ -1,4 +1,4 @@
-import type { DetectorKubeStateSchema } from "@/hooks/states/ExpanseState";
+import type { DetectorKubeStateSchema } from "@/apps/default/hooks/states/ExpanseState";
 import { type z } from "zod";
 import { useThreeAffine } from "./useThreeAffine";
 import { useCameraState } from "@/apps/default/hooks/states";

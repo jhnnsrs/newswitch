@@ -11,7 +11,7 @@ import {
 import "@xyflow/react/dist/style.css";
 import { type z } from "zod";
 
-import type { LightPathStateSchema } from "@/hooks/states/ExpanseState";
+import type { LightPathStateSchema } from "@/apps/default/hooks/states/ExpanseState";
 import { getLayoutedElements } from "./layoutUtils";
 import { nodeTypes } from "./nodes";
 

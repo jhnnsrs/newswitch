@@ -1,4 +1,4 @@
-import type { FilterKubeStateSchema } from "@/hooks/states/ExpanseState";
+import type { FilterKubeStateSchema } from "@/apps/default/hooks/states/ExpanseState";
 import * as THREE from "three";
 import { type z } from "zod";
 import { useThreeAffine } from "./useThreeAffine";

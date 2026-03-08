@@ -1,7 +1,7 @@
 import React from "react";
 import { Handle, Position, type Node, type NodeProps } from "@xyflow/react";
 import { type z } from "zod";
-import type { DetectorKubeStateSchema } from "@/hooks/states/ExpanseState";
+import type { DetectorKubeStateSchema } from "@/apps/default/hooks/states/ExpanseState";
 import { NodeHeader, nodeStyle } from "./NodeHeader";
 
 type DetectorData = z.infer<typeof DetectorKubeStateSchema>;

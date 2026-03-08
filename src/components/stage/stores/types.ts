@@ -2,7 +2,7 @@
 
 import type { AbsolutePath } from "@zarrita/storage"
 import type { ZarrStore } from "../hooks/zarr/zarr_stores/type";
-import type { ArrayMetadataSchema, MetadataSchema} from "@/hooks/states/ExpanseState";
+import type { ArrayMetadataSchema, MetadataSchema} from "@/apps/default/hooks/states/ExpanseState";
 import * as THREE from "three";
 import { z } from "zod";
 
