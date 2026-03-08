@@ -7,6 +7,7 @@ import { PanelProvider } from "@/components/stage/PanelProvider";
 import { FramePanel } from "@/components/stage/panels/FramePanel";
 import { KubeStatePanel } from "@/components/stage/panels/KubeStatePanel";
 import { CurrentLightPathPlane } from "@/components/stage/planes/lightpath/LightPathPlane";
+import { useTransportStore } from "@/lib/rekuest/transport";
 
 import { useEffect, useState } from "react";
 
@@ -14,7 +15,7 @@ import { useEffect, useState } from "react";
 
 
 export const useActiveSessionBoundaries = () => {
-  const { fetchActiveSessionBoundaries } = useTransport();
+  const { fetchActiveSessionBoundaries } = useTransportStore();
 
   const [sessionBoundaries, setSessionBoundaries] = useState<{
     sessionStart: Date;

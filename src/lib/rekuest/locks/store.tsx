@@ -86,10 +86,10 @@ export interface LockStoreRegistry {
   getStoreEntries: () => Array<[string, StoreApi<LockStore>]>;
 }
 
-export const createLockStoreRegistry = (defaultAppKey: string): LockStoreRegistry => {
+export const createLockStoreRegistry = (): LockStoreRegistry => {
   const stores = new Map<string, StoreApi<LockStore>>();
 
-  const getStoreApi = (appKey = defaultAppKey) => {
+  const getStoreApi = (appKey: string) => {
     const existingStore = stores.get(appKey);
     if (existingStore) {
       return existingStore;
@@ -101,7 +101,6 @@ export const createLockStoreRegistry = (defaultAppKey: string): LockStoreRegistr
   };
 
   return {
-    defaultAppKey,
     getStoreApi,
     getStoreEntries: () => Array.from(stores.entries()),
   };

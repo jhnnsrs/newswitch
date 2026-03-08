@@ -123,12 +123,10 @@ export interface GlobalStateStoreRegistry {
   getStoreEntries: () => Array<[string, StoreApi<GlobalStateStore>]>;
 }
 
-export const createGlobalStateStoreRegistry = (
-  defaultAppKey: string,
-): GlobalStateStoreRegistry => {
+export const createGlobalStateStoreRegistry = (): GlobalStateStoreRegistry => {
   const stores = new Map<string, StoreApi<GlobalStateStore>>();
 
-  const getStoreApi = (appKey = defaultAppKey) => {
+  const getStoreApi = (appKey: string) => {
     const existingStore = stores.get(appKey);
     if (existingStore) {
       return existingStore;
@@ -140,7 +138,6 @@ export const createGlobalStateStoreRegistry = (
   };
 
   return {
-    defaultAppKey,
     getStoreApi,
     getStoreEntries: () => Array.from(stores.entries()),
   };

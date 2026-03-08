@@ -164,12 +164,11 @@ export type TransportStore = TaskStore & RuntimeTransportStore;
 export type TransportStoreRegistry = TaskStoreRegistry;
 
 export const createTaskStoreRegistry = (
-  defaultAppKey: string,
   transportStore: StoreApi<RuntimeTransportStore>,
 ): TaskStoreRegistry => {
   const stores = new Map<string, StoreApi<TaskStore>>();
 
-  const getStoreApi = (appKey = defaultAppKey) => {
+  const getStoreApi = (appKey: string) => {
     const existingStore = stores.get(appKey);
     if (existingStore) {
       return existingStore;
@@ -184,7 +183,6 @@ export const createTaskStoreRegistry = (
   };
 
   return {
-    defaultAppKey,
     getStoreApi,
     getStoreEntries: () => Array.from(stores.entries()),
   };
@@ -202,7 +200,7 @@ export const useTaskStoreRegistry = (): TaskStoreRegistry => {
   return registry;
 };
 
-export function useTaskStoreApi(appKey?: string) {
+export function useTaskStoreApi(appKey: string) {
   return useTaskStoreRegistry().getStoreApi(appKey);
 }
 

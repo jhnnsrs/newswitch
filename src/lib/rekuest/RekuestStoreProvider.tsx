@@ -16,7 +16,6 @@ import {
   createTransportStore,
   TransportStoreContext,
 } from '@/lib/rekuest/transport/store';
-import { defaultAppKey } from '@/apps';
 
 export interface RekuestStoreBundle {
   globalStateStore: ReturnType<typeof createGlobalStateStoreRegistry>;
@@ -36,10 +35,10 @@ const createRekuestStoreBundle = (): RekuestStoreBundle => {
   const transportStore = createTransportStore();
 
   return {
-    globalStateStore: createGlobalStateStoreRegistry(defaultAppKey),
-    taskStore: createTaskStoreRegistry(defaultAppKey, transportStore),
+    globalStateStore: createGlobalStateStoreRegistry(),
+    taskStore: createTaskStoreRegistry(transportStore),
     transportStore,
-    lockStore: createLockStoreRegistry(defaultAppKey),
+    lockStore: createLockStoreRegistry(),
   };
 };
 
