@@ -427,6 +427,8 @@ export type GlobalStateShape = {
   [K in GlobalStateKey]: InferStateDefinition<GlobalStateDefinition[K]>;
 };
 
+export const globalStateKeys = Object.values(globalStateDefinition).map((definition) => definition.key) as GlobalStateKey[];
+
 // Backwards-compatible alias for the requested misspelling.
 export const globalStateDefintiion = globalStateDefinition;
 `;

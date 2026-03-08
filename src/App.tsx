@@ -9,6 +9,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "./components/ui/tooltip";
+import { appDefinition } from "../app";
 import { StateProvider } from "./hooks/StateProvider";
 import { cn } from "./lib/utils";
 import { IndexPage, ReplayPage } from "./pages";
@@ -89,6 +90,7 @@ function AppNavigation() {
 function App() {
   return (
     <TransportProvider
+      app={appDefinition}
       config={{
         instanceId: "microscope-control-panel",
         apiEndpoint: BACKEND_API,

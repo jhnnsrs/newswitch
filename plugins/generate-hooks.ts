@@ -10,6 +10,12 @@ const IMPORT_PATH_TO_USE_ACTION = "../../transport/useTransportAction";
 // --- PLUGIN OPTIONS ---
 export interface GenerateHooksPluginOptions {
   schemaUrl?: string;
+  whitelist?: string[];
+  blacklist?: string[];
+}
+
+interface HooksSchema {
+  implementations: Record<string, Implementation>;
 }
 
 interface ValidatorSchema {
@@ -29,7 +35,7 @@ interface SchemaArg {
   kind: string;
   nullable: boolean;
   identifier?: string;
-  default?: any;
+  default?: unknown;
   children?: SchemaArg[];
   choices?: Choice[];
   description?: string;
@@ -45,6 +51,17 @@ const toCamel = (s: string) =>
 const toPascal = (s: string) => {
   const c = toCamel(s);
   return c.charAt(0).toUpperCase() + c.slice(1);
+};
+
+const shouldGenerateHook = (
+  key: string,
+  whitelist?: string[],
+  blacklist?: string[],
+) => {
+  const isAllowed = whitelist ? whitelist.includes(key) : true;
+  const isBlocked = blacklist ? blacklist.includes(key) : false;
+
+  return isAllowed && !isBlocked;
 };
 
 /**
@@ -168,7 +185,7 @@ const mapToZod = (arg: SchemaArg, ctx: GeneratorContext): string => {
           base = "z.record(z.string(), z.any())";
         }
         break;
-      case "MODEL":
+      case "MODEL": {
         const children = arg.children || [];
 
         // 1. Generate fields
@@ -195,6 +212,7 @@ const mapToZod = (arg: SchemaArg, ctx: GeneratorContext): string => {
           base = schemaCode;
         }
         break;
+      }
       case "UNION":
         if (arg.children && arg.children.length > 0) {
           const types = arg.children.map((child) => mapToZod(child, ctx));
@@ -347,7 +365,7 @@ ${(impl.optimistics || []).map(generateOptimisticState).join("\n")}
 export default function generateHooksPlugin(
   options: GenerateHooksPluginOptions = {},
 ): Plugin {
-  const { schemaUrl } = options;
+  const { schemaUrl, whitelist, blacklist } = options;
 
   return {
     name: "vite-plugin-generate-hooks",
@@ -357,7 +375,7 @@ export default function generateHooksPlugin(
       try {
         const response = await fetch(schemaUrl);
         if (!response.ok) return;
-        const schema = await response.json();
+        const schema = (await response.json()) as HooksSchema;
 
         if (!fs.existsSync(OUTPUT_DIR))
           fs.mkdirSync(OUTPUT_DIR, { recursive: true });
@@ -365,20 +383,56 @@ export default function generateHooksPlugin(
         fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 
         const files: string[] = [];
+        const generatedHooks: Array<{ fileName: string; hookName: string }> = [];
         for (const [key, impl] of Object.entries(schema.implementations)) {
+          if (!shouldGenerateHook(key, whitelist, blacklist)) {
+            continue;
+          }
+
           const code = generateContent(key, impl);
           const formatted = await prettier.format(code, {
             parser: "typescript",
             singleQuote: true,
             trailingComma: "all",
           });
-          const fname = `${toCamel(key)}.ts`;
+          const hookFileName = toCamel(key);
+          const hookName = toPascal(key);
+          const fname = `${hookFileName}.ts`;
           fs.writeFileSync(path.join(OUTPUT_DIR, fname), formatted);
-          files.push(toCamel(key));
+          files.push(hookFileName);
+          generatedHooks.push({ fileName: hookFileName, hookName });
         }
 
-        const index = files.map((f) => `export * from './${f}';`).join("\n");
-        fs.writeFileSync(path.join(OUTPUT_DIR, "index.ts"), index);
+        const definitionImports = generatedHooks
+          .map(
+            ({ fileName, hookName }) =>
+              `import { ${hookName}Definition } from './${fileName}';`,
+          )
+          .join("\n");
+
+        const definitionEntries = generatedHooks
+          .map(({ hookName }) => `  ${hookName}: ${hookName}Definition,`)
+          .join("\n");
+
+        const index = `import type { ActionDefinition } from '../../transport/useTransportAction';
+${definitionImports}
+
+${files.map((f) => `export * from './${f}';`).join("\n")}
+
+export const globalActionDefinition = {
+${definitionEntries}
+} satisfies Record<string, ActionDefinition<unknown, unknown>>;
+
+export type GlobalActionDefinition = typeof globalActionDefinition;
+// Backwards-compatible alias for the requested misspelling.
+export const globalActionDefintiion = globalActionDefinition;
+`;
+        const formattedIndex = await prettier.format(index, {
+          parser: "typescript",
+          singleQuote: true,
+          trailingComma: "all",
+        });
+        fs.writeFileSync(path.join(OUTPUT_DIR, "index.ts"), formattedIndex);
         console.log(
           `✅ [GenHooks] Generated definitions for ${files.length} actions.`,
         );

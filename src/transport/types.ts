@@ -1,5 +1,7 @@
 // src/transport/types.ts
 
+import type { AppDefinition } from "../../app";
+
 export type TaskStatus =
   | "pending"
   | "running"
@@ -180,6 +182,9 @@ export const ToAgentMessageType = {
   BOUNCE: "BOUNCE",
   KICK: "KICK",
   PROTOCOL_ERROR: "PROTOCOL_ERROR",
+  LISTEN_STATES: "LISTEN_STATES",
+  LISTEN_LOCKS: "LISTEN_LOCKS",
+  LISTEN_TASKS: "LISTEN_TASKS",
 } as const;
 
 export type ToAgentMessageType =
@@ -402,6 +407,21 @@ export interface ProtocolErrorMessage extends BaseMessage {
   error: string;
 }
 
+export interface ListenStatesMessage {
+  type: typeof ToAgentMessageType.LISTEN_STATES;
+  states: string[];
+}
+
+export interface ListenLocksMessage {
+  type: typeof ToAgentMessageType.LISTEN_LOCKS;
+  locks: string[];
+}
+
+export interface ListenTasksMessage {
+  type: typeof ToAgentMessageType.LISTEN_TASKS;
+  tasks: string[];
+}
+
 // Union type for all messages to the agent
 export type ToAgentMessage =
   | AssignMessage
@@ -415,7 +435,10 @@ export type ToAgentMessage =
   | InitMessage
   | BounceMessage
   | KickMessage
-  | ProtocolErrorMessage;
+  | ProtocolErrorMessage
+  | ListenStatesMessage
+  | ListenLocksMessage
+  | ListenTasksMessage;
 
 
 export type SessionBoundaries = {
@@ -454,8 +477,16 @@ export interface TransportConfig {
 export interface TransportContextValue {
   /** The API endpoint URL */
   apiEndpoint: string;
+  /** Application-level generated definitions */
+  app: AppDefinition;
   /** The resolved WebSocket endpoint URL */
   wsUrl: string;
+  /** Dedicated state websocket endpoint */
+  stateWsUrl: string;
+  /** Dedicated lock websocket endpoint */
+  lockWsUrl: string;
+  /** Dedicated task websocket endpoint */
+  taskWsUrl: string;
   /** Instance ID used for assignment requests */
   instanceId: string;
   /** Ping interval for the websocket manager */

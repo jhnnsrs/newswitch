@@ -5,10 +5,12 @@ import {
   useTransportStoreApi,
 } from "../store";
 import { ActionContext } from "./action-context";
-import { TransportWebSocketSync } from "./TransportWebSocketSync";
+import {
+  TransportWebSocketSync,
+  type TransportWebSocketSyncHandle,
+} from "./TransportWebSocketSync";
 import { useTransport } from "./transport-context";
 import type { AssignOptions, Task, TaskStatus, ActionContextValue } from "./types";
-import type { WebSocketManager } from "./WebSocketManager";
 
 interface ActionProviderProps {
   children: ReactNode;
@@ -17,7 +19,7 @@ interface ActionProviderProps {
 export function ActionProvider({ children }: ActionProviderProps) {
   const transport = useTransport();
   const transportStoreApi = useTransportStoreApi();
-  const managerRef = useRef<WebSocketManager | null>(null);
+  const managerRef = useRef<TransportWebSocketSyncHandle | null>(null);
 
   const isConnected = useTransportStore((s) => s.isConnected);
   const isReconnecting = useTransportStore((s) => s.isReconnecting);

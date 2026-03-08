@@ -1,74 +1,49 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import type { MutableRefObject } from "react";
-import {
-  useGlobalStateStoreApi,
-  useLockStoreApi,
-  useTransportStore,
-  useTransportStoreApi,
-} from "../store";
-import { useTransport } from "./transport-context";
-import { WebSocketManager } from "./WebSocketManager";
+import { LockWebSocketSync, type LockWebSocketSyncHandle } from "./LockWebSocketSync";
+import { StateWebSocketSync, type StateWebSocketSyncHandle } from "./StateWebSocketSync";
+import { TaskWebSocketSync, type TaskWebSocketSyncHandle } from "./TaskWebSocketSync";
 
 interface TransportWebSocketSyncProps {
-  managerRef: MutableRefObject<WebSocketManager | null>;
+  managerRef: MutableRefObject<TransportWebSocketSyncHandle | null>;
+}
+
+export interface TransportWebSocketSyncHandle {
+  reconnect: () => void;
+  disconnect: () => void;
 }
 
 export function TransportWebSocketSync({
   managerRef,
 }: TransportWebSocketSyncProps) {
-  const transport = useTransport();
-  const globalStateStoreApi = useGlobalStateStoreApi();
-  const lockStoreApi = useLockStoreApi();
-  const transportStoreApi = useTransportStoreApi();
-  const isConnected = useTransportStore((s) => s.isConnected);
+  const taskManagerRef = useRef<TaskWebSocketSyncHandle | null>(null);
+  const stateManagerRef = useRef<StateWebSocketSyncHandle | null>(null);
+  const lockManagerRef = useRef<LockWebSocketSyncHandle | null>(null);
 
   useEffect(() => {
-    const manager = new WebSocketManager({
-      wsUrl: transport.wsUrl,
-      pingInterval: transport.pingInterval,
-      reconnect: transport.reconnect,
-      globalStateStore: globalStateStoreApi,
-      lockStore: lockStoreApi,
-      transportStore: transportStoreApi,
-    });
-
-    managerRef.current = manager;
-    manager.connect();
+    managerRef.current = {
+      reconnect: () => {
+        taskManagerRef.current?.reconnect();
+        stateManagerRef.current?.reconnect();
+        lockManagerRef.current?.reconnect();
+      },
+      disconnect: () => {
+        taskManagerRef.current?.disconnect();
+        stateManagerRef.current?.disconnect();
+        lockManagerRef.current?.disconnect();
+      },
+    };
 
     return () => {
-      manager.disconnect();
       managerRef.current = null;
     };
-  }, [
-    globalStateStoreApi,
-    managerRef,
-    transport.pingInterval,
-    transport.reconnect,
-    transport.wsUrl,
-    lockStoreApi,
-    transportStoreApi,
-  ]);
+  }, [managerRef]);
 
-  useEffect(() => {
-    if (!isConnected) {
-      return;
-    }
-
-    const syncLocks = async () => {
-      try {
-        const locks = await transport.fetchLocks();
-        lockStoreApi.getState().replaceLocks(
-          Object.fromEntries(
-            Object.entries(locks).map(([key, lock]) => [key, lock.task_id]),
-          ),
-        );
-      } catch (error) {
-        console.error("[TransportWebSocketSync] Error fetching locks:", error);
-      }
-    };
-
-    void syncLocks();
-  }, [isConnected, lockStoreApi, transport]);
-
-  return null;
+  return (
+    <>
+      <TaskWebSocketSync managerRef={taskManagerRef} />
+      <StateWebSocketSync managerRef={stateManagerRef} />
+      <LockWebSocketSync managerRef={lockManagerRef} />
+    </>
+  );
 }

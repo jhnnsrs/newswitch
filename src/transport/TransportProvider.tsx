@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { useCallback, useMemo } from "react";
+import type { AppDefinition } from "../../app";
 import { TransportContext } from "./transport-context";
 import type {
   AssignInput,
@@ -23,6 +24,7 @@ const DEFAULT_PING_INTERVAL = 30000;
 interface TransportProviderProps {
   children: ReactNode;
   config: TransportConfig;
+  app: AppDefinition;
 }
 
 function normalizeTask<TArgs = unknown, TReturn = unknown>(
@@ -42,7 +44,7 @@ function normalizeTask<TArgs = unknown, TReturn = unknown>(
   };
 }
 
-export function TransportProvider({ children, config }: TransportProviderProps) {
+export function TransportProvider({ children, config, app }: TransportProviderProps) {
   const reconnect = useMemo(
     () => ({ ...DEFAULT_RECONNECT_CONFIG, ...config.reconnect }),
     [config.reconnect],
@@ -50,7 +52,7 @@ export function TransportProvider({ children, config }: TransportProviderProps) 
 
   const pingInterval = config.pingInterval ?? DEFAULT_PING_INTERVAL;
 
-  const wsUrl = useMemo(() => {
+  const wsBaseUrl = useMemo(() => {
     if (config.wsEndpoint) {
       return config.wsEndpoint;
     }
@@ -60,6 +62,19 @@ export function TransportProvider({ children, config }: TransportProviderProps) 
     url.pathname = url.pathname.replace(/\/$/, "") + "/ws";
     return url.toString();
   }, [config.apiEndpoint, config.wsEndpoint]);
+
+  const createChannelWsUrl = useCallback(
+    (channel: "state" | "locks" | "tasks") => {
+      const url = new URL(wsBaseUrl);
+      url.pathname = `${url.pathname.replace(/\/$/, "")}/${channel}`;
+      return url.toString();
+    },
+    [wsBaseUrl],
+  );
+
+  const stateWsUrl = useMemo(() => createChannelWsUrl("state"), [createChannelWsUrl]);
+  const lockWsUrl = useMemo(() => createChannelWsUrl("locks"), [createChannelWsUrl]);
+  const taskWsUrl = useMemo(() => createChannelWsUrl("tasks"), [createChannelWsUrl]);
 
   const assignAction = useCallback(
     async <TArgs,>(
@@ -245,6 +260,7 @@ export function TransportProvider({ children, config }: TransportProviderProps) 
   const contextValue = useMemo<TransportContextValue>(
     () => ({
       apiEndpoint: config.apiEndpoint,
+      app,
       assignAction,
       cancelTaskRequest: createTaskMutation("cancel"),
       fetchLocks,
@@ -256,12 +272,16 @@ export function TransportProvider({ children, config }: TransportProviderProps) 
       pauseTaskRequest: createTaskMutation("pause"),
       pingInterval,
       reconnect,
+        lockWsUrl,
+        stateWsUrl,
       stepTaskRequest: createTaskMutation("step"),
+        taskWsUrl,
       unpauseTaskRequest: createTaskMutation("resume"),
-      wsUrl,
+        wsUrl: wsBaseUrl,
     }),
     [
       assignAction,
+      app,
       config.apiEndpoint,
       config.instanceId,
       createTaskMutation,
@@ -270,9 +290,12 @@ export function TransportProvider({ children, config }: TransportProviderProps) 
       fetchTask,
       fetchActiveSessionBoundaries,
       fetchSessionBoundaries,
+        lockWsUrl,
       pingInterval,
       reconnect,
-      wsUrl,
+        stateWsUrl,
+        taskWsUrl,
+        wsBaseUrl,
     ],
   );
 

@@ -3,11 +3,7 @@ import { useCallback, useMemo, useRef } from "react";
 import { useGlobalStateStoreApi } from "../store";
 import { useTransport } from "../transport/transport-context";
 import { StateContext, type StateContextValue } from "./state-context";
-import {
-  globalStateDefinition,
-  type GlobalStateKey,
-  type GlobalStateShape,
-} from "./states";
+import { type GlobalStateKey, type GlobalStateShape } from "./states";
 
 interface TransportStateResponse<TState> {
   state: TState;
@@ -28,6 +24,7 @@ function normalizeError(error: unknown, key: string): Error {
 
 export function StateProvider({ children }: StateProviderProps) {
   const transport = useTransport();
+  const definitions = transport.app.states;
   const globalStateStoreApi = useGlobalStateStoreApi();
   const inflightRequestsRef = useRef(new Map<string, Promise<unknown>>());
 
@@ -41,7 +38,7 @@ export function StateProvider({ children }: StateProviderProps) {
         return existingRequest as Promise<GlobalStateShape[TKey]>;
       }
 
-      const definition = globalStateDefinition[key];
+      const definition = definitions[key];
 
       if (!definition) {
         throw new Error(`No state definition registered for ${key}`);
@@ -67,9 +64,13 @@ export function StateProvider({ children }: StateProviderProps) {
 
           globalStateStoreApi
             .getState()
-            .setStateSnapshot(key, parsed.data, response.revision ?? 0);
+            .setStateSnapshot(
+              key,
+              parsed.data as GlobalStateShape[TKey],
+              response.revision ?? 0,
+            );
 
-          return parsed.data;
+          return parsed.data as GlobalStateShape[TKey];
         })
         .catch((error) => {
           const normalizedError = normalizeError(error, key);
@@ -85,7 +86,7 @@ export function StateProvider({ children }: StateProviderProps) {
 
       return request;
     },
-    [globalStateStoreApi, transport],
+    [definitions, globalStateStoreApi, transport],
   );
 
   const ensureState = useCallback(
@@ -103,11 +104,11 @@ export function StateProvider({ children }: StateProviderProps) {
 
   const value = useMemo<StateContextValue>(
     () => ({
-      definitions: globalStateDefinition,
+      definitions,
       ensureState,
       refetchState,
     }),
-    [ensureState, refetchState],
+    [definitions, ensureState, refetchState],
   );
 
   return <StateContext.Provider value={value}>{children}</StateContext.Provider>;
