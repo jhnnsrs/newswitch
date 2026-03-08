@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, type MutableRefObject } from "react";
 import { getScopedLockKey } from "@/lib/rekuest/locks";
 import type { AppKey } from "@/apps";
-import { useLockStoreApi } from "../store";
+import { useLockStoreApi } from "@/lib/rekuest/locks/store";
 import {
   FromAgentMessageType,
   type ListenLocksMessage,

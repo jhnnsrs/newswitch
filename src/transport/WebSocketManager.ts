@@ -1,9 +1,9 @@
 // src/transport/WebSocketManager.ts
 import { toast } from "sonner";
 import type { StoreApi } from "zustand/vanilla";
-import type { LockStore } from "../store/lockStore";
-import type { GlobalStateStore } from "../store/stateStore";
-import type { TransportStore } from "../store/transportStore";
+import type { LockStore } from "@/lib/rekuest/locks/store";
+import type { GlobalStateStore } from "@/lib/rekuest/state/store";
+import type { TransportStore } from "@/lib/rekuest/task/store";
 import { FromAgentMessageType, type FromAgentMessage } from "./types";
 
 export interface WebSocketConfig {

@@ -1,4 +1,4 @@
-import { selectTask, useTransportStore } from "@/store"; // Ensure selectTask is exported from your store index
+import { selectTask, useTransportStore } from "@/lib/rekuest/task/store";
 import { useCancelTask } from "@/transport/useCancelTask";
 import { usePauseTask } from "@/transport/usePauseTask";
 import { useResumeTask } from "@/transport/useResumeTask";

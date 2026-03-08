@@ -2,7 +2,7 @@
 
 import { defaultAppKey } from "@/apps";
 import { useCallback, useEffect, useMemo } from "react";
-import { selectTask, useTransportStore } from "../store";
+import { selectTask, useTransportStore } from "@/lib/rekuest/task/store";
 import { useAction } from "./action-context";
 import type { Task, TaskStatus } from "./types";
 
@@ -44,6 +44,7 @@ export const useTask = <TArgs = unknown, TReturn = unknown>(
   void options.autoSubscribe;
 
   const action = useAction();
+  const scopedAppKey = appKey as Parameters<typeof action.getTask>[0];
   const taskSelector = useMemo(
     () => (taskId ? selectTask<TArgs, TReturn>(taskId, appKey) : () => undefined),
     [appKey, taskId],
@@ -60,14 +61,14 @@ export const useTask = <TArgs = unknown, TReturn = unknown>(
   // Fetch task from server
   const refresh = useCallback(async (): Promise<void> => {
     if (!taskId) return;
-    await action.getTask<TArgs, TReturn>(appKey, taskId);
-  }, [action, appKey, taskId]);
+    await action.getTask<TArgs, TReturn>(scopedAppKey, taskId);
+  }, [action, scopedAppKey, taskId]);
 
   // Cancel task
   const cancel = useCallback(async (): Promise<void> => {
     if (!taskId) return;
-    await action.cancelTask(appKey, taskId);
-  }, [action, appKey, taskId]);
+    await action.cancelTask(scopedAppKey, taskId);
+  }, [action, scopedAppKey, taskId]);
 
   // Fetch on mount
   useEffect(() => {

@@ -1,4 +1,4 @@
-import { useBlockingLock } from '@/store';
+import { useBlockingLock } from './store';
 import { useTransport } from '@/transport/transport-context';
 import { getScopedLockKey, resolveLockAppKey } from './keys';
 import type {

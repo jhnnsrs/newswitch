@@ -6,7 +6,7 @@ import {
   resolveStateDefinition,
   type StateDefinition,
 } from '@/lib/rekuest/state';
-import { useGlobalStateStoreApi } from '@/store';
+import { useGlobalStateStoreApi } from '@/lib/rekuest/state/store';
 import { useTransport } from '@/transport/transport-context';
 import { StateContext, type StateContextValue } from '@/hooks/state-context';
 

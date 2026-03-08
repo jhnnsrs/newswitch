@@ -1,9 +1,8 @@
-export * from '@/lib/rekuest/locks/store';
-import { useMemo } from "react";
-import { subscribeWithSelector } from "zustand/middleware";
-import { immer } from "zustand/middleware/immer";
-import { createStore } from "zustand/vanilla";
-import { createScopedStoreHooks } from "./createScopedStore";
+import { useMemo } from 'react';
+import { subscribeWithSelector } from 'zustand/middleware';
+import { immer } from 'zustand/middleware/immer';
+import { createStore } from 'zustand/vanilla';
+import { createScopedStoreHooks } from '@/lib/rekuest/createScopedStore';
 
 export interface LockStore {
   locks: Record<string, string | undefined | null>;
@@ -63,14 +62,14 @@ const {
   useScopedStore: useLockStore,
   useStoreApi: useLockStoreApi,
 } = createScopedStoreHooks<LockStore, ReturnType<typeof createLockStore>>(
-  "LockStore",
+  'LockStore',
 );
 
 export { LockStoreContext, useLockStore, useLockStoreApi };
 
 export const selectLock =
   (key: string) =>
-  (store: LockStore): string | undefined | null =>
+  (store: LockStore): string | undefined =>
     store.locks[key];
 
 export function getBlockingLock(

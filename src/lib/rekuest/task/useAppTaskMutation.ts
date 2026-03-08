@@ -1,51 +1,54 @@
-import type { AppKey } from '@/apps';
 import { useCallback } from 'react';
 import { useAction as useActionContext } from '@/transport/action-context';
 import type { UseAppTaskMutationResult } from './types';
 
-export const useCancelAppTask = (appKey: AppKey): UseAppTaskMutationResult => {
+export const useCancelAppTask = (appKey: string): UseAppTaskMutationResult => {
   const action = useActionContext();
+  type AppKeyInput = Parameters<typeof action.cancelTask>[0];
 
   return useCallback(
     async (taskId: string): Promise<void> => {
       if (!taskId) return;
-      await action.cancelTask(appKey, taskId);
+      await action.cancelTask(appKey as AppKeyInput, taskId);
     },
     [action, appKey],
   );
 };
 
-export const usePauseAppTask = (appKey: AppKey): UseAppTaskMutationResult => {
+export const usePauseAppTask = (appKey: string): UseAppTaskMutationResult => {
   const action = useActionContext();
+  type AppKeyInput = Parameters<typeof action.pauseTask>[0];
 
   return useCallback(
     async (taskId: string): Promise<void> => {
       if (!taskId) return;
-      await action.pauseTask(appKey, taskId);
+      await action.pauseTask(appKey as AppKeyInput, taskId);
     },
     [action, appKey],
   );
 };
 
-export const useResumeAppTask = (appKey: AppKey): UseAppTaskMutationResult => {
+export const useResumeAppTask = (appKey: string): UseAppTaskMutationResult => {
   const action = useActionContext();
+  type AppKeyInput = Parameters<typeof action.unpauseTask>[0];
 
   return useCallback(
     async (taskId: string): Promise<void> => {
       if (!taskId) return;
-      await action.unpauseTask(appKey, taskId);
+      await action.unpauseTask(appKey as AppKeyInput, taskId);
     },
     [action, appKey],
   );
 };
 
-export const useStepAppTask = (appKey: AppKey): UseAppTaskMutationResult => {
+export const useStepAppTask = (appKey: string): UseAppTaskMutationResult => {
   const action = useActionContext();
+  type AppKeyInput = Parameters<typeof action.stepTask>[0];
 
   return useCallback(
     async (taskId: string): Promise<void> => {
       if (!taskId) return;
-      await action.stepTask(appKey, taskId);
+      await action.stepTask(appKey as AppKeyInput, taskId);
     },
     [action, appKey],
   );

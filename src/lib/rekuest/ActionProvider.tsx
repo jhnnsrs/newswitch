@@ -1,11 +1,10 @@
 import { useCallback, useMemo, useRef, type ReactNode } from 'react';
-import type { AppKey } from '@/apps';
 import { getScopedTaskReference } from '@/lib/rekuest/task';
 import {
   selectTask,
   useTransportStore,
   useTransportStoreApi,
-} from '@/store';
+} from '@/lib/rekuest/task/store';
 import { ActionContext } from '@/transport/action-context';
 import {
   TransportWebSocketSync,
@@ -22,6 +21,11 @@ import type {
 export interface ActionProviderProps {
   children: ReactNode;
 }
+
+type AssignAppKey = Parameters<ActionContextValue['assign']>[0];
+type CachedTaskAppKey = Parameters<ActionContextValue['getCachedTask']>[1];
+type SubscribeAppKey = Parameters<ActionContextValue['subscribeToTask']>[1];
+type WaitForTaskAppKey = Parameters<ActionContextValue['waitForTask']>[0];
 
 export function ActionProvider({ children }: ActionProviderProps) {
   const transport = useTransport();
@@ -42,9 +46,9 @@ export function ActionProvider({ children }: ActionProviderProps) {
     return `local-${Date.now()}-${Math.random().toString(16).slice(2)}`;
   }, []);
 
-  const assign = useCallback(
+  const assign: ActionContextValue['assign'] = useCallback(
     async <TArgs, TReturn>(
-      appKey: AppKey,
+      appKey: AssignAppKey,
       actionName: string,
       args: TArgs,
       options?: AssignOptions,
@@ -74,9 +78,9 @@ export function ActionProvider({ children }: ActionProviderProps) {
     [addTask, createReference, getTaskFromStore, setAssignationID, transport, updateTask],
   );
 
-  const getTask = useCallback(
+  const getTask: ActionContextValue['getTask'] = useCallback(
     async <TArgs = unknown, TReturn = unknown>(
-      appKey: AppKey,
+      appKey: AssignAppKey,
       taskId: string,
     ): Promise<Task<TArgs, TReturn>> => {
       const task = await transport.fetchTask<TArgs, TReturn>(appKey, taskId);
@@ -87,7 +91,7 @@ export function ActionProvider({ children }: ActionProviderProps) {
   );
 
   const getCachedTask = useCallback(
-    (taskId: string, appKey?: AppKey): Task | undefined =>
+    (taskId: string, appKey?: CachedTaskAppKey): Task | undefined =>
       getTaskFromStore(taskId, appKey),
     [getTaskFromStore],
   );
@@ -97,7 +101,7 @@ export function ActionProvider({ children }: ActionProviderProps) {
       taskId: string,
       status: TaskStatus,
       request: () => Promise<void>,
-      appKey?: AppKey,
+      appKey?: CachedTaskAppKey,
     ) => {
       await request();
       updateTask(taskId, { status }, appKey);
@@ -106,7 +110,7 @@ export function ActionProvider({ children }: ActionProviderProps) {
   );
 
   const cancelTask = useCallback(
-    async (appKey: AppKey, taskId: string) => {
+    async (appKey: AssignAppKey, taskId: string) => {
       await updateTaskStatus(
         taskId,
         'cancelled',
@@ -118,7 +122,7 @@ export function ActionProvider({ children }: ActionProviderProps) {
   );
 
   const pauseTask = useCallback(
-    async (appKey: AppKey, taskId: string) => {
+    async (appKey: AssignAppKey, taskId: string) => {
       await updateTaskStatus(
         taskId,
         'paused',
@@ -130,7 +134,7 @@ export function ActionProvider({ children }: ActionProviderProps) {
   );
 
   const unpauseTask = useCallback(
-    async (appKey: AppKey, taskId: string) => {
+    async (appKey: AssignAppKey, taskId: string) => {
       await updateTaskStatus(
         taskId,
         'running',
@@ -142,7 +146,7 @@ export function ActionProvider({ children }: ActionProviderProps) {
   );
 
   const stepTask = useCallback(
-    async (appKey: AppKey, taskId: string) => {
+    async (appKey: AssignAppKey, taskId: string) => {
       await updateTaskStatus(
         taskId,
         'running',
@@ -156,7 +160,7 @@ export function ActionProvider({ children }: ActionProviderProps) {
   const subscribeToTask = useCallback(
     (
       taskId: string,
-      appKey: AppKey,
+      appKey: SubscribeAppKey,
       callback: (task: Task) => void,
     ): (() => void) => {
       return transportStoreApi.subscribe(selectTask(taskId, appKey), (task) => {
@@ -168,9 +172,9 @@ export function ActionProvider({ children }: ActionProviderProps) {
     [transportStoreApi],
   );
 
-  const waitForTask = useCallback(
+  const waitForTask: ActionContextValue['waitForTask'] = useCallback(
     <TArgs = unknown, TReturn = unknown>(
-      appKey: AppKey,
+      appKey: WaitForTaskAppKey,
       taskId: string,
     ): Promise<Task<TArgs, TReturn>> => {
       const cachedTask = getTaskFromStore<TArgs, TReturn>(taskId, appKey);

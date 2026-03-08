@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { useState } from 'react';
-import { createLockStore, LockStoreContext } from '@/store/lockStore';
+import { createLockStore, LockStoreContext } from '@/lib/rekuest/locks/store';
 
 export interface LockProviderProps {
   children: ReactNode;

@@ -3,6 +3,10 @@ export type {
   CreateScopedProviderOptions,
   ScopedProviderProps,
 } from './createScopedProvider';
+export type {
+  RekuestAppDefinition,
+  RekuestAppsDefinition,
+} from './types';
 export {
   RekuestStoreProvider,
 } from './RekuestStoreProvider';

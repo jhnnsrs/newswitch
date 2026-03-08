@@ -1,5 +1,4 @@
 import { ZodType } from 'zod';
-import type { AppKey } from '@/apps';
 
 export interface StateDefinition<T, TKey extends string = string> {
   key: TKey;
@@ -24,4 +23,4 @@ export interface UseStateSyncResult<U> {
 export type ResolvedStateDefinition<
   TState extends Record<string, unknown> = Record<string, unknown>,
   TKey extends string = string,
-> = StateDefinition<TState, TKey> & { appKey: AppKey };
+> = StateDefinition<TState, TKey> & { appKey: string };

@@ -1,13 +1,22 @@
-import type { ReactNode } from 'react';
-import type { AppDefinition, AppKey, AppsDefinition } from '@/apps';
+import type { ComponentProps, ReactNode } from 'react';
 import { LocalStoreProvider } from '@/store';
 import { TransportProvider } from '@/transport';
 import type { TransportConfig } from '@/transport';
 import { ActionProvider } from './ActionProvider';
 import { RekuestStoreProvider } from './RekuestStoreProvider';
 import { StateProvider } from './StateProvider';
+import type { RekuestAppDefinition, RekuestAppsDefinition } from './types';
 
-type ScopedProviderDefinition = AppsDefinition | AppDefinition;
+type ScopedProviderDefinition<
+  TKey extends string = string,
+  TActions extends Record<string, unknown> = Record<string, unknown>,
+  TLocks extends Record<string, unknown> = Record<string, unknown>,
+  TStates extends Record<string, unknown> = Record<string, unknown>,
+> =
+  | RekuestAppsDefinition<TKey, TActions, TLocks, TStates>
+  | RekuestAppDefinition<TKey, TActions, TLocks, TStates>;
+
+type TransportProviderApps = ComponentProps<typeof TransportProvider>['apps'];
 
 type TransportEndpointConfig = {
   kind?: string;
@@ -24,13 +33,23 @@ type ScopedProviderTransportConfig<TKey extends string> =
   | TransportConfig
   | TransportEndpointMap<TKey>;
 
-interface NormalizedDefinition<TKey extends string = string> {
-  apps: Record<TKey, AppDefinition>;
+interface NormalizedDefinition<
+  TKey extends string = string,
+  TActions extends Record<string, unknown> = Record<string, unknown>,
+  TLocks extends Record<string, unknown> = Record<string, unknown>,
+  TStates extends Record<string, unknown> = Record<string, unknown>,
+> {
+  apps: Record<TKey, RekuestAppDefinition<TKey, TActions, TLocks, TStates>>;
   defaultAppKey: TKey;
 }
 
-export interface CreateScopedProviderOptions<TKey extends string = string> {
-  definition: ScopedProviderDefinition;
+export interface CreateScopedProviderOptions<
+  TKey extends string = string,
+  TActions extends Record<string, unknown> = Record<string, unknown>,
+  TLocks extends Record<string, unknown> = Record<string, unknown>,
+  TStates extends Record<string, unknown> = Record<string, unknown>,
+> {
+  definition: ScopedProviderDefinition<TKey, TActions, TLocks, TStates>;
   config: ScopedProviderTransportConfig<TKey>;
   instanceId?: string;
   defaultScope?: string;
@@ -49,9 +68,14 @@ export interface ScopedProviderProps {
 const DEFAULT_SCOPE = 'default';
 const DEFAULT_INSTANCE_ID = 'rekuest-scoped-provider';
 
-const isSingleAppDefinition = (
-  definition: ScopedProviderDefinition,
-): definition is AppDefinition => {
+const isSingleAppDefinition = <
+  TKey extends string,
+  TActions extends Record<string, unknown>,
+  TLocks extends Record<string, unknown>,
+  TStates extends Record<string, unknown>,
+>(
+  definition: ScopedProviderDefinition<TKey, TActions, TLocks, TStates>,
+): definition is RekuestAppDefinition<TKey, TActions, TLocks, TStates> => {
   return (
     'key' in definition &&
     'actions' in definition &&
@@ -66,9 +90,14 @@ const isTransportConfig = <TKey extends string>(
   return 'apiEndpoint' in config && 'instanceId' in config;
 };
 
-const normalizeDefinition = (
-  definition: ScopedProviderDefinition,
-): NormalizedDefinition => {
+const normalizeDefinition = <
+  TKey extends string,
+  TActions extends Record<string, unknown>,
+  TLocks extends Record<string, unknown>,
+  TStates extends Record<string, unknown>,
+>(
+  definition: ScopedProviderDefinition<TKey, TActions, TLocks, TStates>,
+): NormalizedDefinition<TKey, TActions, TLocks, TStates> => {
   if (isSingleAppDefinition(definition)) {
     const singleDefinition = definition;
     return {
@@ -76,14 +105,17 @@ const normalizeDefinition = (
         [singleDefinition.key]: singleDefinition,
       },
       defaultAppKey: singleDefinition.key,
-    } as NormalizedDefinition;
+    } as NormalizedDefinition<TKey, TActions, TLocks, TStates>;
   }
 
-  const appKeys = Object.keys(definition) as AppKey[];
-  const defaultAppKey = (appKeys[0] ?? 'default') as AppKey;
+  const appKeys = Object.keys(definition) as TKey[];
+  const defaultAppKey = (appKeys[0] ?? 'default') as TKey;
 
   return {
-    apps: definition as Record<AppKey, AppDefinition>,
+    apps: definition as Record<
+      TKey,
+      RekuestAppDefinition<TKey, TActions, TLocks, TStates>
+    >,
     defaultAppKey,
   };
 };
@@ -173,14 +205,19 @@ const buildScopeKey = (
     .join(':');
 };
 
-export function createScopedProvider<TKey extends string = string>({
+export function createScopedProvider<
+  TKey extends string = string,
+  TActions extends Record<string, unknown> = Record<string, unknown>,
+  TLocks extends Record<string, unknown> = Record<string, unknown>,
+  TStates extends Record<string, unknown> = Record<string, unknown>,
+>({
   definition,
   config,
   instanceId = DEFAULT_INSTANCE_ID,
   defaultScope = DEFAULT_SCOPE,
   reconnect,
   pingInterval,
-}: CreateScopedProviderOptions<TKey>) {
+}: CreateScopedProviderOptions<TKey, TActions, TLocks, TStates>) {
   const normalizedDefinition = normalizeDefinition(definition);
 
   function ScopedProvider({
@@ -203,7 +240,7 @@ export function createScopedProvider<TKey extends string = string>({
     return (
       <TransportProvider
         key={scopeKey}
-        apps={normalizedDefinition.apps as AppsDefinition}
+        apps={normalizedDefinition.apps as TransportProviderApps}
         config={resolvedConfig}
       >
         <RekuestStoreProvider scope={scopeKey}>

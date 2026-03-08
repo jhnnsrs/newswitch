@@ -4,7 +4,7 @@ import {
   selectLoading,
   selectState,
   useGlobalStateStore,
-} from '@/store';
+} from './store';
 import { useTransport } from '@/transport/transport-context';
 import { useStateContext } from '@/hooks/state-context';
 import { getScopedStateKey, resolveStateAppKey } from './definitions';

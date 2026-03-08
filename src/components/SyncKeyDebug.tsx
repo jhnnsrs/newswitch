@@ -1,7 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useLockSync } from "@/hooks/useLockSync";
-import { useTransportStore } from "@/store";
+import { useTransportStore } from "@/lib/rekuest/task/store";
 import { Bug } from "lucide-react";
 
 interface SyncKeyDebugProps {

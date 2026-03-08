@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, type MutableRefObject } from "react";
 import type { AppKey } from "@/apps";
 import { getScopedStateKey } from "@/lib/rekuest/state";
-import type { Envelope as StateStoreEnvelope } from "../store/stateStore";
-import { useGlobalStateStoreApi } from "../store";
+import type { Envelope as StateStoreEnvelope } from "@/lib/rekuest/state/store";
+import { useGlobalStateStoreApi } from "@/lib/rekuest/state/store";
 import {
   FromAgentMessageType,
   type ListenStatesMessage,

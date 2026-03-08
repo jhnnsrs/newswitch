@@ -5,8 +5,9 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { scopeLockKeys } from "@/lib/rekuest/locks";
+import { useBlockingLock } from "@/lib/rekuest/locks/store";
 import { cn } from "@/lib/utils";
-import { useBlockingLock } from "@/store";
 import { useAction } from "@/transport/action-context";
 import { type AssignOptions } from "@/transport/types";
 import { type ActionDefinition } from "@/transport/useTransportAction";
@@ -43,8 +44,10 @@ export function ActionButton<TArgs, TReturn>({
   disabled,
   ...props
 }: ActionButtonProps<TArgs, TReturn>) {
+  const appKey = action.appKey as Parameters<ReturnType<typeof useAction>["assign"]>[0];
+  const scopedLockKeys = scopeLockKeys(action.appKey, action.lockKeys);
   const { isLocked, lockKey: blockingLock, lockingTaskId: blockingTaskId } =
-    useBlockingLock(action.lockKeys);
+    useBlockingLock(scopedLockKeys);
 
   const actionApi = useAction();
 
@@ -72,7 +75,7 @@ export function ActionButton<TArgs, TReturn>({
         "reference:",
         reference,
       );
-      const task = await actionApi.assign(action.appKey, args, {
+      const task = await actionApi.assign(appKey, action.name, args, {
         ...assignOptions,
         reference,
         step,

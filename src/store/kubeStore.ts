@@ -2,7 +2,7 @@ import type { KubeUnionSchema } from "@/hooks/states/LightPathState";
 import { createStore } from "zustand/vanilla";
 import { immer } from "zustand/middleware/immer";
 import { z } from "zod";
-import { createScopedStoreHooks } from "./createScopedStore";
+import { createScopedStoreHooks } from "@/lib/rekuest/createScopedStore";
 
 export type Kube = z.infer<typeof KubeUnionSchema>;
 

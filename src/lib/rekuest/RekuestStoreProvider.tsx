@@ -3,15 +3,15 @@ import { useMemo } from 'react';
 import {
   createLockStore,
   LockStoreContext,
-} from '@/store/lockStore';
+} from '@/lib/rekuest/locks/store';
 import {
   createGlobalStateStore,
   GlobalStateStoreContext,
-} from '@/store/stateStore';
+} from '@/lib/rekuest/state/store';
 import {
   createTransportStore,
   TransportStoreContext,
-} from '@/store/transportStore';
+} from '@/lib/rekuest/task/store';
 
 export interface RekuestStoreBundle {
   globalStateStore: ReturnType<typeof createGlobalStateStore>;

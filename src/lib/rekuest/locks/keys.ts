@@ -1,4 +1,3 @@
-import type { AppKey } from '@/apps';
 import type { LockDefinition } from './types';
 
 export const getScopedLockKey = (appKey: string, lockKey: string) =>
@@ -7,7 +6,7 @@ export const getScopedLockKey = (appKey: string, lockKey: string) =>
 export const scopeLockKeys = (appKey: string, lockKeys: string[]) =>
   lockKeys.map((lockKey) => getScopedLockKey(appKey, lockKey));
 
-export const resolveLockAppKey = (
+export const resolveLockAppKey = <TAppKey extends string>(
   definition: Pick<LockDefinition<string>, 'appKey'>,
-  defaultAppKey: AppKey,
-): AppKey => (definition.appKey as AppKey | undefined) ?? defaultAppKey;
+  defaultAppKey: TAppKey,
+): TAppKey => (definition.appKey as TAppKey | undefined) ?? defaultAppKey;

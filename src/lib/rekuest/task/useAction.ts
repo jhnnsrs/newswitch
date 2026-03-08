@@ -2,11 +2,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { z } from 'zod';
 import {
   getBlockingLock,
-  selectTask,
   useBlockingLock,
   useLockStoreApi,
+} from '@/lib/rekuest/locks/store';
+import {
+  selectTask,
   useTransportStore,
-} from '@/store';
+} from '@/lib/rekuest/task/store';
 import { useAction as useActionContext } from '@/transport/action-context';
 import { useTransport } from '@/transport/transport-context';
 import type { AssignOptions, Task } from '@/transport/types';

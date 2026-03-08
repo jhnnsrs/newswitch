@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, type MutableRefObject } from "react";
 import type { AppKey } from "@/apps";
 import { toast } from "sonner";
-import { useTransportStore, useTransportStoreApi } from "../store";
+import { useTransportStore, useTransportStoreApi } from "@/lib/rekuest/task/store";
 import {
   FromAgentMessageType,
   type CriticalEvent,
