@@ -6,7 +6,7 @@ import {
   type StateDefinition,
 } from '@/lib/rekuest/state';
 import { useGlobalStateStoreRegistry } from '@/lib/rekuest/state/store';
-import { useTransport } from '@/transport/transport-context';
+import { useTransport } from '@/lib/rekuest/transport/transport-context';
 import { StateContext, type StateContextValue } from '@/hooks/state-context';
 
 interface TransportStateResponse<TState> {

@@ -2,10 +2,10 @@ import type { LockDefinition } from "../useLockSync";
 import { MikrosckopeExpanseStateDefinition } from "./ExpanseState";
 import { MikrosckopeIlluminationDefinition } from "./Illumination";
 import { MikrosckopeStagePositionDefinition } from "./StagePosition";
-import { MikrosckopeIoDefinition } from "./Io";
 import { MikrosckopeCameraParametersDefinition } from "./CameraParameters";
-import { MikrosckopeFilterBankDefinition } from "./FilterBank";
+import { MikrosckopeIoDefinition } from "./Io";
 import { MikrosckopeObjectiveDefinition } from "./Objective";
+import { MikrosckopeFilterBankDefinition } from "./FilterBank";
 import { MikrosckopeHookRegistryDefinition } from "./HookRegistry";
 
 export {
@@ -27,29 +27,29 @@ export {
   StagePositionDefinition,
 } from "./StagePosition";
 export {
-  MikrosckopeIoDefinition,
-  useMikrosckopeIoLock,
-  useIoLock,
-  IoDefinition,
-} from "./Io";
-export {
   MikrosckopeCameraParametersDefinition,
   useMikrosckopeCameraParametersLock,
   useCameraParametersLock,
   CameraParametersDefinition,
 } from "./CameraParameters";
 export {
-  MikrosckopeFilterBankDefinition,
-  useMikrosckopeFilterBankLock,
-  useFilterBankLock,
-  FilterBankDefinition,
-} from "./FilterBank";
+  MikrosckopeIoDefinition,
+  useMikrosckopeIoLock,
+  useIoLock,
+  IoDefinition,
+} from "./Io";
 export {
   MikrosckopeObjectiveDefinition,
   useMikrosckopeObjectiveLock,
   useObjectiveLock,
   ObjectiveDefinition,
 } from "./Objective";
+export {
+  MikrosckopeFilterBankDefinition,
+  useMikrosckopeFilterBankLock,
+  useFilterBankLock,
+  FilterBankDefinition,
+} from "./FilterBank";
 export {
   MikrosckopeHookRegistryDefinition,
   useMikrosckopeHookRegistryLock,
@@ -61,10 +61,10 @@ export const globalLockDefinition = {
   ExpanseState: MikrosckopeExpanseStateDefinition,
   Illumination: MikrosckopeIlluminationDefinition,
   StagePosition: MikrosckopeStagePositionDefinition,
-  Io: MikrosckopeIoDefinition,
   CameraParameters: MikrosckopeCameraParametersDefinition,
-  FilterBank: MikrosckopeFilterBankDefinition,
+  Io: MikrosckopeIoDefinition,
   Objective: MikrosckopeObjectiveDefinition,
+  FilterBank: MikrosckopeFilterBankDefinition,
   HookRegistry: MikrosckopeHookRegistryDefinition,
 } satisfies Record<string, LockDefinition<string>>;
 

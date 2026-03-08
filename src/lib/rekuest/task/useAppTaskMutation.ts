@@ -1,9 +1,9 @@
 import { useCallback } from 'react';
-import { useAction as useActionContext } from '@/transport/action-context';
+import { useTaskContext } from './task-context';
 import type { UseAppTaskMutationResult } from './types';
 
 export const useCancelAppTask = (appKey: string): UseAppTaskMutationResult => {
-  const action = useActionContext();
+  const action = useTaskContext();
   type AppKeyInput = Parameters<typeof action.cancelTask>[0];
 
   return useCallback(
@@ -16,7 +16,7 @@ export const useCancelAppTask = (appKey: string): UseAppTaskMutationResult => {
 };
 
 export const usePauseAppTask = (appKey: string): UseAppTaskMutationResult => {
-  const action = useActionContext();
+  const action = useTaskContext();
   type AppKeyInput = Parameters<typeof action.pauseTask>[0];
 
   return useCallback(
@@ -29,7 +29,7 @@ export const usePauseAppTask = (appKey: string): UseAppTaskMutationResult => {
 };
 
 export const useResumeAppTask = (appKey: string): UseAppTaskMutationResult => {
-  const action = useActionContext();
+  const action = useTaskContext();
   type AppKeyInput = Parameters<typeof action.unpauseTask>[0];
 
   return useCallback(
@@ -42,7 +42,7 @@ export const useResumeAppTask = (appKey: string): UseAppTaskMutationResult => {
 };
 
 export const useStepAppTask = (appKey: string): UseAppTaskMutationResult => {
-  const action = useActionContext();
+  const action = useTaskContext();
   type AppKeyInput = Parameters<typeof action.stepTask>[0];
 
   return useCallback(

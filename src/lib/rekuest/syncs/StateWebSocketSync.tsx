@@ -1,16 +1,17 @@
 import { useEffect, useMemo, useRef } from "react";
 import type { AppKey } from "@/apps";
-import { useLockStoreRegistry } from "@/lib/rekuest/locks/store";
+import type { Envelope as StateStoreEnvelope } from "@/lib/rekuest/state/store";
+import { useGlobalStateStoreRegistry } from "@/lib/rekuest/state/store";
 import {
-  LockEventType,
-  type LockTransportMessage,
+  StateEventType,
+  type StateTransportMessage,
   type TransportMessageSubscription,
-} from "./types";
-import { useTransport } from "./transport-context";
+} from "../../../transport/types";
+import { useTransport } from "../transport/transport-context";
 
-export function LockWebSocketSync() {
+export function StateWebSocketSync() {
   const transport = useTransport();
-  const lockStoreRegistry = useLockStoreRegistry();
+  const globalStateStoreRegistry = useGlobalStateStoreRegistry();
   const subscriptionsRef = useRef(new Map<AppKey, TransportMessageSubscription>());
   const appKeys = useMemo(
     () => Object.keys(transport.apps) as AppKey[],
@@ -18,15 +19,15 @@ export function LockWebSocketSync() {
   );
 
   useEffect(() => {
-    const handleMessage = (appKey: AppKey, message: LockTransportMessage) => {
-      const store = lockStoreRegistry.getStoreApi(appKey).getState();
+    const handleMessage = (appKey: AppKey, message: StateTransportMessage) => {
+      const store = globalStateStoreRegistry.getStoreApi(appKey).getState();
 
       switch (message.type) {
-        case LockEventType.LOCK:
-          store.setLock(message.key, message.assignation);
+        case StateEventType.STATE_UPDATE:
+          store.setState(message.state, message.value);
           return;
-        case LockEventType.UNLOCK:
-          store.setLock(message.key, undefined);
+        case StateEventType.STATE_PATCH:
+          store.applyEnvelope(message.envelope as unknown as StateStoreEnvelope);
           return;
       }
     };
@@ -42,7 +43,7 @@ export function LockWebSocketSync() {
         appKey,
         transport.subscribeToMessages({
           appKey,
-          topic: "locks",
+          topic: "states",
           listener: (message) => handleMessage(appKey, message),
         }),
       );
@@ -54,7 +55,7 @@ export function LockWebSocketSync() {
         subscriptionsRef.current.delete(appKey);
       }
     });
-  }, [appKeys, lockStoreRegistry, transport]);
+  }, [appKeys, globalStateStoreRegistry, transport]);
 
   useEffect(() => {
     const subscriptions = subscriptionsRef.current;

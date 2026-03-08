@@ -6,10 +6,10 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useBlockingLock } from "@/lib/rekuest/locks/store";
+import { useAction } from "@/lib/rekuest/task";
+import { type ActionDefinition } from "@/lib/rekuest/task/types";
 import { cn } from "@/lib/utils";
-import { useAction } from "@/transport/action-context";
 import { type AssignOptions } from "@/transport/types";
-import { type ActionDefinition } from "@/transport/useTransportAction";
 import { type VariantProps } from "class-variance-authority";
 import React, { type ButtonHTMLAttributes } from "react";
 import { toast } from "sonner";
@@ -43,11 +43,10 @@ export function ActionButton<TArgs, TReturn>({
   disabled,
   ...props
 }: ActionButtonProps<TArgs, TReturn>) {
-  const appKey = action.appKey as Parameters<ReturnType<typeof useAction>["assign"]>[0];
   const { isLocked, lockKey: blockingLock, lockingTaskId: blockingTaskId } =
     useBlockingLock(action.appKey, action.lockKeys);
 
-  const actionApi = useAction();
+  const actionApi = useAction(action);
 
   const handleClick = async (e: React.MouseEvent<HTMLButtonElement>) => {
     onClick?.(e);
@@ -73,7 +72,7 @@ export function ActionButton<TArgs, TReturn>({
         "reference:",
         reference,
       );
-      const task = await actionApi.assign(appKey, action.name, args, {
+      const task = await actionApi.assign(args, {
         ...assignOptions,
         reference,
         step,

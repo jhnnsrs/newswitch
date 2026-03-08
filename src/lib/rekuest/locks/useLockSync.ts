@@ -1,5 +1,5 @@
 import { useBlockingLock } from './store';
-import { useTransport } from '@/transport/transport-context';
+import { useTransport } from '@/lib/rekuest/transport/transport-context';
 import { resolveLockAppKey } from './keys';
 import type {
   LockDefinition,

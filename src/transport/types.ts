@@ -599,7 +599,7 @@ export interface TransportContextValue {
   disconnectSocket: (appKey?: AppKey) => void;
 }
 
-export interface ActionContextValue {
+export interface TaskContextValue {
   /** Whether the WebSocket is connected */
   isConnected: boolean;
   /** Whether the action layer is attempting to reconnect */
@@ -647,3 +647,5 @@ export interface ActionContextValue {
   /** Disconnect the WebSocket */
   disconnect: () => void;
 }
+
+export type ActionContextValue = TaskContextValue;

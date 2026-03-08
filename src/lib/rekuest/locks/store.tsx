@@ -157,29 +157,17 @@ export const selectLock =
 export function getBlockingLock(
   locks: Record<string, string | undefined | null>,
   lockKeys: string[] = [],
-): BlockingLockState;
-export function getBlockingLock(
-  locks: Record<string, string | undefined | null>,
-  lockKeys: string[] = [],
 ): BlockingLockState {
   return resolveBlockingLock(locks, lockKeys) ?? unlockedState;
 }
 
-export function useBlockingLock(lockKeys?: string[]): BlockingLockState;
-export function useBlockingLock(appKey: string, lockKeys?: string[]): BlockingLockState;
 export function useBlockingLock(
-  appKeyOrLockKeys: string | string[] = [],
-  maybeLockKeys: string[] = [],
+  appKey: string,
+  lockKeys: string[] = [],
 ): BlockingLockState {
-  const locks = Array.isArray(appKeyOrLockKeys)
-    ? useLockStore((state) => state.locks)
-    : useLockStore(appKeyOrLockKeys, (state) => state.locks);
+  const locks = useLockStore(appKey, (state) => state.locks);
 
-  return useMemo(() => {
-    if (Array.isArray(appKeyOrLockKeys)) {
-      return getBlockingLock(locks, appKeyOrLockKeys);
-    }
-
-    return getBlockingLock(locks, maybeLockKeys);
-  }, [appKeyOrLockKeys, locks, maybeLockKeys]);
+return useMemo(() => {
+    return resolveBlockingLock(locks, lockKeys) ?? unlockedState;
+}, [locks, lockKeys]);
 }

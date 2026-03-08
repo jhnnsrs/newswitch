@@ -1,12 +1,13 @@
 import { selectTask, useTaskStore } from "@/lib/rekuest/task/store";
-import { useCancelTask } from "@/transport/useCancelTask";
-import { usePauseTask } from "@/transport/usePauseTask";
-import { useResumeTask } from "@/transport/useResumeTask";
 import { Button } from "./ui/button";
 import { Progress } from "./ui/progress";
+import { useCancelTask } from "@/apps/default/hooks/useCancelTask";
+import { useResumeTask } from "@/apps/default/hooks/useResumeTask";
+import { usePauseTask } from "@/apps/default/hooks/usePauseTask";
 
 export const ProgressDisplay = (props: {
   activeTaskId: string | null | undefined;
+
 }) => {
   const activeTaskId = props.activeTaskId;
 

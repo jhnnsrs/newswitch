@@ -7,7 +7,7 @@ import { PanelProvider } from "@/components/stage/PanelProvider";
 import { FramePanel } from "@/components/stage/panels/FramePanel";
 import { KubeStatePanel } from "@/components/stage/panels/KubeStatePanel";
 import { CurrentLightPathPlane } from "@/components/stage/planes/lightpath/LightPathPlane";
-import { useTransport } from "@/transport/transport-context";
+
 import { useEffect, useState } from "react";
 
 

@@ -6,7 +6,7 @@ import {
   selectState,
   useGlobalStateStore,
 } from './store';
-import { useTransport } from '@/transport/transport-context';
+import { useTransport } from '@/lib/rekuest/transport/transport-context';
 import { useStateContext } from '@/hooks/state-context';
 import { resolveStateAppKey } from './definitions';
 import type {

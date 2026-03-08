@@ -3,7 +3,7 @@ import type { MutableRefObject } from "react";
 import { LockWebSocketSync } from "./LockWebSocketSync";
 import { StateWebSocketSync } from "./StateWebSocketSync";
 import { TaskWebSocketSync } from "./TaskWebSocketSync";
-import { useTransport } from "./transport-context";
+import { useTransport } from "../transport/transport-context";
 
 interface TransportWebSocketSyncProps {
   managerRef: MutableRefObject<TransportWebSocketSyncHandle | null>;

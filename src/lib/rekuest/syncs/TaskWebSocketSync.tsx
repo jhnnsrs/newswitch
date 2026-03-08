@@ -10,8 +10,8 @@ import {
   type TransportMessageSubscription,
   type TransportSocketConnectionState,
   type TaskTransportMessage,
-} from "./types";
-import { useTransport } from "./transport-context";
+} from "../../../transport/types";
+import { useTransport } from "../transport/transport-context";
 
 const defaultConnectionState: TransportSocketConnectionState = {
   isConnected: false,

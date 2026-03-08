@@ -9,8 +9,8 @@ import {
   selectTask,
   useTaskStore,
 } from '@/lib/rekuest/task/store';
-import { useAction as useActionContext } from '@/transport/action-context';
-import { useTransport } from '@/transport/transport-context';
+import { useTaskContext } from '@/lib/rekuest/task/task-context';
+import { useTransport } from '@/lib/rekuest/transport/transport-context';
 import type { AssignOptions, Task } from '@/transport/types';
 import { resolveActionAppKey } from './keys';
 import type {
@@ -33,7 +33,7 @@ export const useAction = <TArgs, TReturn>(
     onProgress,
   } = options;
 
-  const action = useActionContext();
+  const taskApi = useTaskContext();
   const transport = useTransport();
   const lockStoreApi = useLockStoreApi();
   const appKey = resolveActionAppKey(definition, transport.defaultAppKey);
@@ -91,7 +91,7 @@ export const useAction = <TArgs, TReturn>(
   useEffect(() => {
     if (!autoSubscribe || !currentReference) return;
 
-    const unsubscribe = action.subscribeToTask(
+    const unsubscribe = taskApi.subscribeToTask(
       currentReference,
       appKey,
       (updatedTask) => {
@@ -100,7 +100,7 @@ export const useAction = <TArgs, TReturn>(
     );
 
     return () => unsubscribe();
-  }, [action, appKey, autoSubscribe, currentReference, handleTaskUpdate]);
+  }, [taskApi, appKey, autoSubscribe, currentReference, handleTaskUpdate]);
 
   const execute = useCallback(
     async (
@@ -126,17 +126,17 @@ export const useAction = <TArgs, TReturn>(
         throw parsed.error;
       }
 
-      const reference = opts?.reference || action.createReference();
+      const reference = opts?.reference || taskApi.createReference();
   setCurrentReference(reference);
 
-      return await action.assign<TArgs, TReturn>(
+      return await taskApi.assign<TArgs, TReturn>(
         appKey,
         definition.name,
         parsed.data,
         { ...opts, reference },
       );
     },
-    [action, appKey, definition, lockStoreApi],
+    [taskApi, appKey, definition, lockStoreApi],
   );
 
   const assign = useCallback(
@@ -148,11 +148,11 @@ export const useAction = <TArgs, TReturn>(
 
   const call = useCallback(
     async (args: TArgs, opts?: AssignOptions): Promise<TReturn> => {
-      const reference = opts?.reference || action.createReference();
+      const reference = opts?.reference || taskApi.createReference();
 
       await execute(args, { ...opts, reference });
 
-      const taskState = await action.waitForTask<TArgs, TReturn>(appKey, reference);
+      const taskState = await taskApi.waitForTask<TArgs, TReturn>(appKey, reference);
       const parsed = definition.returnSchema.safeParse(taskState.result);
 
       if (!parsed.success) {
@@ -163,18 +163,18 @@ export const useAction = <TArgs, TReturn>(
 
       return parsed.data;
     },
-    [action, appKey, definition.returnSchema, execute],
+    [taskApi, appKey, definition.returnSchema, execute],
   );
 
   const refresh = useCallback(async (): Promise<void> => {
     if (!currentTaskId) return;
-    await action.getTask(appKey, currentTaskId);
-  }, [action, appKey, currentTaskId]);
+    await taskApi.getTask(appKey, currentTaskId);
+  }, [taskApi, appKey, currentTaskId]);
 
   const cancel = useCallback(async (): Promise<void> => {
     if (!currentTaskId) return;
-    await action.cancelTask(appKey, currentTaskId);
-  }, [action, appKey, currentTaskId]);
+    await taskApi.cancelTask(appKey, currentTaskId);
+  }, [taskApi, appKey, currentTaskId]);
 
   const clear = useCallback((): void => {
     setCurrentReference(null);

@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useIOState } from "@/hooks/states";
-import { useTransport } from "@/transport/transport-context";
+import { useTransport } from "@/lib/rekuest/transport/transport-context";
 import { Download, ImageIcon, RefreshCw } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 

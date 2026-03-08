@@ -11,16 +11,16 @@ import {
   selectRegistryVersion,
   useTransportStore,
 } from '@/lib/rekuest/transport/store';
-import { ActionContext } from '@/transport/action-context';
+import { TaskContext } from './task-context';
 import {
   TransportWebSocketSync,
   type TransportWebSocketSyncHandle,
-} from '@/transport/TransportWebSocketSync';
-import { useTransport } from '@/transport/transport-context';
+} from '@/lib/rekuest/syncs/TransportWebSocketSync';
+import { useTransport } from '@/lib/rekuest/transport/transport-context';
 import type {
-  ActionContextValue,
   AssignOptions,
   Task,
+  TaskContextValue,
   TaskStatus,
 } from '@/transport/types';
 
@@ -28,10 +28,10 @@ export interface TaskProviderProps {
   children: ReactNode;
 }
 
-type AssignAppKey = Parameters<ActionContextValue['assign']>[0];
-type CachedTaskAppKey = Parameters<ActionContextValue['getCachedTask']>[1];
-type SubscribeAppKey = Parameters<ActionContextValue['subscribeToTask']>[1];
-type WaitForTaskAppKey = Parameters<ActionContextValue['waitForTask']>[0];
+type AssignAppKey = Parameters<TaskContextValue['assign']>[0];
+type CachedTaskAppKey = Parameters<TaskContextValue['getCachedTask']>[1];
+type SubscribeAppKey = Parameters<TaskContextValue['subscribeToTask']>[1];
+type WaitForTaskAppKey = Parameters<TaskContextValue['waitForTask']>[0];
 
 export function TaskProvider({ children }: TaskProviderProps) {
   const transport = useTransport();
@@ -47,7 +47,7 @@ export function TaskProvider({ children }: TaskProviderProps) {
     return `local-${Date.now()}-${Math.random().toString(16).slice(2)}`;
   }, []);
 
-  const assign: ActionContextValue['assign'] = useCallback(
+  const assign: TaskContextValue['assign'] = useCallback(
     async <TArgs, TReturn>(
       appKey: AssignAppKey,
       actionName: string,
@@ -82,7 +82,7 @@ export function TaskProvider({ children }: TaskProviderProps) {
     [createReference, taskStoreRegistry, transport],
   );
 
-  const getTask: ActionContextValue['getTask'] = useCallback(
+  const getTask: TaskContextValue['getTask'] = useCallback(
     async <TArgs = unknown, TReturn = unknown>(
       appKey: AssignAppKey,
       taskId: string,
@@ -181,7 +181,7 @@ export function TaskProvider({ children }: TaskProviderProps) {
     [taskStoreRegistry],
   );
 
-  const waitForTask: ActionContextValue['waitForTask'] = useCallback(
+  const waitForTask: TaskContextValue['waitForTask'] = useCallback(
     <TArgs = unknown, TReturn = unknown>(
       appKey: WaitForTaskAppKey,
       taskId: string,
@@ -257,7 +257,7 @@ export function TaskProvider({ children }: TaskProviderProps) {
     return map;
   }, [tasks]);
 
-  const contextValue = useMemo<ActionContextValue>(
+  const contextValue = useMemo<TaskContextValue>(
     () => ({
       apiEndpoint: transport.apiEndpoint,
       wsUrl: transport.wsUrl,
@@ -301,9 +301,9 @@ export function TaskProvider({ children }: TaskProviderProps) {
   );
 
   return (
-    <ActionContext.Provider value={contextValue}>
+    <TaskContext.Provider value={contextValue}>
       <TransportWebSocketSync ref={managerRef} />
       {children}
-    </ActionContext.Provider>
+    </TaskContext.Provider>
   );
 }

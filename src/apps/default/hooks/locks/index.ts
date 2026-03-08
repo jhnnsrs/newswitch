@@ -2,32 +2,32 @@ import type { LockDefinition } from "../useLockSync";
 import { ExpanseStateDefinition } from "./ExpanseState";
 import { IlluminationDefinition } from "./Illumination";
 import { StagePositionDefinition } from "./StagePosition";
-import { IoDefinition } from "./Io";
 import { CameraParametersDefinition } from "./CameraParameters";
-import { FilterBankDefinition } from "./FilterBank";
+import { IoDefinition } from "./Io";
 import { ObjectiveDefinition } from "./Objective";
+import { FilterBankDefinition } from "./FilterBank";
 import { HookRegistryDefinition } from "./HookRegistry";
 
 export { ExpanseStateDefinition, useExpanseStateLock } from "./ExpanseState";
 export { IlluminationDefinition, useIlluminationLock } from "./Illumination";
 export { StagePositionDefinition, useStagePositionLock } from "./StagePosition";
-export { IoDefinition, useIoLock } from "./Io";
 export {
   CameraParametersDefinition,
   useCameraParametersLock,
 } from "./CameraParameters";
-export { FilterBankDefinition, useFilterBankLock } from "./FilterBank";
+export { IoDefinition, useIoLock } from "./Io";
 export { ObjectiveDefinition, useObjectiveLock } from "./Objective";
+export { FilterBankDefinition, useFilterBankLock } from "./FilterBank";
 export { HookRegistryDefinition, useHookRegistryLock } from "./HookRegistry";
 
 export const globalLockDefinition = {
   ExpanseState: ExpanseStateDefinition,
   Illumination: IlluminationDefinition,
   StagePosition: StagePositionDefinition,
-  Io: IoDefinition,
   CameraParameters: CameraParametersDefinition,
-  FilterBank: FilterBankDefinition,
+  Io: IoDefinition,
   Objective: ObjectiveDefinition,
+  FilterBank: FilterBankDefinition,
   HookRegistry: HookRegistryDefinition,
 } satisfies Record<string, LockDefinition<string>>;
 

@@ -1,17 +1,20 @@
 // src/transport/index.ts
 
-export { ActionProvider } from "./ActionProvider";
-export { TaskProvider } from "./ActionProvider";
-export { TransportProvider } from "./TransportProvider";
-export { useAction } from "./action-context";
-export { useTransport } from "./transport-context";
-export { useTask } from "./useTask";
-export { useTransportAction } from "./useTransportAction";
+export {
+  TaskProvider as ActionProvider,
+  TaskProvider,
+} from "@/lib/rekuest/task/TaskProvider";
+export { TransportProvider } from "@/lib/rekuest/transport/TransportProvider";
+export { useTaskContext, useTaskContext as useAction } from "@/lib/rekuest/task/task-context";
+export { useTransport } from "@/lib/rekuest/transport/transport-context";
+export { useTask } from "@/lib/rekuest/task/useTask";
+export { useAction as useTransportAction } from "@/lib/rekuest/task/useAction";
 
 export type {
   AssignResponse,
   ActionContextValue,
   Task,
+  TaskContextValue,
   TaskStatus,
   TaskUpdate,
   TransportConfig,
@@ -23,6 +26,6 @@ export type {
   ActionDefinition,
   UseTransportActionOptions,
   UseTransportActionResult,
-} from "./useTransportAction";
+} from "@/lib/rekuest/task/types";
 
-export type { UseTaskOptions, UseTaskResult } from "./useTask";
+export type { UseTaskOptions, UseTaskResult } from "@/lib/rekuest/task/useTask";
