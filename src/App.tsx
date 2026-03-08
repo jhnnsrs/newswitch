@@ -20,6 +20,8 @@ const BACKEND_API = window.__agent_url__ || import.meta.env.VITE_BACKEND_URL;
 const BACKEND_WS =
   window.__agent_ws_url__ || import.meta.env.VITE_WEBSOCKET_URL;
 
+
+  
 const scopedTransportConfig: Partial<
   Record<AppKey, { apiEndpoint: string; wsEndpoint?: string }>
 > = {
@@ -28,6 +30,8 @@ const scopedTransportConfig: Partial<
     wsEndpoint: BACKEND_WS,
   },
 };
+
+
 
 const ScopedAppsProvider = createScopedProvider({
   definition: appsDefinition,

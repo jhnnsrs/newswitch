@@ -103,6 +103,7 @@ export default defineConfig(({ mode }) => {
         ],
         baseDir: env.VITE_APPS_DIR || "apps",
         defaultApp,
+        rekuestImportPath: env.VITE_REKUEST_IMPORT_PATH || "@/lib/rekuest",
       }),
       tailwindcss(),
       ViteHookManifest({

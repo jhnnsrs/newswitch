@@ -43,6 +43,7 @@ export interface GenerateAppsPluginOptions {
   apps: GenerateAppPluginOptions[];
   baseDir?: string;
   defaultApp?: string;
+  rekuestImportPath?: string;
 }
 
 interface NormalizedGenerateAppPluginOptions extends GenerateAppPluginOptions {
@@ -52,6 +53,26 @@ interface NormalizedGenerateAppPluginOptions extends GenerateAppPluginOptions {
 }
 
 const DEFAULT_APP_KEY = "default";
+const DEFAULT_REKUEST_IMPORT_PATH = '@/lib/rekuest';
+
+const buildTaskHookContent = (
+  appKey: string,
+  symbolPrefix: string | undefined,
+  hookName: 'Cancel' | 'Pause' | 'Resume' | 'Step',
+  rekuestImportPath: string,
+) => {
+  const qualifiedHookName = `use${symbolPrefix ?? ''}${hookName}Task`;
+  const baseHookName = `use${hookName}AppTask`;
+
+  const aliasExport = symbolPrefix
+    ? `\nexport const use${hookName}Task = ${qualifiedHookName};\n`
+    : '';
+
+  return `
+import { ${baseHookName} } from '${rekuestImportPath}/task';
+
+export const ${qualifiedHookName} = () => ${baseHookName}('${appKey}');${aliasExport}`;
+};
 
 const ensureCleanDir = (dirPath: string) => {
   fs.rmSync(dirPath, { force: true, recursive: true });
@@ -189,6 +210,8 @@ export default function generateAppsPlugin(
   const normalizedApps = normalizeApps(options.apps);
   const appsDir = path.resolve(SRC_DIR, options.baseDir ?? path.relative(SRC_DIR, DEFAULT_APPS_DIR));
   const defaultApp = options.defaultApp ?? normalizedApps[0]?.key ?? "default";
+  const rekuestImportPath =
+    options.rekuestImportPath ?? DEFAULT_REKUEST_IMPORT_PATH;
 
   if (!normalizedApps.some((app) => app.key === defaultApp)) {
     throw new Error(`Default app "${defaultApp}" is not present in the configured apps.`);
@@ -254,6 +277,46 @@ export default function generateAppsPlugin(
         await formatAndWrite(
           path.resolve(appHooksDir, "useLockSync.tsx"),
           `export * from '@/hooks/useLockSync';\n`,
+        );
+
+        await formatAndWrite(
+          path.resolve(appHooksDir, 'useCancelTask.ts'),
+          buildTaskHookContent(
+            app.key,
+            app.symbolPrefix,
+            'Cancel',
+            rekuestImportPath,
+          ),
+        );
+
+        await formatAndWrite(
+          path.resolve(appHooksDir, 'usePauseTask.ts'),
+          buildTaskHookContent(
+            app.key,
+            app.symbolPrefix,
+            'Pause',
+            rekuestImportPath,
+          ),
+        );
+
+        await formatAndWrite(
+          path.resolve(appHooksDir, 'useResumeTask.ts'),
+          buildTaskHookContent(
+            app.key,
+            app.symbolPrefix,
+            'Resume',
+            rekuestImportPath,
+          ),
+        );
+
+        await formatAndWrite(
+          path.resolve(appHooksDir, 'useStepTask.ts'),
+          buildTaskHookContent(
+            app.key,
+            app.symbolPrefix,
+            'Step',
+            rekuestImportPath,
+          ),
         );
 
         await formatAndWrite(

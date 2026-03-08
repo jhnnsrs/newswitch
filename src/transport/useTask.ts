@@ -1,11 +1,13 @@
 // src/transport/useTask.ts
 
+import { defaultAppKey } from "@/apps";
 import { useCallback, useEffect, useMemo } from "react";
 import { selectTask, useTransportStore } from "../store";
 import { useAction } from "./action-context";
 import type { Task, TaskStatus } from "./types";
 
 export interface UseTaskOptions {
+  appKey?: string;
   /** Whether to fetch from server on mount */
   fetchOnMount?: boolean;
   /** Whether to auto-subscribe to updates */
@@ -34,6 +36,7 @@ export const useTask = <TArgs = unknown, TReturn = unknown>(
   options: UseTaskOptions = {},
 ): UseTaskResult<TArgs, TReturn> => {
   const {
+    appKey = defaultAppKey,
     fetchOnMount = true,
     pollingInterval,
   } = options;
@@ -42,8 +45,8 @@ export const useTask = <TArgs = unknown, TReturn = unknown>(
 
   const action = useAction();
   const taskSelector = useMemo(
-    () => (taskId ? selectTask<TArgs, TReturn>(taskId) : () => undefined),
-    [taskId],
+    () => (taskId ? selectTask<TArgs, TReturn>(taskId, appKey) : () => undefined),
+    [appKey, taskId],
   );
   const task = useTransportStore(taskSelector) ?? null;
 
@@ -57,14 +60,14 @@ export const useTask = <TArgs = unknown, TReturn = unknown>(
   // Fetch task from server
   const refresh = useCallback(async (): Promise<void> => {
     if (!taskId) return;
-    await action.getTask<TArgs, TReturn>(taskId);
-  }, [action, taskId]);
+    await action.getTask<TArgs, TReturn>(appKey, taskId);
+  }, [action, appKey, taskId]);
 
   // Cancel task
   const cancel = useCallback(async (): Promise<void> => {
     if (!taskId) return;
-    await action.cancelTask(taskId);
-  }, [action, taskId]);
+    await action.cancelTask(appKey, taskId);
+  }, [action, appKey, taskId]);
 
   // Fetch on mount
   useEffect(() => {
