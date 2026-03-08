@@ -3,7 +3,7 @@ import type { AssignOptions, Task, TaskStatus } from '@/transport/types';
 
 export interface ActionDefinition<TArgs, TReturn> {
   name: string;
-  appKey?: string;
+  appKey: string;
   description?: string;
   argsSchema: ZodType<TArgs>;
   returnSchema: ZodType<TReturn>;

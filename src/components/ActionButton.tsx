@@ -72,7 +72,7 @@ export function ActionButton<TArgs, TReturn>({
         "reference:",
         reference,
       );
-      const task = await actionApi.assign(action.name, args, {
+      const task = await actionApi.assign(action.appKey, args, {
         ...assignOptions,
         reference,
         step,

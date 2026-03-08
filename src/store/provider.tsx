@@ -18,7 +18,7 @@ import { createTimeStore, TimeStoreContext } from './timeStore';
 import { createViewStore, ViewStoreContext } from './viewStore';
 import { createViewerStore, ViewerStoreContext } from './viewerStore';
 
-export interface AppStoreBundle {
+export interface LocalStoreBundle {
   modeStore: ReturnType<typeof createModeStore>;
   viewStore: ReturnType<typeof createViewStore>;
   viewerStore: ReturnType<typeof createViewerStore>;
@@ -29,7 +29,7 @@ export interface AppStoreBundle {
   timeStore: ReturnType<typeof createTimeStore>;
 }
 
-const createAppStoreBundle = (): AppStoreBundle => ({
+const createLocalStoreBundle = (): LocalStoreBundle => ({
   modeStore: createModeStore(),
   viewStore: createViewStore(),
   viewerStore: createViewerStore(),
@@ -40,29 +40,29 @@ const createAppStoreBundle = (): AppStoreBundle => ({
   timeStore: createTimeStore(),
 });
 
-const scopedBundles = new Map<string, AppStoreBundle>();
+const scopedBundles = new Map<string, LocalStoreBundle>();
 
-const getScopedBundle = (scope: string): AppStoreBundle => {
+const getScopedBundle = (scope: string): LocalStoreBundle => {
   const existingBundle = scopedBundles.get(scope);
 
   if (existingBundle) {
     return existingBundle;
   }
 
-  const nextBundle = createAppStoreBundle();
+  const nextBundle = createLocalStoreBundle();
   scopedBundles.set(scope, nextBundle);
   return nextBundle;
 };
 
-interface StoreProviderProps {
+export interface LocalStoreProviderProps {
   children: ReactNode;
   scope?: string;
 }
 
-export function StoreProvider({
+export function LocalStoreProvider({
   children,
   scope = 'default',
-}: StoreProviderProps) {
+}: LocalStoreProviderProps) {
   const stores = useMemo(() => getScopedBundle(scope), [scope]);
 
   return (
@@ -85,3 +85,7 @@ export function StoreProvider({
     </ModeStoreContext.Provider>
   );
 }
+
+export const StoreProvider = LocalStoreProvider;
+export type AppStoreBundle = LocalStoreBundle;
+export type StoreProviderProps = LocalStoreProviderProps;

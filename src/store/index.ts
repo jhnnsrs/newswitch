@@ -35,4 +35,11 @@ export {
 } from "./transportStore";
 export type { TransportStore } from "./transportStore";
 
-export { StoreProvider } from "./provider";
+export {
+  LocalStoreProvider,
+  StoreProvider,
+} from "./provider";
+export type {
+  LocalStoreBundle,
+  LocalStoreProviderProps,
+} from "./provider";

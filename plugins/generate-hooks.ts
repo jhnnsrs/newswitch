@@ -402,7 +402,7 @@ ${schemaAndTypeAliases}
 // --- Definition ---
 export const ${defName}: ActionDefinition<${argsTypeName}, ${returnTypeName}> = {
   name: "${key}",
-  ${appKey ? `appKey: '${appKey}',` : ""}
+  appKey: '${appKey}',
   description: "${impl.description || ""}",
   argsSchema: ${argsSchemaName},
   returnSchema: ${returnSchemaName},

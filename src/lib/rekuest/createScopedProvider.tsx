@@ -1,10 +1,11 @@
 import type { ReactNode } from 'react';
 import type { AppDefinition, AppKey, AppsDefinition } from '@/apps';
-import { StateProvider } from '@/hooks/StateProvider';
-import { StoreProvider } from '@/store';
-import { ActionProvider, TransportProvider } from '@/transport';
+import { LocalStoreProvider } from '@/store';
+import { TransportProvider } from '@/transport';
 import type { TransportConfig } from '@/transport';
+import { ActionProvider } from './ActionProvider';
 import { RekuestStoreProvider } from './RekuestStoreProvider';
+import { StateProvider } from './StateProvider';
 
 type ScopedProviderDefinition = AppsDefinition | AppDefinition;
 
@@ -206,11 +207,11 @@ export function createScopedProvider<TKey extends string = string>({
         config={resolvedConfig}
       >
         <RekuestStoreProvider scope={scopeKey}>
-          <StoreProvider scope={scopeKey}>
+          <LocalStoreProvider scope={scopeKey}>
             <StateProvider>
               <ActionProvider>{children}</ActionProvider>
             </StateProvider>
-          </StoreProvider>
+          </LocalStoreProvider>
         </RekuestStoreProvider>
       </TransportProvider>
     );
