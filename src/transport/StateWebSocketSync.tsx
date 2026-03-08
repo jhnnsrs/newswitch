@@ -1,105 +1,70 @@
-import { useEffect, useMemo, useRef, type MutableRefObject } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import type { AppKey } from "@/apps";
 import type { Envelope as StateStoreEnvelope } from "@/lib/rekuest/state/store";
 import { useGlobalStateStoreRegistry } from "@/lib/rekuest/state/store";
 import {
-  FromAgentMessageType,
-  type ListenStatesMessage,
-  type RegisterMessage,
-  type StatePatchEvent,
-  type StateUpdateEvent,
+  StateEventType,
+  type StateTransportMessage,
+  type TransportMessageSubscription,
 } from "./types";
-import { SubscriptionWebSocketManager } from "./SubscriptionWebSocketManager";
 import { useTransport } from "./transport-context";
 
-type StateChannelMessage =
-  | RegisterMessage
-  | StateUpdateEvent
-  | StatePatchEvent
-  | { type: typeof FromAgentMessageType.HEARTBEAT_ANSWER };
-
-export interface StateWebSocketSyncHandle {
-  reconnect: () => void;
-  disconnect: () => void;
-}
-
-interface StateWebSocketSyncProps {
-  managerRef?: MutableRefObject<StateWebSocketSyncHandle | null>;
-}
-
-export function StateWebSocketSync({ managerRef }: StateWebSocketSyncProps) {
+export function StateWebSocketSync() {
   const transport = useTransport();
   const globalStateStoreRegistry = useGlobalStateStoreRegistry();
-  const channelManagerRef = useRef<
-    Map<AppKey, SubscriptionWebSocketManager<StateChannelMessage>>
-  >(new Map());
+  const subscriptionsRef = useRef(new Map<AppKey, TransportMessageSubscription>());
   const appKeys = useMemo(
     () => Object.keys(transport.apps) as AppKey[],
     [transport.apps],
   );
 
   useEffect(() => {
-    const managers = new Map<AppKey, SubscriptionWebSocketManager<StateChannelMessage>>();
+    const handleMessage = (appKey: AppKey, message: StateTransportMessage) => {
+      const store = globalStateStoreRegistry.getStoreApi(appKey).getState();
 
-    for (const appKey of appKeys) {
-      const app = transport.getApp(appKey);
-      const endpoints = transport.getEndpoints(appKey);
-      const listeningKeys = Object.values(app.states).map((definition) => definition.key);
-
-      const manager = new SubscriptionWebSocketManager<StateChannelMessage>({
-        name: `StateWebSocketSync:${appKey}`,
-        wsUrl: endpoints.stateWsUrl,
-        pingInterval: transport.pingInterval,
-        reconnect: transport.reconnect,
-        buildListenMessage: (keys): ListenStatesMessage => ({
-          type: "LISTEN_STATES",
-          states: keys,
-        }),
-        onMessage: (message) => {
-          const store = globalStateStoreRegistry.getStoreApi(appKey).getState();
-
-          switch (message.type) {
-            case FromAgentMessageType.STATE_UPDATE:
-              store.setState(message.state, message.value);
-              return;
-            case FromAgentMessageType.STATE_PATCH:
-              store.applyEnvelope(message.envelope as unknown as StateStoreEnvelope);
-              return;
-            case FromAgentMessageType.REGISTER:
-            case FromAgentMessageType.HEARTBEAT_ANSWER:
-              return;
-            default:
-              return;
-          }
-        },
-      });
-
-      manager.updateListenKeys(listeningKeys);
-      manager.connect();
-      managers.set(appKey, manager);
-    }
-
-    channelManagerRef.current = managers;
-
-    if (managerRef) {
-      managerRef.current = {
-        reconnect: () => {
-          managers.forEach((manager) => manager.reconnect());
-        },
-        disconnect: () => {
-          managers.forEach((manager) => manager.disconnect());
-        },
-      };
-    }
-
-    return () => {
-      managers.forEach((manager) => manager.disconnect());
-      channelManagerRef.current = new Map();
-      if (managerRef) {
-        managerRef.current = null;
+      switch (message.type) {
+        case StateEventType.STATE_UPDATE:
+          store.setState(message.state, message.value);
+          return;
+        case StateEventType.STATE_PATCH:
+          store.applyEnvelope(message.envelope as unknown as StateStoreEnvelope);
+          return;
       }
     };
-  }, [appKeys, globalStateStoreRegistry, managerRef, transport]);
+
+    for (const appKey of appKeys) {
+      const existingSubscription = subscriptionsRef.current.get(appKey);
+
+      if (existingSubscription) {
+        continue;
+      }
+
+      subscriptionsRef.current.set(
+        appKey,
+        transport.subscribeToMessages({
+          appKey,
+          topic: "states",
+          listener: (message) => handleMessage(appKey, message),
+        }),
+      );
+    }
+
+    subscriptionsRef.current.forEach((subscription, appKey) => {
+      if (!appKeys.includes(appKey)) {
+        subscription.unsubscribe();
+        subscriptionsRef.current.delete(appKey);
+      }
+    });
+  }, [appKeys, globalStateStoreRegistry, transport]);
+
+  useEffect(() => {
+    const subscriptions = subscriptionsRef.current;
+
+    return () => {
+      subscriptions.forEach((subscription) => subscription.unsubscribe());
+      subscriptions.clear();
+    };
+  }, []);
 
   return null;
 }

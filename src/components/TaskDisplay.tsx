@@ -1,4 +1,4 @@
-import { selectTask, useTransportStore } from "@/lib/rekuest/task/store";
+import { selectTask, useTaskStore } from "@/lib/rekuest/task/store";
 import { useCancelTask } from "@/transport/useCancelTask";
 import { usePauseTask } from "@/transport/usePauseTask";
 import { useResumeTask } from "@/transport/useResumeTask";
@@ -11,7 +11,7 @@ export const ProgressDisplay = (props: {
   const activeTaskId = props.activeTaskId;
 
   // Use the built-in selector which safely resolves both local references and server IDs
-  const task = useTransportStore(
+  const task = useTaskStore(
     activeTaskId ? selectTask(activeTaskId) : () => undefined,
   );
 

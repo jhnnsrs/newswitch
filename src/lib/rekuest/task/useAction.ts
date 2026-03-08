@@ -7,7 +7,7 @@ import {
 } from '@/lib/rekuest/locks/store';
 import {
   selectTask,
-  useTransportStore,
+  useTaskStore,
 } from '@/lib/rekuest/task/store';
 import { useAction as useActionContext } from '@/transport/action-context';
 import { useTransport } from '@/transport/transport-context';
@@ -59,7 +59,7 @@ export const useAction = <TArgs, TReturn>(
       : () => undefined;
   }, [currentReference]);
 
-  const task = useTransportStore(appKey, taskSelector) ?? null;
+  const task = useTaskStore(appKey, taskSelector) ?? null;
   const {
     isLocked,
     lockKey: blockingLockKey,

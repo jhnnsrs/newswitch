@@ -1,6 +1,7 @@
 // src/transport/index.ts
 
 export { ActionProvider } from "./ActionProvider";
+export { TaskProvider } from "./ActionProvider";
 export { TransportProvider } from "./TransportProvider";
 export { useAction } from "./action-context";
 export { useTransport } from "./transport-context";

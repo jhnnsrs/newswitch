@@ -1,104 +1,69 @@
-import { useEffect, useMemo, useRef, type MutableRefObject } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import type { AppKey } from "@/apps";
 import { useLockStoreRegistry } from "@/lib/rekuest/locks/store";
 import {
-  FromAgentMessageType,
-  type ListenLocksMessage,
-  type LockEvent,
-  type RegisterMessage,
-  type UnlockEvent,
+  LockEventType,
+  type LockTransportMessage,
+  type TransportMessageSubscription,
 } from "./types";
-import { SubscriptionWebSocketManager } from "./SubscriptionWebSocketManager";
 import { useTransport } from "./transport-context";
 
-type LockChannelMessage =
-  | RegisterMessage
-  | LockEvent
-  | UnlockEvent
-  | { type: typeof FromAgentMessageType.HEARTBEAT_ANSWER };
-
-export interface LockWebSocketSyncHandle {
-  reconnect: () => void;
-  disconnect: () => void;
-}
-
-interface LockWebSocketSyncProps {
-  managerRef?: MutableRefObject<LockWebSocketSyncHandle | null>;
-}
-
-export function LockWebSocketSync({ managerRef }: LockWebSocketSyncProps) {
+export function LockWebSocketSync() {
   const transport = useTransport();
   const lockStoreRegistry = useLockStoreRegistry();
-  const channelManagerRef = useRef<
-    Map<AppKey, SubscriptionWebSocketManager<LockChannelMessage>>
-  >(new Map());
+  const subscriptionsRef = useRef(new Map<AppKey, TransportMessageSubscription>());
   const appKeys = useMemo(
     () => Object.keys(transport.apps) as AppKey[],
     [transport.apps],
   );
 
   useEffect(() => {
-    const managers = new Map<AppKey, SubscriptionWebSocketManager<LockChannelMessage>>();
+    const handleMessage = (appKey: AppKey, message: LockTransportMessage) => {
+      const store = lockStoreRegistry.getStoreApi(appKey).getState();
 
-    for (const appKey of appKeys) {
-      const app = transport.getApp(appKey);
-      const endpoints = transport.getEndpoints(appKey);
-      const listeningKeys = Object.values(app.locks).map((definition) => definition.key);
-
-      const manager = new SubscriptionWebSocketManager<LockChannelMessage>({
-        name: `LockWebSocketSync:${appKey}`,
-        wsUrl: endpoints.lockWsUrl,
-        pingInterval: transport.pingInterval,
-        reconnect: transport.reconnect,
-        buildListenMessage: (keys): ListenLocksMessage => ({
-          type: "LISTEN_LOCKS",
-          locks: keys,
-        }),
-        onMessage: (message) => {
-          const store = lockStoreRegistry.getStoreApi(appKey).getState();
-
-          switch (message.type) {
-            case FromAgentMessageType.LOCK:
-              store.setLock(message.key, message.assignation);
-              return;
-            case FromAgentMessageType.UNLOCK:
-              store.setLock(message.key, undefined);
-              return;
-            case FromAgentMessageType.REGISTER:
-            case FromAgentMessageType.HEARTBEAT_ANSWER:
-              return;
-            default:
-              return;
-          }
-        },
-      });
-
-      manager.updateListenKeys(listeningKeys);
-      manager.connect();
-      managers.set(appKey, manager);
-    }
-
-    channelManagerRef.current = managers;
-
-    if (managerRef) {
-      managerRef.current = {
-        reconnect: () => {
-          managers.forEach((manager) => manager.reconnect());
-        },
-        disconnect: () => {
-          managers.forEach((manager) => manager.disconnect());
-        },
-      };
-    }
-
-    return () => {
-      managers.forEach((manager) => manager.disconnect());
-      channelManagerRef.current = new Map();
-      if (managerRef) {
-        managerRef.current = null;
+      switch (message.type) {
+        case LockEventType.LOCK:
+          store.setLock(message.key, message.assignation);
+          return;
+        case LockEventType.UNLOCK:
+          store.setLock(message.key, undefined);
+          return;
       }
     };
-  }, [appKeys, lockStoreRegistry, managerRef, transport]);
+
+    for (const appKey of appKeys) {
+      const existingSubscription = subscriptionsRef.current.get(appKey);
+
+      if (existingSubscription) {
+        continue;
+      }
+
+      subscriptionsRef.current.set(
+        appKey,
+        transport.subscribeToMessages({
+          appKey,
+          topic: "locks",
+          listener: (message) => handleMessage(appKey, message),
+        }),
+      );
+    }
+
+    subscriptionsRef.current.forEach((subscription, appKey) => {
+      if (!appKeys.includes(appKey)) {
+        subscription.unsubscribe();
+        subscriptionsRef.current.delete(appKey);
+      }
+    });
+  }, [appKeys, lockStoreRegistry, transport]);
+
+  useEffect(() => {
+    const subscriptions = subscriptionsRef.current;
+
+    return () => {
+      subscriptions.forEach((subscription) => subscription.unsubscribe());
+      subscriptions.clear();
+    };
+  }, []);
 
   return null;
 }

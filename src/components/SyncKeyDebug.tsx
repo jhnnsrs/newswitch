@@ -1,7 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useLockSync } from "@/hooks/useLockSync";
-import { selectTask, useTransportStore } from "@/lib/rekuest/task/store";
+import { selectTask, useTaskStore } from "@/lib/rekuest/task/store";
 import { Bug } from "lucide-react";
 
 interface SyncKeyDebugProps {
@@ -10,7 +10,7 @@ interface SyncKeyDebugProps {
 
 export function SyncKeyDebug({ syncKey }: SyncKeyDebugProps) {
   const syncKeyState = useLockSync({ key: syncKey });
-  const task = useTransportStore(
+  const task = useTaskStore(
     syncKeyState?.lockingTaskId
       ? selectTask(syncKeyState.lockingTaskId)
       : () => undefined,

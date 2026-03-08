@@ -1,10 +1,10 @@
 import type { ComponentProps, ReactNode } from 'react';
 import { LocalStoreProvider } from '@/store';
-import { TransportProvider } from '@/transport';
 import type { TransportConfig } from '@/transport';
-import { ActionProvider } from './ActionProvider';
 import { RekuestStoreProvider } from './RekuestStoreProvider';
-import { StateProvider } from './StateProvider';
+import { StateProvider } from './state';
+import { TaskProvider } from './task';
+import { TransportProvider } from './transport';
 import type { RekuestAppDefinition, RekuestAppsDefinition } from './types';
 
 type ScopedProviderDefinition<
@@ -246,7 +246,7 @@ export function createScopedProvider<
         <RekuestStoreProvider scope={scopeKey}>
           <LocalStoreProvider scope={scopeKey}>
             <StateProvider>
-              <ActionProvider>{children}</ActionProvider>
+              <TaskProvider>{children}</TaskProvider>
             </StateProvider>
           </LocalStoreProvider>
         </RekuestStoreProvider>

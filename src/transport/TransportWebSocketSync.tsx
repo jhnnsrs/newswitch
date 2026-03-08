@@ -1,8 +1,9 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import type { MutableRefObject } from "react";
-import { LockWebSocketSync, type LockWebSocketSyncHandle } from "./LockWebSocketSync";
-import { StateWebSocketSync, type StateWebSocketSyncHandle } from "./StateWebSocketSync";
-import { TaskWebSocketSync, type TaskWebSocketSyncHandle } from "./TaskWebSocketSync";
+import { LockWebSocketSync } from "./LockWebSocketSync";
+import { StateWebSocketSync } from "./StateWebSocketSync";
+import { TaskWebSocketSync } from "./TaskWebSocketSync";
+import { useTransport } from "./transport-context";
 
 interface TransportWebSocketSyncProps {
   managerRef: MutableRefObject<TransportWebSocketSyncHandle | null>;
@@ -16,34 +17,28 @@ export interface TransportWebSocketSyncHandle {
 export function TransportWebSocketSync({
   managerRef,
 }: TransportWebSocketSyncProps) {
-  const taskManagerRef = useRef<TaskWebSocketSyncHandle | null>(null);
-  const stateManagerRef = useRef<StateWebSocketSyncHandle | null>(null);
-  const lockManagerRef = useRef<LockWebSocketSyncHandle | null>(null);
+  const transport = useTransport();
 
   useEffect(() => {
     managerRef.current = {
       reconnect: () => {
-        taskManagerRef.current?.reconnect();
-        stateManagerRef.current?.reconnect();
-        lockManagerRef.current?.reconnect();
+        transport.reconnectSocket();
       },
       disconnect: () => {
-        taskManagerRef.current?.disconnect();
-        stateManagerRef.current?.disconnect();
-        lockManagerRef.current?.disconnect();
+        transport.disconnectSocket();
       },
     };
 
     return () => {
       managerRef.current = null;
     };
-  }, [managerRef]);
+  }, [managerRef, transport]);
 
   return (
     <>
-      <TaskWebSocketSync managerRef={taskManagerRef} />
-      <StateWebSocketSync managerRef={stateManagerRef} />
-      <LockWebSocketSync managerRef={lockManagerRef} />
+      <TaskWebSocketSync />
+      <StateWebSocketSync />
+      <LockWebSocketSync />
     </>
   );
 }

@@ -14,12 +14,14 @@ export type {
   RekuestStoreBundle,
   RekuestStoreProviderProps,
 } from './RekuestStoreProvider';
-export { ActionProvider } from './ActionProvider';
-export type { ActionProviderProps } from './ActionProvider';
-export { LockProvider } from './LockProvider';
-export type { LockProviderProps } from './LockProvider';
-export { StateProvider } from './StateProvider';
-export type { StateProviderProps } from './StateProvider';
+export { TaskProvider } from './task';
+export type { TaskProviderProps } from './task';
+export { LockProvider } from './locks';
+export type { LockProviderProps } from './locks';
+export { StateProvider } from './state';
+export type { StateProviderProps } from './state';
+export { TransportProvider } from './transport';
+export type { TransportProviderProps } from './transport';
 export * as RekuestLocks from './locks';
 export * as RekuestState from './state';
 export * as RekuestTask from './task';

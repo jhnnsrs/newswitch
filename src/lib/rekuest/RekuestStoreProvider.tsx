@@ -9,14 +9,19 @@ import {
   GlobalStateStoreContext,
 } from '@/lib/rekuest/state/store';
 import {
-  createTransportStoreRegistry,
-  TransportStoreContext,
+  createTaskStoreRegistry,
+  TaskStoreContext,
 } from '@/lib/rekuest/task/store';
+import {
+  createTransportStore,
+  TransportStoreContext,
+} from '@/lib/rekuest/transport/store';
 import { defaultAppKey } from '@/apps';
 
 export interface RekuestStoreBundle {
   globalStateStore: ReturnType<typeof createGlobalStateStoreRegistry>;
-  transportStore: ReturnType<typeof createTransportStoreRegistry>;
+  taskStore: ReturnType<typeof createTaskStoreRegistry>;
+  transportStore: ReturnType<typeof createTransportStore>;
   lockStore: ReturnType<typeof createLockStoreRegistry>;
 }
 
@@ -27,11 +32,16 @@ export interface RekuestStoreProviderProps {
 
 const scopedBundles = new Map<string, RekuestStoreBundle>();
 
-const createRekuestStoreBundle = (): RekuestStoreBundle => ({
-  globalStateStore: createGlobalStateStoreRegistry(defaultAppKey),
-  transportStore: createTransportStoreRegistry(defaultAppKey),
-  lockStore: createLockStoreRegistry(defaultAppKey),
-});
+const createRekuestStoreBundle = (): RekuestStoreBundle => {
+  const transportStore = createTransportStore();
+
+  return {
+    globalStateStore: createGlobalStateStoreRegistry(defaultAppKey),
+    taskStore: createTaskStoreRegistry(defaultAppKey, transportStore),
+    transportStore,
+    lockStore: createLockStoreRegistry(defaultAppKey),
+  };
+};
 
 const getScopedBundle = (scope: string): RekuestStoreBundle => {
   const existingBundle = scopedBundles.get(scope);
@@ -54,9 +64,11 @@ export function RekuestStoreProvider({
   return (
     <GlobalStateStoreContext.Provider value={stores.globalStateStore}>
       <TransportStoreContext.Provider value={stores.transportStore}>
-        <LockStoreContext.Provider value={stores.lockStore}>
-          {children}
-        </LockStoreContext.Provider>
+        <TaskStoreContext.Provider value={stores.taskStore}>
+          <LockStoreContext.Provider value={stores.lockStore}>
+            {children}
+          </LockStoreContext.Provider>
+        </TaskStoreContext.Provider>
       </TransportStoreContext.Provider>
     </GlobalStateStoreContext.Provider>
   );

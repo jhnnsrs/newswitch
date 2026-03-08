@@ -2,7 +2,7 @@
 
 import { defaultAppKey } from "@/apps";
 import { useCallback, useEffect, useMemo } from "react";
-import { selectTask, useTransportStore } from "@/lib/rekuest/task/store";
+import { selectTask, useTaskStore } from "@/lib/rekuest/task/store";
 import { useAction } from "./action-context";
 import type { Task, TaskStatus } from "./types";
 
@@ -49,7 +49,7 @@ export const useTask = <TArgs = unknown, TReturn = unknown>(
     () => (taskId ? selectTask<TArgs, TReturn>(taskId) : () => undefined),
     [taskId],
   );
-  const task = useTransportStore(appKey, taskSelector) ?? null;
+  const task = useTaskStore(appKey, taskSelector) ?? null;
 
   // Derived state
   const status = task?.status ?? null;

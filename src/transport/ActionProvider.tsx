@@ -1,2 +1,5 @@
-export { ActionProvider } from '@/lib/rekuest/ActionProvider';
-export type { ActionProviderProps } from '@/lib/rekuest/ActionProvider';
+export { TaskProvider, TaskProvider as ActionProvider } from '@/lib/rekuest/task/TaskProvider';
+export type {
+	TaskProviderProps,
+	TaskProviderProps as ActionProviderProps,
+} from '@/lib/rekuest/task/TaskProvider';

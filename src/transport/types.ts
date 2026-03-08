@@ -141,8 +141,8 @@ export interface AssignResponse {
 // Log levels from the backend
 export type LogLevel = "DEBUG" | "INFO" | "ERROR" | "WARN" | "CRITICAL";
 
-// Message types sent FROM the agent (backend) TO the frontend
-export const FromAgentMessageType = {
+// Task channel message types sent FROM the agent (backend) TO the frontend
+export const TaskEventType = {
   REGISTER: "REGISTER",
   LOG: "LOG",
   PROGRESS: "PROGRESS",
@@ -158,14 +158,30 @@ export const FromAgentMessageType = {
   ASSIGNED: "ASSIGNED",
   INTERRUPTED: "INTERRUPTED",
   HEARTBEAT_ANSWER: "HEARTBEAT_ANSWER",
+} as const;
+
+export type TaskEventType =
+  (typeof TaskEventType)[keyof typeof TaskEventType];
+
+export const StateEventType = {
   STATE_UPDATE: "STATE_UPDATE",
   STATE_PATCH: "STATE_PATCH",
+} as const;
+
+export type StateEventType =
+  (typeof StateEventType)[keyof typeof StateEventType];
+
+export const LockEventType = {
   LOCK: "LOCK",
   UNLOCK: "UNLOCK",
 } as const;
 
-export type FromAgentMessageType =
-  (typeof FromAgentMessageType)[keyof typeof FromAgentMessageType];
+export type LockEventType =
+  (typeof LockEventType)[keyof typeof LockEventType];
+
+// Backwards-compatible alias for task-channel event types.
+export const FromAgentMessageType = TaskEventType;
+export type FromAgentMessageType = TaskEventType;
 
 // Message types sent TO the agent (backend) FROM the frontend
 export const ToAgentMessageType = {
@@ -194,84 +210,85 @@ export type ToAgentMessageType =
 // Base message interface
 export interface BaseMessage {
   id: string;
-  type: FromAgentMessageType | ToAgentMessageType;
+  type: string;
 }
 
 // FROM Agent Messages (received via WebSocket)
 
 export interface LogEvent extends BaseMessage {
-  type: typeof FromAgentMessageType.LOG;
+  type: typeof TaskEventType.LOG;
   assignation: string;
   message: string;
   level: LogLevel;
 }
 
 export interface ProgressEvent extends BaseMessage {
-  type: typeof FromAgentMessageType.PROGRESS;
+  type: typeof TaskEventType.PROGRESS;
   assignation: string;
   progress?: number;
   message?: string;
 }
 
 export interface YieldEvent extends BaseMessage {
-  type: typeof FromAgentMessageType.YIELD;
+  type: typeof TaskEventType.YIELD;
   assignation: string;
   returns?: Record<string, unknown>;
 }
 
 export interface DoneEvent extends BaseMessage {
-  type: typeof FromAgentMessageType.DONE;
+  type: typeof TaskEventType.DONE;
   assignation: string;
+  returns?: Record<string, unknown>;
 }
 
 export interface ErrorEvent extends BaseMessage {
-  type: typeof FromAgentMessageType.ERROR;
+  type: typeof TaskEventType.ERROR;
   assignation: string;
   error: string;
 }
 
 export interface CriticalEvent extends BaseMessage {
-  type: typeof FromAgentMessageType.CRITICAL;
+  type: typeof TaskEventType.CRITICAL;
   assignation: string;
   error: string;
 }
 
 export interface PausedEvent extends BaseMessage {
-  type: typeof FromAgentMessageType.PAUSED;
+  type: typeof TaskEventType.PAUSED;
   assignation: string;
 }
 
 export interface ResumedEvent extends BaseMessage {
-  type: typeof FromAgentMessageType.RESUMED;
+  type: typeof TaskEventType.RESUMED;
   assignation: string;
 }
 
 export interface SteppedEvent extends BaseMessage {
-  type: typeof FromAgentMessageType.STEPPED;
+  type: typeof TaskEventType.STEPPED;
 }
 
 export interface CancelledEvent extends BaseMessage {
-  type: typeof FromAgentMessageType.CANCELLED;
+  type: typeof TaskEventType.CANCELLED;
   assignation: string;
 }
 
 export interface InterruptedEvent extends BaseMessage {
-  type: typeof FromAgentMessageType.INTERRUPTED;
+  type: typeof TaskEventType.INTERRUPTED;
   assignation: string;
 }
 
 export interface HeartbeatAnswerEvent extends BaseMessage {
-  type: typeof FromAgentMessageType.HEARTBEAT_ANSWER;
+  type: typeof TaskEventType.HEARTBEAT_ANSWER;
 }
 
 export interface RegisterMessage extends BaseMessage {
-  type: typeof FromAgentMessageType.REGISTER;
+  type: typeof TaskEventType.REGISTER;
   instance_id: string;
   token: string;
 }
 
 export interface StateUpdateEvent {
-  type: typeof FromAgentMessageType.STATE_UPDATE;
+  type: typeof StateEventType.STATE_UPDATE;
   state: string;
   value: unknown;
 }
@@ -292,23 +309,22 @@ export interface Envelope {
 }
 
 export interface StatePatchEvent {
-  type: typeof FromAgentMessageType.STATE_PATCH;
+  type: typeof StateEventType.STATE_PATCH;
   envelope: Envelope;
 }
 
 export interface LockEvent {
-  type: typeof FromAgentMessageType.LOCK;
+  type: typeof LockEventType.LOCK;
   key: string;
   assignation: string;
 }
 
 export interface UnlockEvent {
-  type: typeof FromAgentMessageType.UNLOCK;
+  type: typeof LockEventType.UNLOCK;
   key: string;
 }
 
-// Union type for all messages from the agent
-export type FromAgentMessage =
+export type TaskEvent =
   | LogEvent
   | ProgressEvent
   | YieldEvent
@@ -323,7 +339,16 @@ export type FromAgentMessage =
   | UnlockEvent
   | InterruptedEvent
   | HeartbeatAnswerEvent
-  | RegisterMessage
+  | RegisterMessage;
+
+export type StateEvent = StateUpdateEvent | StatePatchEvent;
+export type LockEventMessage = LockEvent | UnlockEvent;
+
+// Union type for all messages from the agent
+export type FromAgentMessage =
+  | TaskEvent
+  | StateEvent
+  | LockEventMessage
   | StateUpdateEvent
   | StatePatchEvent;
 
@@ -421,6 +446,29 @@ export interface ListenLocksMessage {
 export interface ListenTasksMessage {
   type: typeof ToAgentMessageType.LISTEN_TASKS;
   tasks: string[];
+}
+
+export type TransportSubscriptionTopic = 'states' | 'locks' | 'tasks';
+
+export type StateTransportMessage = StateEvent;
+export type LockTransportMessage = LockEventMessage;
+export type TaskTransportMessage = TaskEvent;
+
+export interface TransportTopicMessageMap {
+  states: StateTransportMessage;
+  locks: LockTransportMessage;
+  tasks: TaskTransportMessage;
+}
+
+export interface TransportSocketConnectionState {
+  isConnected: boolean;
+  isReconnecting: boolean;
+  isUnconnectable: boolean;
+  reconnectAttempt: number;
+}
+
+export interface TransportMessageSubscription {
+  unsubscribe: () => void;
 }
 
 // Union type for all messages to the agent
@@ -538,6 +586,17 @@ export interface TransportContextValue {
     lockWsUrl: string;
     taskWsUrl: string;
   };
+  subscribeToMessages: <TTopic extends TransportSubscriptionTopic>(options: {
+    appKey: AppKey;
+    topic: TTopic;
+    listener: (message: TransportTopicMessageMap[TTopic]) => void;
+  }) => TransportMessageSubscription;
+  subscribeToConnectionState: (
+    appKey: AppKey,
+    listener: (state: TransportSocketConnectionState) => void,
+  ) => () => void;
+  reconnectSocket: (appKey?: AppKey) => void;
+  disconnectSocket: (appKey?: AppKey) => void;
 }
 
 export interface ActionContextValue {

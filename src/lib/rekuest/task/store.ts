@@ -3,10 +3,11 @@ import { useStore } from 'zustand';
 import { createStore, type StoreApi } from 'zustand/vanilla';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
+import type { TransportStore as RuntimeTransportStore } from '@/lib/rekuest/transport/store';
 import type { Task, TaskStatus } from '@/transport/types';
 
 const resolveTaskReference = (
-  state: Pick<TransportStore, 'tasks' | 'taskIdToReference'>,
+  state: Pick<TaskStore, 'tasks' | 'taskIdToReference'>,
   referenceOrId: string,
 ) => {
   if (state.tasks[referenceOrId]) {
@@ -16,7 +17,7 @@ const resolveTaskReference = (
   return state.taskIdToReference[referenceOrId];
 };
 
-export interface TransportStore {
+export interface TaskStore {
   tasks: Record<string, Task>;
   taskIdToReference: Record<string, string>;
   pendingTaskUpdates: Record<string, Partial<Task>[]>;
@@ -35,23 +36,8 @@ export interface TransportStore {
   clearTasks: () => void;
 }
 
-export interface TransportRuntimeStore {
-  isConnected: boolean;
-  isReconnecting: boolean;
-  isUnconnectable: boolean;
-  reconnectAttempt: number;
-  registryVersion: number;
-  setConnected: (connected: boolean) => void;
-  setReconnecting: (reconnecting: boolean) => void;
-  setUnconnectable: (unconnectable: boolean) => void;
-  setReconnectAttempt: (attempt: number) => void;
-  incrementReconnectAttempt: () => number;
-  resetReconnect: () => void;
-  bumpRegistryVersion: () => void;
-}
-
-export const createTransportStore = () =>
-  createStore<TransportStore>()(
+export const createTaskStore = () =>
+  createStore<TaskStore>()(
     subscribeWithSelector(
       immer((set, get) => ({
         tasks: {},
@@ -168,77 +154,20 @@ export const createTransportStore = () =>
     ),
   );
 
-export const createTransportRuntimeStore = () =>
-  createStore<TransportRuntimeStore>()(
-    subscribeWithSelector(
-      immer((set) => ({
-        isConnected: false,
-        isReconnecting: false,
-        isUnconnectable: false,
-        reconnectAttempt: 0,
-        registryVersion: 0,
-        setConnected: (connected) => {
-          set((state) => {
-            state.isConnected = connected;
-            if (connected) {
-              state.isUnconnectable = false;
-            }
-          });
-        },
-        setReconnecting: (reconnecting) => {
-          set((state) => {
-            state.isReconnecting = reconnecting;
-          });
-        },
-        setUnconnectable: (unconnectable) => {
-          set((state) => {
-            state.isUnconnectable = unconnectable;
-            if (unconnectable) {
-              state.isReconnecting = false;
-            }
-          });
-        },
-        setReconnectAttempt: (attempt) => {
-          set((state) => {
-            state.reconnectAttempt = attempt;
-          });
-        },
-        incrementReconnectAttempt: () => {
-          let nextAttempt = 0;
-          set((state) => {
-            nextAttempt = state.reconnectAttempt + 1;
-            state.reconnectAttempt = nextAttempt;
-          });
-          return nextAttempt;
-        },
-        resetReconnect: () => {
-          set((state) => {
-            state.reconnectAttempt = 0;
-            state.isReconnecting = false;
-            state.isUnconnectable = false;
-          });
-        },
-        bumpRegistryVersion: () => {
-          set((state) => {
-            state.registryVersion += 1;
-          });
-        },
-      })),
-    ),
-  );
-
-export interface TransportStoreRegistry {
+export interface TaskStoreRegistry {
   defaultAppKey: string;
-  runtimeStore: StoreApi<TransportRuntimeStore>;
-  getStoreApi: (appKey?: string) => StoreApi<TransportStore>;
-  getStoreEntries: () => Array<[string, StoreApi<TransportStore>]>;
+  getStoreApi: (appKey?: string) => StoreApi<TaskStore>;
+  getStoreEntries: () => Array<[string, StoreApi<TaskStore>]>;
 }
 
-export const createTransportStoreRegistry = (
+export type TransportStore = TaskStore & RuntimeTransportStore;
+export type TransportStoreRegistry = TaskStoreRegistry;
+
+export const createTaskStoreRegistry = (
   defaultAppKey: string,
-): TransportStoreRegistry => {
-  const runtimeStore = createTransportRuntimeStore();
-  const stores = new Map<string, StoreApi<TransportStore>>();
+  transportStore: StoreApi<RuntimeTransportStore>,
+): TaskStoreRegistry => {
+  const stores = new Map<string, StoreApi<TaskStore>>();
 
   const getStoreApi = (appKey = defaultAppKey) => {
     const existingStore = stores.get(appKey);
@@ -246,9 +175,9 @@ export const createTransportStoreRegistry = (
       return existingStore;
     }
 
-    const nextStore = createTransportStore();
+    const nextStore = createTaskStore();
     nextStore.subscribe(() => {
-      runtimeStore.getState().bumpRegistryVersion();
+      transportStore.getState().bumpRegistryVersion();
     });
     stores.set(appKey, nextStore);
     return nextStore;
@@ -256,44 +185,39 @@ export const createTransportStoreRegistry = (
 
   return {
     defaultAppKey,
-    runtimeStore,
     getStoreApi,
     getStoreEntries: () => Array.from(stores.entries()),
   };
 };
 
-export const TransportStoreContext = createContext<TransportStoreRegistry | null>(null);
+export const TaskStoreContext = createContext<TaskStoreRegistry | null>(null);
 
-export const useTransportStoreRegistry = (): TransportStoreRegistry => {
-  const registry = useContext(TransportStoreContext);
+export const useTaskStoreRegistry = (): TaskStoreRegistry => {
+  const registry = useContext(TaskStoreContext);
 
   if (!registry) {
-    throw new Error('Missing TransportStoreProvider');
+    throw new Error('Missing TaskStoreProvider');
   }
 
   return registry;
 };
 
-export function useTransportStoreApi(appKey?: string) {
-  return useTransportStoreRegistry().getStoreApi(appKey);
+export function useTaskStoreApi(appKey?: string) {
+  return useTaskStoreRegistry().getStoreApi(appKey);
 }
 
-export function useTransportRuntimeStoreApi() {
-  return useTransportStoreRegistry().runtimeStore;
-}
-
-export function useTransportStore<TSelected>(
-  selector: (state: TransportStore) => TSelected,
+export function useTaskStore<TSelected>(
+  selector: (state: TaskStore) => TSelected,
 ): TSelected;
-export function useTransportStore<TSelected>(
+export function useTaskStore<TSelected>(
   appKey: string,
-  selector: (state: TransportStore) => TSelected,
+  selector: (state: TaskStore) => TSelected,
 ): TSelected;
-export function useTransportStore<TSelected>(
-  appKeyOrSelector: string | ((state: TransportStore) => TSelected),
-  maybeSelector?: (state: TransportStore) => TSelected,
+export function useTaskStore<TSelected>(
+  appKeyOrSelector: string | ((state: TaskStore) => TSelected),
+  maybeSelector?: (state: TaskStore) => TSelected,
 ): TSelected {
-  const registry = useTransportStoreRegistry();
+  const registry = useTaskStoreRegistry();
   const appKey = typeof appKeyOrSelector === 'string'
     ? appKeyOrSelector
     : registry.defaultAppKey;
@@ -302,27 +226,20 @@ export function useTransportStore<TSelected>(
     : appKeyOrSelector;
 
   if (!selector) {
-    throw new Error('Missing transport selector');
+    throw new Error('Missing task selector');
   }
 
   return useStore(registry.getStoreApi(appKey), selector);
 }
 
-export function useTransportRuntimeStore<TSelected>(
-  selector: (state: TransportRuntimeStore) => TSelected,
-): TSelected {
-  const registry = useTransportStoreRegistry();
-  return useStore(registry.runtimeStore, selector);
-}
-
-export const getRegistryTasks = (registry: TransportStoreRegistry) =>
+export const getRegistryTasks = (registry: TaskStoreRegistry) =>
   Object.fromEntries(
     registry.getStoreEntries().map(([appKey, storeApi]) => [appKey, storeApi.getState().tasks]),
   ) as Record<string, Record<string, Task>>;
 
 export const selectTask =
   <TArgs = unknown, TReturn = unknown>(referenceOrId: string) =>
-  (store: TransportStore) => {
+  (store: TaskStore) => {
     const reference = resolveTaskReference(store, referenceOrId);
     if (!reference) {
       return undefined;
@@ -333,26 +250,20 @@ export const selectTask =
       | undefined;
   };
 
-export const selectTasks = (store: TransportStore) => Object.values(store.tasks);
+export const selectTasks = (store: TaskStore) => Object.values(store.tasks);
 export const selectTasksByAction =
-  (actionName: string) => (store: TransportStore) =>
+  (actionName: string) => (store: TaskStore) =>
     Object.values(store.tasks).filter((task) => task.action === actionName);
 
-export const selectIsConnected = (store: TransportRuntimeStore) => store.isConnected;
-export const selectIsReconnecting = (store: TransportRuntimeStore) => store.isReconnecting;
-export const selectIsUnconnectable = (store: TransportRuntimeStore) => store.isUnconnectable;
-export const selectReconnectAttempt = (store: TransportRuntimeStore) => store.reconnectAttempt;
-export const selectRegistryVersion = (store: TransportRuntimeStore) => store.registryVersion;
-
-export const transportStore = {
+export const taskStore = {
   getState: () => {
     throw new Error(
-      'transportStore.getState is no longer available outside StoreProvider context.',
+      'taskStore.getState is no longer available outside StoreProvider context.',
     );
   },
   subscribe: () => {
     throw new Error(
-      'transportStore.subscribe is no longer available outside StoreProvider context.',
+      'taskStore.subscribe is no longer available outside StoreProvider context.',
     );
   },
 };
