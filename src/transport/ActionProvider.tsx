@@ -1,4 +1,6 @@
 import { useCallback, useMemo, useRef, type ReactNode } from "react";
+import type { AppKey } from "@/apps";
+import { getScopedTaskReference } from "@/lib/rekuest/task";
 import {
   selectTask,
   useTransportStore,
@@ -37,28 +39,30 @@ export function ActionProvider({ children }: ActionProviderProps) {
 
   const assign = useCallback(
     async <TArgs, TReturn>(
+      appKey: AppKey,
       actionName: string,
       args: TArgs,
       options?: AssignOptions,
     ): Promise<Task<TArgs, TReturn>> => {
       const reference = options?.reference || createReference();
+      const scopedReference = getScopedTaskReference(appKey, reference);
 
-      addTask(actionName, reference, args, "pending");
+      addTask(appKey, actionName, reference, args, "pending");
 
       try {
-        const data = await transport.assignAction(actionName, args, {
+        const data = await transport.assignAction(appKey, actionName, args, {
           ...options,
           reference,
         });
 
-        setAssignationID(reference, data.task_id);
-        updateTask(reference, { status: data.status });
+        setAssignationID(appKey, reference, data.task_id);
+        updateTask(scopedReference, { status: data.status }, appKey);
 
-        return getTaskFromStore<TArgs, TReturn>(reference)!;
+        return getTaskFromStore<TArgs, TReturn>(scopedReference, appKey)!;
       } catch (error: unknown) {
         const message =
           error instanceof Error ? error.message : "Unknown transport error";
-        updateTask(reference, { status: "failed", error: message });
+        updateTask(scopedReference, { status: "failed", error: message }, appKey);
         throw error;
       }
     },
@@ -67,67 +71,82 @@ export function ActionProvider({ children }: ActionProviderProps) {
 
   const getTask = useCallback(
     async <TArgs = unknown, TReturn = unknown>(
+      appKey: AppKey,
       taskId: string,
     ): Promise<Task<TArgs, TReturn>> => {
-      const task = await transport.fetchTask<TArgs, TReturn>(taskId);
-      updateTask(taskId, task);
+      const task = await transport.fetchTask<TArgs, TReturn>(appKey, taskId);
+      updateTask(taskId, task, appKey);
       return task;
     },
     [transport, updateTask],
   );
 
   const getCachedTask = useCallback(
-    (taskId: string): Task | undefined => getTaskFromStore(taskId),
+    (taskId: string, appKey?: AppKey): Task | undefined =>
+      getTaskFromStore(taskId, appKey),
     [getTaskFromStore],
   );
 
   const updateTaskStatus = useCallback(
-    async (taskId: string, status: TaskStatus, request: () => Promise<void>) => {
+    async (
+      taskId: string,
+      status: TaskStatus,
+      request: () => Promise<void>,
+      appKey?: AppKey,
+    ) => {
       await request();
-      updateTask(taskId, { status });
+      updateTask(taskId, { status }, appKey);
     },
     [updateTask],
   );
 
   const cancelTask = useCallback(
-    async (taskId: string) => {
+    async (appKey: AppKey, taskId: string) => {
       await updateTaskStatus(taskId, "cancelled", () =>
-        transport.cancelTaskRequest(taskId),
+        transport.cancelTaskRequest(appKey, taskId),
+        appKey,
       );
     },
     [transport, updateTaskStatus],
   );
 
   const pauseTask = useCallback(
-    async (taskId: string) => {
+    async (appKey: AppKey, taskId: string) => {
       await updateTaskStatus(taskId, "paused", () =>
-        transport.pauseTaskRequest(taskId),
+        transport.pauseTaskRequest(appKey, taskId),
+        appKey,
       );
     },
     [transport, updateTaskStatus],
   );
 
   const unpauseTask = useCallback(
-    async (taskId: string) => {
+    async (appKey: AppKey, taskId: string) => {
       await updateTaskStatus(taskId, "running", () =>
-        transport.unpauseTaskRequest(taskId),
+        transport.unpauseTaskRequest(appKey, taskId),
+        appKey,
       );
     },
     [transport, updateTaskStatus],
   );
 
   const stepTask = useCallback(
-    async (taskId: string) => {
+    async (appKey: AppKey, taskId: string) => {
       await updateTaskStatus(taskId, "running", () =>
-        transport.stepTaskRequest(taskId),
+        transport.stepTaskRequest(appKey, taskId),
+        appKey,
       );
     },
     [transport, updateTaskStatus],
   );
 
   const subscribeToTask = useCallback(
-    (taskId: string, callback: (task: Task) => void): (() => void) => {
-      return transportStoreApi.subscribe(selectTask(taskId), (task) => {
+    (
+      taskId: string,
+      appKey: AppKey,
+      callback: (task: Task) => void,
+    ): (() => void) => {
+      return transportStoreApi.subscribe(selectTask(taskId, appKey), (task) => {
         if (task) {
           callback(task as Task);
         }
@@ -138,9 +157,10 @@ export function ActionProvider({ children }: ActionProviderProps) {
 
   const waitForTask = useCallback(
     <TArgs = unknown, TReturn = unknown>(
+      appKey: AppKey,
       taskId: string,
     ): Promise<Task<TArgs, TReturn>> => {
-      const cachedTask = getTaskFromStore<TArgs, TReturn>(taskId);
+      const cachedTask = getTaskFromStore<TArgs, TReturn>(taskId, appKey);
 
       if (cachedTask?.status === "completed") {
         return Promise.resolve(cachedTask);
@@ -158,7 +178,7 @@ export function ActionProvider({ children }: ActionProviderProps) {
       }
 
       return new Promise<Task<TArgs, TReturn>>((resolve, reject) => {
-        const unsubscribe = subscribeToTask(taskId, (task) => {
+        const unsubscribe = subscribeToTask(taskId, appKey, (task) => {
           const typedTask = task as Task<TArgs, TReturn>;
 
           if (typedTask.status === "completed") {

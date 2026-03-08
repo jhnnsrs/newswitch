@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, type MutableRefObject } from "react";
+import type { AppKey } from "@/apps";
+import { getScopedStateKey } from "@/lib/rekuest/state";
 import type { Envelope as StateStoreEnvelope } from "../store/stateStore";
 import { useGlobalStateStoreApi } from "../store";
 import {
@@ -29,60 +31,85 @@ interface StateWebSocketSyncProps {
 export function StateWebSocketSync({ managerRef }: StateWebSocketSyncProps) {
   const transport = useTransport();
   const globalStateStoreApi = useGlobalStateStoreApi();
-  const channelManagerRef = useRef<SubscriptionWebSocketManager<StateChannelMessage> | null>(null);
-  const listeningKeys = useMemo(
-    () => Object.values(transport.app.states).map((definition) => definition.key),
-    [transport.app.states],
+  const channelManagerRef = useRef<
+    Map<AppKey, SubscriptionWebSocketManager<StateChannelMessage>>
+  >(new Map());
+  const appKeys = useMemo(
+    () => Object.keys(transport.apps) as AppKey[],
+    [transport.apps],
   );
 
   useEffect(() => {
-    const manager = new SubscriptionWebSocketManager<StateChannelMessage>({
-      name: "StateWebSocketSync",
-      wsUrl: transport.stateWsUrl,
-      pingInterval: transport.pingInterval,
-      reconnect: transport.reconnect,
-      buildListenMessage: (keys): ListenStatesMessage => ({
-        type: "LISTEN_STATES",
-        states: keys,
-      }),
-      onMessage: (message) => {
-        const store = globalStateStoreApi.getState();
+    const managers = new Map<AppKey, SubscriptionWebSocketManager<StateChannelMessage>>();
 
-        switch (message.type) {
-          case FromAgentMessageType.STATE_UPDATE:
-            store.setState(message.state, message.value);
-            return;
-          case FromAgentMessageType.STATE_PATCH:
-            store.applyEnvelope(message.envelope as unknown as StateStoreEnvelope);
-            return;
-          case FromAgentMessageType.REGISTER:
-          case FromAgentMessageType.HEARTBEAT_ANSWER:
-            return;
-          default:
-            return;
-        }
-      },
-    });
+    for (const appKey of appKeys) {
+      const app = transport.getApp(appKey);
+      const endpoints = transport.getEndpoints(appKey);
+      const listeningKeys = Object.values(app.states).map((definition) => definition.key);
 
-    manager.updateListenKeys(listeningKeys);
-    manager.connect();
-    channelManagerRef.current = manager;
+      const manager = new SubscriptionWebSocketManager<StateChannelMessage>({
+        name: `StateWebSocketSync:${appKey}`,
+        wsUrl: endpoints.stateWsUrl,
+        pingInterval: transport.pingInterval,
+        reconnect: transport.reconnect,
+        buildListenMessage: (keys): ListenStatesMessage => ({
+          type: "LISTEN_STATES",
+          states: keys,
+        }),
+        onMessage: (message) => {
+          const store = globalStateStoreApi.getState();
+
+          switch (message.type) {
+            case FromAgentMessageType.STATE_UPDATE:
+              store.setState(
+                getScopedStateKey(appKey, message.state),
+                message.value,
+              );
+              return;
+            case FromAgentMessageType.STATE_PATCH:
+              store.applyEnvelope({
+                ...(message.envelope as unknown as StateStoreEnvelope),
+                state_name: getScopedStateKey(
+                  appKey,
+                  (message.envelope as StateStoreEnvelope).state_name,
+                ),
+              });
+              return;
+            case FromAgentMessageType.REGISTER:
+            case FromAgentMessageType.HEARTBEAT_ANSWER:
+              return;
+            default:
+              return;
+          }
+        },
+      });
+
+      manager.updateListenKeys(listeningKeys);
+      manager.connect();
+      managers.set(appKey, manager);
+    }
+
+    channelManagerRef.current = managers;
 
     if (managerRef) {
       managerRef.current = {
-        reconnect: () => manager.reconnect(),
-        disconnect: () => manager.disconnect(),
+        reconnect: () => {
+          managers.forEach((manager) => manager.reconnect());
+        },
+        disconnect: () => {
+          managers.forEach((manager) => manager.disconnect());
+        },
       };
     }
 
     return () => {
-      manager.disconnect();
-      channelManagerRef.current = null;
+      managers.forEach((manager) => manager.disconnect());
+      channelManagerRef.current = new Map();
       if (managerRef) {
         managerRef.current = null;
       }
     };
-  }, [globalStateStoreApi, listeningKeys, managerRef, transport]);
+  }, [appKeys, globalStateStoreApi, managerRef, transport]);
 
   return null;
 }

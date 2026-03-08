@@ -1,9 +1,10 @@
 import type { ReactNode } from "react";
 import { useCallback, useMemo, useRef } from "react";
+import { getScopedStateKey, getStateDefinitionsRecord, resolveStateDefinition } from "@/lib/rekuest/state";
 import { useGlobalStateStoreApi } from "../store";
 import { useTransport } from "../transport/transport-context";
 import { StateContext, type StateContextValue } from "./state-context";
-import { type GlobalStateKey, type GlobalStateShape } from "./states";
+import type { StateDefinition } from "./useStateSync";
 
 interface TransportStateResponse<TState> {
   state: TState;
@@ -24,82 +25,94 @@ function normalizeError(error: unknown, key: string): Error {
 
 export function StateProvider({ children }: StateProviderProps) {
   const transport = useTransport();
-  const definitions = transport.app.states;
+  const definitions = useMemo(
+    () => getStateDefinitionsRecord(transport.apps, transport.defaultAppKey),
+    [transport.apps, transport.defaultAppKey],
+  );
   const globalStateStoreApi = useGlobalStateStoreApi();
   const inflightRequestsRef = useRef(new Map<string, Promise<unknown>>());
 
   const refetchState = useCallback(
-    async <TKey extends GlobalStateKey>(
-      key: TKey,
-    ): Promise<GlobalStateShape[TKey]> => {
-      const existingRequest = inflightRequestsRef.current.get(key);
+    async <T extends Record<string, unknown>, TKey extends string>(
+      inputDefinition: StateDefinition<T, TKey>,
+    ): Promise<T> => {
+      const definition = resolveStateDefinition(
+        inputDefinition,
+        transport.defaultAppKey,
+      );
+      const scopedKey = getScopedStateKey(definition.appKey, definition.key);
+      const existingRequest = inflightRequestsRef.current.get(scopedKey);
 
       if (existingRequest) {
-        return existingRequest as Promise<GlobalStateShape[TKey]>;
-      }
-
-      const definition = definitions[key];
-
-      if (!definition) {
-        throw new Error(`No state definition registered for ${key}`);
+        return existingRequest as Promise<T>;
       }
 
       const store = globalStateStoreApi.getState();
-      store.setLoading(key, true);
-      store.setError(key, null);
+      store.setLoading(scopedKey, true);
+      store.setError(scopedKey, null);
 
       const request = transport
-        .fetchState<TransportStateResponse<GlobalStateShape[TKey]>>(key)
+        .fetchState<TransportStateResponse<T>>(definition.appKey, definition.key)
         .then((response) => {
           const parsed = definition.schema.safeParse(response.state);
 
           if (!parsed.success) {
-            console.error(`[StateProvider] Validation failed for ${key}`, {
+            console.error(`[StateProvider] Validation failed for ${scopedKey}`, {
               error: parsed.error,
               value: response.state,
             });
 
-            throw new Error(`Validation failed for ${key}`);
+            throw new Error(`Validation failed for ${scopedKey}`);
           }
 
           globalStateStoreApi
             .getState()
             .setStateSnapshot(
-              key,
-              parsed.data as GlobalStateShape[TKey],
+              scopedKey,
+              parsed.data as T,
               response.revision ?? 0,
             );
 
-          return parsed.data as GlobalStateShape[TKey];
+          return parsed.data as T;
         })
         .catch((error) => {
-          const normalizedError = normalizeError(error, key);
-          globalStateStoreApi.getState().setError(key, normalizedError);
+          const normalizedError = normalizeError(error, scopedKey);
+          globalStateStoreApi.getState().setError(scopedKey, normalizedError);
           throw normalizedError;
         })
         .finally(() => {
-          inflightRequestsRef.current.delete(key);
-          globalStateStoreApi.getState().setLoading(key, false);
+          inflightRequestsRef.current.delete(scopedKey);
+          globalStateStoreApi.getState().setLoading(scopedKey, false);
         });
 
-      inflightRequestsRef.current.set(key, request);
+      inflightRequestsRef.current.set(scopedKey, request);
 
       return request;
     },
-    [definitions, globalStateStoreApi, transport],
+    [globalStateStoreApi, transport],
   );
 
   const ensureState = useCallback(
-    async <TKey extends GlobalStateKey>(key: TKey): Promise<void> => {
-      const currentState = globalStateStoreApi.getState().getState(key);
+    async <T extends Record<string, unknown>, TKey extends string>(
+      definition: StateDefinition<T, TKey>,
+    ): Promise<void> => {
+      const resolvedDefinition = resolveStateDefinition(
+        definition,
+        transport.defaultAppKey,
+      );
+      const scopedKey = getScopedStateKey(
+        resolvedDefinition.appKey,
+        resolvedDefinition.key,
+      );
+      const currentState = globalStateStoreApi.getState().getState(scopedKey);
 
       if (currentState !== undefined) {
         return;
       }
 
-      await refetchState(key);
+      await refetchState(resolvedDefinition);
     },
-    [globalStateStoreApi, refetchState],
+    [globalStateStoreApi, refetchState, transport.defaultAppKey],
   );
 
   const value = useMemo<StateContextValue>(

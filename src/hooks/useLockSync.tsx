@@ -1,9 +1,12 @@
 // src/hooks/useLockSync.ts
+import { getScopedLockKey, resolveLockAppKey } from "@/lib/rekuest/locks";
 import { useBlockingLock } from "../store";
+import { useTransport } from "../transport/transport-context";
 
 // --- The Definition Interface ---
 export interface LockDefinition<T extends string> {
   key: T;
+  appKey?: string;
 }
 
 export interface UseLockSyncOptions {
@@ -27,7 +30,13 @@ export const useLockSync = <T extends string>(
   options: UseLockSyncOptions = {},
 ): UseLockSyncResult => {
   void options;
-  const blockingLock = useBlockingLock([definition.key]);
+  const transport = useTransport();
+
+  const appKey = resolveLockAppKey(definition, transport.defaultAppKey);
+
+  const blockingLock = useBlockingLock([
+    getScopedLockKey(appKey, definition.key),
+  ]);
 
   return {
     isLocked: blockingLock.isLocked,

@@ -16,6 +16,16 @@ export interface GenerateStatesPluginOptions {
   whitelist?: string[];
   /** If provided, these lock keys will be skipped */
   blacklist?: string[];
+  /** Output directory for generated lock files */
+  outputDir?: string;
+  /** Relative import path to the lock sync module */
+  importPathToSync?: string;
+  /** App key to embed into generated definitions */
+  appKey?: string;
+  /** Prefix applied to generated exported symbols */
+  symbolPrefix?: string;
+  /** Prefix used for app-qualified hook names */
+  hookNamePrefix?: string;
 }
 
 const LockSchema = zod.object({
@@ -37,6 +47,9 @@ const toPascal = (s: string) => {
   const c = toCamel(s);
   return c.charAt(0).toUpperCase() + c.slice(1);
 };
+
+const withSymbolPrefix = (value: string, symbolPrefix?: string) =>
+  symbolPrefix ? `${symbolPrefix}${value}` : value;
 
 const shouldGenerateLock = (
   key: string,
@@ -71,33 +84,61 @@ const getExportEntries = (code: string): ExportEntry[] => {
 };
 
 // --- CONTENT GENERATOR ---
-const generateContent = (key: string, lockDef: LockDef) => {
-  const hookName = `use${toPascal(key)}Lock`; // useStageState
-  const defName = `${toPascal(key)}Definition`;
+const generateContent = (
+  key: string,
+  lockDef: LockDef,
+  importPathToSync: string,
+  appKey?: string,
+  symbolPrefix?: string,
+) => {
+  const baseName = toPascal(key);
+  const generatedName = withSymbolPrefix(baseName, symbolPrefix);
+  const hookName = `use${baseName}Lock`; // useStageState
+  const qualifiedHookName = symbolPrefix
+    ? `use${generatedName}Lock`
+    : hookName;
+  const defName = `${generatedName}Definition`;
+  const compatibilityAliases = symbolPrefix
+    ? `
+
+export const ${baseName}Definition = ${defName};`
+    : "";
 
   return `
-import { useLockSync, type LockDefinition, type UseLockSyncOptions} from '${IMPORT_PATH_TO_SYNC}';
+import { useLockSync, type LockDefinition, type UseLockSyncOptions} from '${importPathToSync}';
 
 
 // --- Definition ---
 export const ${defName}: LockDefinition<"${key}"> = {
   // ${lockDef.description ? lockDef.description : "No description provided"} (You can add a "description" field in your schema for better documentation)
+  ${appKey ? `appKey: '${appKey}',` : ""}
   key: "${key}", // The ID used by the backend
 };
 
 /**
  * Hook to sync ${key}
  */
-export const ${hookName} = (options?: UseLockSyncOptions) => {
+export const ${qualifiedHookName} = (options?: UseLockSyncOptions) => {
   return useLockSync<"${key}">(${defName}, options);
-};`;
+};
+${qualifiedHookName !== hookName ? `
+export const ${hookName} = ${qualifiedHookName};` : ""}${compatibilityAliases}`;
 };
 
 // --- VITE PLUGIN ---
 export default function generateLocksPlugin(
   options: GenerateStatesPluginOptions = {},
 ): Plugin {
-  const { schemaUrl, whitelist, blacklist } = options;
+  const {
+    schemaUrl,
+    whitelist,
+    blacklist,
+    outputDir = OUTPUT_DIR,
+    importPathToSync = IMPORT_PATH_TO_SYNC,
+    appKey,
+    hookNamePrefix,
+    symbolPrefix = hookNamePrefix,
+  } = options;
 
   console.log("Generate Locks Plugin initialized with schemaUrl:", schemaUrl);
 
@@ -135,10 +176,10 @@ export default function generateLocksPlugin(
       const fileExports = new Map<string, ExportEntry[]>();
       const generatedLockNames: string[] = [];
 
-      if (!fs.existsSync(OUTPUT_DIR))
-        fs.mkdirSync(OUTPUT_DIR, { recursive: true });
-      fs.rmSync(OUTPUT_DIR, { recursive: true, force: true });
-      fs.mkdirSync(OUTPUT_DIR, { recursive: true });
+      if (!fs.existsSync(outputDir))
+        fs.mkdirSync(outputDir, { recursive: true });
+      fs.rmSync(outputDir, { recursive: true, force: true });
+      fs.mkdirSync(outputDir, { recursive: true });
 
       // Iterate over the "states" object in your schema
       for (const [key, stateDef] of Object.entries(schema.locks)) {
@@ -146,26 +187,39 @@ export default function generateLocksPlugin(
           continue;
         }
 
-        const code = generateContent(key, stateDef);
+        const code = generateContent(
+          key,
+          stateDef,
+          importPathToSync,
+          appKey,
+          symbolPrefix,
+        );
         const formatted = await prettier.format(code, { parser: "typescript" });
 
         // File name: StageState.ts
         const lockName = toPascal(key);
+        const definitionName = `${withSymbolPrefix(lockName, symbolPrefix)}Definition`;
         const fname = `${lockName}.ts`;
-        fs.writeFileSync(path.join(OUTPUT_DIR, fname), formatted);
+        fs.writeFileSync(path.join(outputDir, fname), formatted);
         files.push(lockName);
-        generatedLockNames.push(lockName);
+        generatedLockNames.push(`${lockName}:${definitionName}`);
         fileExports.set(lockName, getExportEntries(formatted));
       }
 
       const lockDefinitionImports = generatedLockNames
         .map(
-          (lockName) => `import { ${lockName}Definition } from './${lockName}';`,
+          (entry) => {
+            const [lockName, definitionName] = entry.split(":");
+            return `import { ${definitionName} } from './${lockName}';`;
+          },
         )
         .join("\n");
 
       const lockDefinitionEntries = generatedLockNames
-        .map((lockName) => `  ${lockName}: ${lockName}Definition,`)
+        .map((entry) => {
+          const [lockName, definitionName] = entry.split(":");
+          return `  ${lockName}: ${definitionName},`;
+        })
         .join("\n");
 
       const exportCounts = new Map<string, number>();
@@ -231,7 +285,7 @@ export const globalLockDefintiion = globalLockDefinition;
       const formattedIndex = await prettier.format(indexCode, {
         parser: "typescript",
       });
-      fs.writeFileSync(path.join(OUTPUT_DIR, "index.ts"), formattedIndex);
+      fs.writeFileSync(path.join(outputDir, "index.ts"), formattedIndex);
 
       console.log(
         `✅ [GenLocks] Generated ${files.length} lock hooks from ${schemaUrl}`,

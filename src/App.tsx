@@ -9,18 +9,31 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "./components/ui/tooltip";
-import { appDefinition } from "../app";
-import { StateProvider } from "./hooks/StateProvider";
+import { appsDefinition, defaultAppKey, type AppKey } from "./apps";
 import { cn } from "./lib/utils";
+import { createScopedProvider } from "./lib/rekuest";
 import { IndexPage, ReplayPage } from "./pages";
-import { LockStoreProvider, StoreProvider } from "./store";
-import { ActionProvider, TransportProvider } from "./transport";
 
 // The backend API URL is either injected into the global scope by the
 // electron app or taken from environment variables, allowing for flexibility in different deployment scenarios.
 const BACKEND_API = window.__agent_url__ || import.meta.env.VITE_BACKEND_URL;
 const BACKEND_WS =
   window.__agent_ws_url__ || import.meta.env.VITE_WEBSOCKET_URL;
+
+const scopedTransportConfig: Partial<
+  Record<AppKey, { apiEndpoint: string; wsEndpoint?: string }>
+> = {
+  [defaultAppKey]: {
+    apiEndpoint: BACKEND_API,
+    wsEndpoint: BACKEND_WS,
+  },
+};
+
+const ScopedAppsProvider = createScopedProvider({
+  definition: appsDefinition,
+  config: scopedTransportConfig,
+  instanceId: "microscope-control-panel",
+});
 
 function ScopedRoute({
   children,
@@ -30,13 +43,9 @@ function ScopedRoute({
   scope: string;
 }) {
   return (
-    <StoreProvider scope={scope}>
-      <StateProvider>
-        <ActionProvider>
-          {children}
-        </ActionProvider>
-      </StateProvider>
-    </StoreProvider>
+    <ScopedAppsProvider scope={scope}>
+      {children}
+    </ScopedAppsProvider>
   );
 }
 
@@ -89,38 +98,29 @@ function AppNavigation() {
 
 function App() {
   return (
-    <TransportProvider
-      app={appDefinition}
-      config={{
-        instanceId: "microscope-control-panel",
-        apiEndpoint: BACKEND_API,
-        wsEndpoint: BACKEND_WS,
-      }}
-    >
-      <LockStoreProvider>
-        <AppNavigation />
-        <Routes>
-          <Route
-            path="/"
-            element={
-              <ScopedRoute scope="index">
-                <IndexPage />
-              </ScopedRoute>
-            }
-          />
-          <Route
-            path="/replay"
-            element={
-              <ScopedRoute scope="replay">
-                <ReplayPage />
-              </ScopedRoute>
-            }
-          />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-        <Toaster position="bottom-right" richColors />
-      </LockStoreProvider>
-    </TransportProvider>
+    <>
+      <AppNavigation />
+      <Routes>
+        <Route
+          path="/"
+          element={
+            <ScopedRoute scope="index">
+              <IndexPage />
+            </ScopedRoute>
+          }
+        />
+        <Route
+          path="/replay"
+          element={
+            <ScopedRoute scope="replay">
+              <ReplayPage />
+            </ScopedRoute>
+          }
+        />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+      <Toaster position="bottom-right" richColors />
+    </>
   );
 }
 

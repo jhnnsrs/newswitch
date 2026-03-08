@@ -1,7 +1,7 @@
-import type { ReactNode } from "react";
-import { useCallback, useMemo } from "react";
-import type { AppDefinition } from "../../app";
-import { TransportContext } from "./transport-context";
+import type { ReactNode } from 'react';
+import { useCallback, useMemo } from 'react';
+import type { AppKey, AppsDefinition } from '@/apps';
+import { TransportContext } from './transport-context';
 import type {
   AssignInput,
   AssignOptions,
@@ -10,7 +10,7 @@ import type {
   Task,
   TransportConfig,
   TransportContextValue,
-} from "./types";
+} from './types';
 
 const DEFAULT_RECONNECT_CONFIG = {
   maxAttempts: 5,
@@ -24,17 +24,19 @@ const DEFAULT_PING_INTERVAL = 30000;
 interface TransportProviderProps {
   children: ReactNode;
   config: TransportConfig;
-  app: AppDefinition;
+  apps: AppsDefinition;
 }
 
 function normalizeTask<TArgs = unknown, TReturn = unknown>(
   data: Record<string, unknown>,
+  appKey: AppKey,
 ): Task<TArgs, TReturn> {
   return {
     id: String(data.task_id ?? data.id),
-    action: String(data.action ?? "unknown"),
+    appKey,
+    action: String(data.action ?? 'unknown'),
     args: (data.args ?? {}) as TArgs,
-    status: data.status as Task<TArgs, TReturn>["status"],
+    status: data.status as Task<TArgs, TReturn>['status'],
     result: data.result as TReturn | undefined,
     error: data.error as string | undefined,
     progress: data.progress as number | undefined,
@@ -44,7 +46,35 @@ function normalizeTask<TArgs = unknown, TReturn = unknown>(
   };
 }
 
-export function TransportProvider({ children, config, app }: TransportProviderProps) {
+function createWsBaseUrl(apiEndpoint: string, wsEndpoint?: string) {
+  if (wsEndpoint) {
+    return wsEndpoint;
+  }
+
+  const url = new URL(apiEndpoint);
+  url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
+  url.pathname = url.pathname.replace(/\/$/, '') + '/ws';
+  return url.toString();
+}
+
+function createChannelWsUrl(
+  wsBaseUrl: string,
+  channel: 'state' | 'locks' | 'tasks',
+) {
+  const url = new URL(wsBaseUrl);
+  url.pathname = `${url.pathname.replace(/\/$/, '')}/${channel}`;
+  return url.toString();
+}
+
+export function TransportProvider({ children, config, apps }: TransportProviderProps) {
+  const appKeys = useMemo(() => Object.keys(apps) as AppKey[], [apps]);
+  const defaultAppKey = appKeys[0];
+  const app = apps[defaultAppKey];
+
+  if (!defaultAppKey || !app) {
+    throw new Error('TransportProvider requires at least one configured app.');
+  }
+
   const reconnect = useMemo(
     () => ({ ...DEFAULT_RECONNECT_CONFIG, ...config.reconnect }),
     [config.reconnect],
@@ -52,37 +82,74 @@ export function TransportProvider({ children, config, app }: TransportProviderPr
 
   const pingInterval = config.pingInterval ?? DEFAULT_PING_INTERVAL;
 
-  const wsBaseUrl = useMemo(() => {
-    if (config.wsEndpoint) {
-      return config.wsEndpoint;
-    }
+  const endpointsByApp = useMemo(() => {
+    return Object.fromEntries(
+      appKeys.map((appKey) => {
+        const apiEndpoint =
+          config.appEndpoints?.[appKey]?.apiEndpoint ?? config.apiEndpoint;
+        const wsUrl = createWsBaseUrl(
+          apiEndpoint,
+          config.appEndpoints?.[appKey]?.wsEndpoint ?? config.wsEndpoint,
+        );
 
-    const url = new URL(config.apiEndpoint);
-    url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
-    url.pathname = url.pathname.replace(/\/$/, "") + "/ws";
-    return url.toString();
-  }, [config.apiEndpoint, config.wsEndpoint]);
+        return [
+          appKey,
+          {
+            apiEndpoint,
+            wsUrl,
+            stateWsUrl: createChannelWsUrl(wsUrl, 'state'),
+            lockWsUrl: createChannelWsUrl(wsUrl, 'locks'),
+            taskWsUrl: createChannelWsUrl(wsUrl, 'tasks'),
+          },
+        ];
+      }),
+    ) as Record<
+      AppKey,
+      {
+        apiEndpoint: string;
+        wsUrl: string;
+        stateWsUrl: string;
+        lockWsUrl: string;
+        taskWsUrl: string;
+      }
+    >;
+  }, [appKeys, config.apiEndpoint, config.appEndpoints, config.wsEndpoint]);
 
-  const createChannelWsUrl = useCallback(
-    (channel: "state" | "locks" | "tasks") => {
-      const url = new URL(wsBaseUrl);
-      url.pathname = `${url.pathname.replace(/\/$/, "")}/${channel}`;
-      return url.toString();
+  const getApp = useCallback(
+    (appKey: AppKey) => {
+      const resolvedApp = apps[appKey];
+
+      if (!resolvedApp) {
+        throw new Error(`Unknown app key: ${appKey}`);
+      }
+
+      return resolvedApp;
     },
-    [wsBaseUrl],
+    [apps],
   );
 
-  const stateWsUrl = useMemo(() => createChannelWsUrl("state"), [createChannelWsUrl]);
-  const lockWsUrl = useMemo(() => createChannelWsUrl("locks"), [createChannelWsUrl]);
-  const taskWsUrl = useMemo(() => createChannelWsUrl("tasks"), [createChannelWsUrl]);
+  const getEndpoints = useCallback(
+    (appKey: AppKey) => {
+      const endpoints = endpointsByApp[appKey];
+
+      if (!endpoints) {
+        throw new Error(`No endpoints configured for app key: ${appKey}`);
+      }
+
+      return endpoints;
+    },
+    [endpointsByApp],
+  );
 
   const assignAction = useCallback(
     async <TArgs,>(
+      appKey: AppKey,
       actionName: string,
       args: TArgs,
       options?: AssignOptions,
     ): Promise<AssignResponse> => {
-      const url = `${config.apiEndpoint.replace(/\/$/, "")}/${actionName}`;
+      const { apiEndpoint } = getEndpoints(appKey);
+      const url = `${apiEndpoint.replace(/\/$/, '')}/${actionName}`;
       const assignInput: AssignInput<TArgs> = {
         args,
         instanceId: config.instanceId,
@@ -101,28 +168,28 @@ export function TransportProvider({ children, config, app }: TransportProviderPr
       };
 
       const response = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(assignInput),
       });
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(
-          `Failed to assign action: ${response.status} ${errorText}`,
-        );
+        throw new Error(`Failed to assign action: ${response.status} ${errorText}`);
       }
 
       return (await response.json()) as AssignResponse;
     },
-    [config.apiEndpoint, config.instanceId],
+    [config.instanceId, getEndpoints],
   );
 
   const fetchTask = useCallback(
     async <TArgs = unknown, TReturn = unknown>(
+      appKey: AppKey,
       taskId: string,
     ): Promise<Task<TArgs, TReturn>> => {
-      const url = `${config.apiEndpoint.replace(/\/$/, "")}/tasks/${taskId}`;
+      const { apiEndpoint } = getEndpoints(appKey);
+      const url = `${apiEndpoint.replace(/\/$/, '')}/tasks/${taskId}`;
       const response = await fetch(url);
 
       if (!response.ok) {
@@ -131,50 +198,48 @@ export function TransportProvider({ children, config, app }: TransportProviderPr
       }
 
       const data = (await response.json()) as Record<string, unknown>;
-      return normalizeTask<TArgs, TReturn>(data);
+      return normalizeTask<TArgs, TReturn>(data, appKey);
     },
-    [config.apiEndpoint],
+    [getEndpoints],
   );
 
   const createTaskMutation = useCallback(
-    (endpoint: string) => async (taskId: string) => {
-      const url = `${config.apiEndpoint.replace(/\/$/, "")}/${endpoint}`;
+    (endpoint: string) => async (appKey: AppKey, taskId: string) => {
+      const { apiEndpoint } = getEndpoints(appKey);
+      const url = `${apiEndpoint.replace(/\/$/, '')}/${endpoint}`;
       const response = await fetch(url, {
-        method: "POST",
+        method: 'POST',
         body: JSON.stringify({ assignation: taskId }),
       });
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(
-          `Failed to ${endpoint} task: ${response.status} ${errorText}`,
-        );
+        throw new Error(`Failed to ${endpoint} task: ${response.status} ${errorText}`);
       }
     },
-    [config.apiEndpoint],
+    [getEndpoints],
   );
 
   const fetchState = useCallback(
-    async <T = unknown,>(stateName: string): Promise<T> => {
-      const url = `${config.apiEndpoint.replace(/\/$/, "")}/states/${stateName}`;
+    async <T = unknown,>(appKey: AppKey, stateName: string): Promise<T> => {
+      const { apiEndpoint } = getEndpoints(appKey);
+      const url = `${apiEndpoint.replace(/\/$/, '')}/states/${stateName}`;
       const response = await fetch(url);
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(
-          `Failed to fetch state: ${response.status} ${errorText}`,
-        );
+        throw new Error(`Failed to fetch state: ${response.status} ${errorText}`);
       }
 
       return (await response.json()) as T;
     },
-    [config.apiEndpoint],
+    [getEndpoints],
   );
 
-
   const fetchActiveSessionBoundaries = useCallback(
-    async (): Promise<SessionBoundaries> => {
-      const url = `${config.apiEndpoint.replace(/\/$/, "")}/active_session_boundaries`;
+    async (appKey: AppKey): Promise<SessionBoundaries> => {
+      const { apiEndpoint } = getEndpoints(appKey);
+      const url = `${apiEndpoint.replace(/\/$/, '')}/active_session_boundaries`;
       const response = await fetch(url);
 
       if (!response.ok) {
@@ -190,9 +255,7 @@ export function TransportProvider({ children, config, app }: TransportProviderPr
         end_revision: number;
         start_time: string;
         end_time: string;
-
       };
-      console.log("Fetched active session boundaries:", data); // Debug log
 
       return {
         sessionStart: new Date(data.start_time),
@@ -200,15 +263,15 @@ export function TransportProvider({ children, config, app }: TransportProviderPr
         startRevision: data.start_revision,
         endRevision: data.end_revision,
         sessionId: data.session_id,
-
       };
     },
-    [config.apiEndpoint],
+    [getEndpoints],
   );
 
   const fetchSessionBoundaries = useCallback(
-    async (sessionId: string): Promise<SessionBoundaries> => {
-      const url = `${config.apiEndpoint.replace(/\/$/, "")}/session_boundaries/${sessionId}`;
+    async (appKey: AppKey, sessionId: string): Promise<SessionBoundaries> => {
+      const { apiEndpoint } = getEndpoints(appKey);
+      const url = `${apiEndpoint.replace(/\/$/, '')}/session_boundaries/${sessionId}`;
       const response = await fetch(url);
 
       if (!response.ok) {
@@ -224,7 +287,6 @@ export function TransportProvider({ children, config, app }: TransportProviderPr
         end_revision: number;
         start_time: string;
         end_time: string;
-
       };
 
       return {
@@ -233,69 +295,71 @@ export function TransportProvider({ children, config, app }: TransportProviderPr
         startRevision: data.start_revision,
         endRevision: data.end_revision,
         sessionId: data.session_id,
-
       };
     },
-    [config.apiEndpoint],
+    [getEndpoints],
   );
 
-  const fetchLocks = useCallback(async () => {
-    const url = `${config.apiEndpoint.replace(/\/$/, "")}/locks`;
-    const response = await fetch(url);
+  const fetchLocks = useCallback(
+    async (appKey: AppKey) => {
+      const { apiEndpoint } = getEndpoints(appKey);
+      const url = `${apiEndpoint.replace(/\/$/, '')}/locks`;
+      const response = await fetch(url);
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(
-        `Failed to fetch locks: ${response.status} ${errorText}`,
-      );
-    }
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to fetch locks: ${response.status} ${errorText}`);
+      }
 
-    const data = (await response.json()) as {
-      locks: Record<string, { task_id: string }>;
-    };
+      const data = (await response.json()) as {
+        locks: Record<string, { task_id: string }>;
+      };
 
-    return data.locks;
-  }, [config.apiEndpoint]);
+      return data.locks;
+    },
+    [getEndpoints],
+  );
 
   const contextValue = useMemo<TransportContextValue>(
     () => ({
-      apiEndpoint: config.apiEndpoint,
+      apiEndpoint: endpointsByApp[defaultAppKey].apiEndpoint,
+      apps,
+      defaultAppKey,
       app,
-      assignAction,
-      cancelTaskRequest: createTaskMutation("cancel"),
-      fetchLocks,
-      fetchState,
-      fetchTask,
+      wsUrl: endpointsByApp[defaultAppKey].wsUrl,
       instanceId: config.instanceId,
-        fetchActiveSessionBoundaries,
-        fetchSessionBoundaries,
-      pauseTaskRequest: createTaskMutation("pause"),
       pingInterval,
       reconnect,
-        lockWsUrl,
-        stateWsUrl,
-      stepTaskRequest: createTaskMutation("step"),
-        taskWsUrl,
-      unpauseTaskRequest: createTaskMutation("resume"),
-        wsUrl: wsBaseUrl,
+      assignAction,
+      fetchTask,
+      fetchSessionBoundaries,
+      fetchActiveSessionBoundaries,
+      cancelTaskRequest: createTaskMutation('cancel'),
+      pauseTaskRequest: createTaskMutation('pause'),
+      unpauseTaskRequest: createTaskMutation('resume'),
+      stepTaskRequest: createTaskMutation('step'),
+      fetchState,
+      fetchLocks,
+      getApp,
+      getEndpoints,
     }),
     [
-      assignAction,
       app,
-      config.apiEndpoint,
+      apps,
+      assignAction,
       config.instanceId,
       createTaskMutation,
+      defaultAppKey,
+      endpointsByApp,
+      fetchActiveSessionBoundaries,
       fetchLocks,
+      fetchSessionBoundaries,
       fetchState,
       fetchTask,
-      fetchActiveSessionBoundaries,
-      fetchSessionBoundaries,
-        lockWsUrl,
+      getApp,
+      getEndpoints,
       pingInterval,
       reconnect,
-        stateWsUrl,
-        taskWsUrl,
-        wsBaseUrl,
     ],
   );
 

@@ -15,6 +15,16 @@ export interface GenerateStatesPluginOptions {
   whitelist?: string[];
   /** If provided, these state keys will be skipped */
   blacklist?: string[];
+  /** Output directory for generated state files */
+  outputDir?: string;
+  /** Relative import path to the state sync module */
+  importPathToSync?: string;
+  /** App key to embed into generated definitions */
+  appKey?: string;
+  /** Prefix applied to generated exported symbols */
+  symbolPrefix?: string;
+  /** Prefix used for app-qualified hook names */
+  hookNamePrefix?: string;
 }
 
 interface ChoiceInput {
@@ -45,6 +55,9 @@ const toPascal = (s: string) => {
   const c = toCamel(s);
   return c.charAt(0).toUpperCase() + c.slice(1);
 };
+
+const withSymbolPrefix = (value: string, symbolPrefix?: string) =>
+  symbolPrefix ? `${symbolPrefix}${value}` : value;
 
 const shouldGenerateState = (
   key: string,
@@ -110,6 +123,7 @@ const mapToZod = (
   port: Port,
   subSchemas: Map<string, string>,
   fallbackName: string = "Unknown",
+  symbolPrefix?: string,
 ): string => {
   let base = "z.any()";
 
@@ -158,6 +172,7 @@ const mapToZod = (
           port.children[0],
           subSchemas,
           childFallback,
+          symbolPrefix,
         );
         base = `z.array(${elementType})`;
       } else {
@@ -167,7 +182,12 @@ const mapToZod = (
     case "DICT":
       if (port.children && port.children.length > 0) {
         const childFallback = `${nodeName}Value`;
-        const valueType = mapToZod(port.children[0], subSchemas, childFallback);
+        const valueType = mapToZod(
+          port.children[0],
+          subSchemas,
+          childFallback,
+          symbolPrefix,
+        );
         base = `z.record(z.string(), ${valueType})`;
       } else {
         base = "z.record(z.string(), z.any())";
@@ -175,9 +195,10 @@ const mapToZod = (
       break;
     case "MODEL": {
       const brandName = port.identifier || nodeName;
-      const modelName = port.identifier
+      const rawModelName = port.identifier
         ? `${toPascal(port.identifier)}Schema`
         : `${toPascal(nodeName)}ModelSchema`;
+      const modelName = withSymbolPrefix(rawModelName, symbolPrefix);
 
       if (!subSchemas.has(modelName)) {
         let fieldsCode = "";
@@ -188,7 +209,7 @@ const mapToZod = (
         if (port.children && port.children.length > 0) {
           const fields = port.children.map(
             (child) =>
-              `  ${child.key}: ${mapToZod(child, subSchemas, child.key)}`,
+              `  ${child.key}: ${mapToZod(child, subSchemas, child.key, symbolPrefix)}`,
           );
           fieldsCode = `{\n  ${injectedBrand},\n${fields.join(",\n")}\n}`;
         } else {
@@ -202,7 +223,9 @@ const mapToZod = (
         // Save the standalone schema definition
         subSchemas.set(
           modelName,
-          `export const ${modelName} = z.object(${fieldsCode})${brandSuffix};`,
+          `export const ${modelName} = z.object(${fieldsCode})${brandSuffix};${
+            symbolPrefix ? `\nexport const ${rawModelName} = ${modelName};` : ""
+          }`,
         );
       }
       base = modelName;
@@ -210,19 +233,27 @@ const mapToZod = (
     }
     case "UNION": {
       // Use the derived nodeName for the union as well
-      const unionName = port.identifier
+      const rawUnionName = port.identifier
         ? `${toPascal(port.identifier)}UnionSchema`
         : `${toPascal(nodeName)}UnionSchema`;
+      const unionName = withSymbolPrefix(rawUnionName, symbolPrefix);
 
       if (!subSchemas.has(unionName)) {
         if (port.children && port.children.length > 0) {
           const types = port.children.map((child, index) =>
-            mapToZod(child, subSchemas, `${nodeName}Variant${index + 1}`),
+            mapToZod(
+              child,
+              subSchemas,
+              `${nodeName}Variant${index + 1}`,
+              symbolPrefix,
+            ),
           );
           // Save the indexed union definition
           subSchemas.set(
             unionName,
-            `export const ${unionName} = createIndexedUnion([\n  ${types.join(",\n  ")}\n]);`,
+            `export const ${unionName} = createIndexedUnion([\n  ${types.join(",\n  ")}\n]);${
+              symbolPrefix ? `\nexport const ${rawUnionName} = ${unionName};` : ""
+            }`,
           );
         } else {
           base = "z.any()";
@@ -241,29 +272,49 @@ const mapToZod = (
 };
 
 // --- CONTENT GENERATOR ---
-const generateContent = (key: string, stateDef: unknown) => {
+const generateContent = (
+  key: string,
+  stateDef: unknown,
+  importPathToSync: string,
+  appKey?: string,
+  symbolPrefix?: string,
+) => {
   const typedStateDef = stateDef as { ports: Port[] };
-  const hookName = `use${toPascal(key)}`; // useStageState
-  const schemaName = `${toPascal(key)}Schema`;
-  const typeName = `${toPascal(key)}`; // StageState (Type)
-  const defName = `${toPascal(key)}Definition`;
+  const baseName = toPascal(key);
+  const generatedName = withSymbolPrefix(baseName, symbolPrefix);
+  const hookName = `use${baseName}`; // useStageState
+  const qualifiedHookName = symbolPrefix
+    ? `use${generatedName}`
+    : hookName;
+  const schemaName = `${generatedName}Schema`;
+  const typeName = `${generatedName}`; // StageState (Type)
+  const defName = `${generatedName}Definition`;
 
   const subSchemas = new Map<string, string>();
 
   // 1. Generate Zod Schema fields from 'ports' and populate subSchemas
   // Pass down the port's actual key as the top-level fallback
   const fields = typedStateDef.ports
-    .map((p: Port) => `  ${p.key}: ${mapToZod(p, subSchemas, p.key)}`)
+    .map((p: Port) => `  ${p.key}: ${mapToZod(p, subSchemas, p.key, symbolPrefix)}`)
     .join(",\n");
 
   const subSchemasCode = Array.from(subSchemas.values()).join("\n\n");
   const mainSchemaCode = `export const ${schemaName} = z.object({\n${fields}\n});`;
+  const schemaAndTypeAliases = symbolPrefix
+    ? `
+export const ${baseName}Schema = ${schemaName};
+export type ${baseName} = ${typeName};`
+    : "";
+  const definitionAlias = symbolPrefix
+    ? `
+export const ${baseName}Definition = ${defName};`
+    : "";
 
   const includesUnion = subSchemasCode.includes("createIndexedUnion");
 
   return `
 import { z } from 'zod';
-import { buildUseState, type StateDefinition } from '${IMPORT_PATH_TO_SYNC}';
+import { buildUseState, type StateDefinition } from '${importPathToSync}';
 ${includesUnion ? "import { createIndexedUnion } from './utils';" : ""}
 
 // --- Sub-Schemas ---
@@ -274,17 +325,22 @@ ${mainSchemaCode}
 
 // --- Type ---
 export type ${typeName} = z.infer<typeof ${schemaName}>;
+${schemaAndTypeAliases}
 
 // --- Definition ---
 export const ${defName}: StateDefinition<${typeName}, "${key}"> = {
+  ${appKey ? `appKey: '${appKey}',` : ""}
   key: "${key}", // The ID used by the backend
   schema: ${schemaName},
 };
+${definitionAlias}
 
 /**
  * Hook to sync ${key}
  */
-export const ${hookName} = buildUseState<${typeName}>(${defName});
+export const ${qualifiedHookName} = buildUseState<${typeName}>(${defName});
+${qualifiedHookName !== hookName ? `
+export const ${hookName} = ${qualifiedHookName};` : ""}
 `;
 };
 
@@ -292,7 +348,16 @@ export const ${hookName} = buildUseState<${typeName}>(${defName});
 export default function generateStatesPlugin(
   options: GenerateStatesPluginOptions = {},
 ): Plugin {
-  const { schemaUrl, whitelist, blacklist } = options;
+  const {
+    schemaUrl,
+    whitelist,
+    blacklist,
+    outputDir = OUTPUT_DIR,
+    importPathToSync = IMPORT_PATH_TO_SYNC,
+    appKey,
+    hookNamePrefix,
+    symbolPrefix = hookNamePrefix,
+  } = options;
 
   return {
     name: "vite-plugin-generate-states",
@@ -322,11 +387,11 @@ export default function generateStatesPlugin(
         return;
       }
 
-      if (!fs.existsSync(OUTPUT_DIR))
-        fs.mkdirSync(OUTPUT_DIR, { recursive: true });
+      if (!fs.existsSync(outputDir))
+        fs.mkdirSync(outputDir, { recursive: true });
       // Clean previous generated outputs
-      fs.rmSync(OUTPUT_DIR, { recursive: true, force: true });
-      fs.mkdirSync(OUTPUT_DIR, { recursive: true });
+      fs.rmSync(outputDir, { recursive: true, force: true });
+      fs.mkdirSync(outputDir, { recursive: true });
       const files: string[] = [];
       const fileExports = new Map<string, ExportEntry[]>();
 
@@ -334,7 +399,7 @@ export default function generateStatesPlugin(
       const formattedUtils = await prettier.format(utilsCode, {
         parser: "typescript",
       });
-      fs.writeFileSync(path.join(OUTPUT_DIR, "utils.ts"), formattedUtils);
+      fs.writeFileSync(path.join(outputDir, "utils.ts"), formattedUtils);
       files.push("utils"); // store for index.ts
       fileExports.set("utils", getExportEntries(formattedUtils));
 
@@ -346,27 +411,39 @@ export default function generateStatesPlugin(
           continue;
         }
 
-        const code = generateContent(key, stateDef);
+        const code = generateContent(
+          key,
+          stateDef,
+          importPathToSync,
+          appKey,
+          symbolPrefix,
+        );
         const formatted = await prettier.format(code, { parser: "typescript" });
 
         // File name: StageState.ts
         const stateName = toPascal(key);
+        const definitionName = `${withSymbolPrefix(stateName, symbolPrefix)}Definition`;
         const fname = `${stateName}.ts`;
-        fs.writeFileSync(path.join(OUTPUT_DIR, fname), formatted);
+        fs.writeFileSync(path.join(outputDir, fname), formatted);
         files.push(stateName); // store for index.ts
-        generatedStateNames.push(stateName);
+        generatedStateNames.push(`${stateName}:${definitionName}`);
         fileExports.set(stateName, getExportEntries(formatted));
       }
 
       const stateDefinitionImports = generatedStateNames
         .map(
-          (stateName) =>
-            `import { ${stateName}Definition } from './${stateName}';`,
+          (entry) => {
+            const [stateName, definitionName] = entry.split(":");
+            return `import { ${definitionName} } from './${stateName}';`;
+          },
         )
         .join("\n");
 
       const stateDefinitionEntries = generatedStateNames
-        .map((stateName) => `  ${stateName}: ${stateName}Definition,`)
+        .map((entry) => {
+          const [stateName, definitionName] = entry.split(":");
+          return `  ${stateName}: ${definitionName},`;
+        })
         .join("\n");
 
       const exportCounts = new Map<string, number>();
@@ -435,7 +512,7 @@ export const globalStateDefintiion = globalStateDefinition;
       const formattedIndex = await prettier.format(indexCode, {
         parser: "typescript",
       });
-      fs.writeFileSync(path.join(OUTPUT_DIR, "index.ts"), formattedIndex);
+      fs.writeFileSync(path.join(outputDir, "index.ts"), formattedIndex);
 
       console.log(
         `✅ [GenStates] Generated ${files.length} files (including utils) from ${schemaUrl}`,

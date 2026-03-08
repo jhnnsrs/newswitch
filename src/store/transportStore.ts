@@ -1,4 +1,6 @@
 // src/store/transportStore.ts
+import type { AppKey } from "@/apps";
+import { getScopedTaskId, getScopedTaskReference } from "@/lib/rekuest/task";
 import { createStore } from "zustand/vanilla";
 import { subscribeWithSelector } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
@@ -33,6 +35,7 @@ export interface TransportStore {
 
   // Task actions
   addTask: <TArgs = unknown, TReturn = unknown>(
+    appKey: AppKey,
     action: string,
     reference: string,
     args: TArgs,
@@ -40,15 +43,24 @@ export interface TransportStore {
   ) => Task<TArgs, TReturn>;
 
   /** Explicitly attach the server's task ID to a local reference after assignment */
-  setAssignationID: (reference: string, assignationId: string) => void;
+  setAssignationID: (
+    appKey: AppKey,
+    reference: string,
+    assignationId: string,
+  ) => void;
 
-  updateTask: (referenceOrId: string, updates: Partial<Task>) => void;
+  updateTask: (
+    referenceOrId: string,
+    updates: Partial<Task>,
+    appKey?: AppKey,
+  ) => void;
 
   getTask: <TArgs = unknown, TReturn = unknown>(
     referenceOrId: string,
+    appKey?: AppKey,
   ) => Task<TArgs, TReturn> | undefined;
 
-  removeTask: (referenceOrId: string) => void;
+  removeTask: (referenceOrId: string, appKey?: AppKey) => void;
 
   clearTasks: () => void;
 }
@@ -116,99 +128,126 @@ export const createTransportStore = () =>
 
       // Task actions
       addTask: <TArgs = unknown, TReturn = unknown>(
+        appKey: AppKey,
         action: string,
         reference: string,
         args: TArgs,
         status: TaskStatus = "pending",
       ): Task<TArgs, TReturn> => {
         const now = new Date();
+        const scopedReference = getScopedTaskReference(appKey, reference);
         const task: Task<TArgs, TReturn> = {
-          id: reference, // Use reference as a placeholder ID until setAssignationID is called
+          id: scopedReference,
+          appKey,
           action,
           args,
           status,
-          reference,
+          reference: scopedReference,
           createdAt: now,
           updatedAt: now,
         };
 
         set((state) => {
-          state.tasks[reference] = task as Task;
+          state.tasks[scopedReference] = task as Task;
         });
 
         return task;
       },
 
-      setAssignationID: (reference, assignationId) => {
+      setAssignationID: (appKey, reference, assignationId) => {
         set((state) => {
-          const task = state.tasks[reference];
+          const scopedReference = getScopedTaskReference(appKey, reference);
+          const scopedAssignationId = getScopedTaskId(appKey, assignationId);
+          const task = state.tasks[scopedReference];
           if (task) {
             task.id = assignationId;
             task.updatedAt = new Date();
-            state.taskIdToReference[assignationId] = reference;
+            state.taskIdToReference[scopedAssignationId] = scopedReference;
 
             // RACE CONDITION FIX: Flush any pending WebSocket updates
             // that arrived before this HTTP response resolved.
-            const pendingUpdates = state.pendingTaskUpdates[assignationId];
+            const pendingUpdates = state.pendingTaskUpdates[scopedAssignationId];
             if (pendingUpdates && pendingUpdates.length > 0) {
               pendingUpdates.forEach((update) => {
                 Object.assign(task, update, { updatedAt: new Date() });
               });
               // Clean up the cache once applied
-              delete state.pendingTaskUpdates[assignationId];
+              delete state.pendingTaskUpdates[scopedAssignationId];
             }
           }
         });
       },
 
-      updateTask: (referenceOrId, updates) => {
+      updateTask: (referenceOrId, updates, appKey) => {
         set((state) => {
+          const scopedReferenceOrId = appKey
+            ? getScopedTaskReference(appKey, referenceOrId)
+            : referenceOrId;
+          const scopedId = appKey ? getScopedTaskId(appKey, referenceOrId) : referenceOrId;
           const ref = state.tasks[referenceOrId]
             ? referenceOrId
+            : state.tasks[scopedReferenceOrId]
+              ? scopedReferenceOrId
             : state.taskIdToReference[referenceOrId];
+          const resolvedReference = ref ?? state.taskIdToReference[scopedId];
 
           // If the task doesn't exist yet, it's likely a WebSocket update outrunning the HTTP response.
           // Cache it based on the ID provided (which will be the server's assignation ID).
-          if (!ref) {
-            if (!state.pendingTaskUpdates[referenceOrId]) {
-              state.pendingTaskUpdates[referenceOrId] = [];
+          if (!resolvedReference) {
+            const pendingKey = appKey ? scopedId : referenceOrId;
+            if (!state.pendingTaskUpdates[pendingKey]) {
+              state.pendingTaskUpdates[pendingKey] = [];
             }
-            state.pendingTaskUpdates[referenceOrId].push(updates);
+            state.pendingTaskUpdates[pendingKey].push(updates);
             return;
           }
 
           // Otherwise, apply the update normally
-          const task = state.tasks[ref];
+          const task = state.tasks[resolvedReference];
           Object.assign(task, updates, { updatedAt: new Date() });
 
           // Catch any spontaneous ID updates that bypass setAssignationID
-          if (updates.id && updates.id !== ref) {
-            state.taskIdToReference[updates.id] = ref;
+          if (updates.id && updates.id !== resolvedReference && task.appKey) {
+            state.taskIdToReference[getScopedTaskId(task.appKey, updates.id)] =
+              resolvedReference;
           }
         });
       },
 
       getTask: <TArgs = unknown, TReturn = unknown>(
         referenceOrId: string,
+        appKey?: AppKey,
       ): Task<TArgs, TReturn> | undefined => {
         const state = get();
+        const scopedReference = appKey
+          ? getScopedTaskReference(appKey, referenceOrId)
+          : referenceOrId;
+        const scopedId = appKey ? getScopedTaskId(appKey, referenceOrId) : referenceOrId;
         const ref = state.tasks[referenceOrId]
           ? referenceOrId
-          : state.taskIdToReference[referenceOrId];
+          : state.tasks[scopedReference]
+            ? scopedReference
+            : state.taskIdToReference[referenceOrId] ?? state.taskIdToReference[scopedId];
 
         return ref ? (state.tasks[ref] as Task<TArgs, TReturn>) : undefined;
       },
 
-      removeTask: (referenceOrId) => {
+      removeTask: (referenceOrId, appKey) => {
         set((state) => {
+          const scopedReference = appKey
+            ? getScopedTaskReference(appKey, referenceOrId)
+            : referenceOrId;
+          const scopedId = appKey ? getScopedTaskId(appKey, referenceOrId) : referenceOrId;
           const ref = state.tasks[referenceOrId]
             ? referenceOrId
-            : state.taskIdToReference[referenceOrId];
+            : state.tasks[scopedReference]
+              ? scopedReference
+              : state.taskIdToReference[referenceOrId] ?? state.taskIdToReference[scopedId];
 
           if (!ref) {
             // Also clear any orphaned updates if the task is removed before it's even fully created
-            if (state.pendingTaskUpdates[referenceOrId]) {
-              delete state.pendingTaskUpdates[referenceOrId];
+            if (state.pendingTaskUpdates[scopedId]) {
+              delete state.pendingTaskUpdates[scopedId];
             }
             return;
           }
@@ -218,8 +257,12 @@ export const createTransportStore = () =>
           if (task.id && state.taskIdToReference[task.id]) {
             delete state.taskIdToReference[task.id];
           }
-          if (task.id && state.pendingTaskUpdates[task.id]) {
-            delete state.pendingTaskUpdates[task.id];
+          if (task.id && task.appKey) {
+            const pendingKey = getScopedTaskId(task.appKey, task.id);
+            delete state.taskIdToReference[pendingKey];
+            if (state.pendingTaskUpdates[pendingKey]) {
+              delete state.pendingTaskUpdates[pendingKey];
+            }
           }
 
           delete state.tasks[ref];
@@ -250,11 +293,17 @@ export { TransportStoreContext, useTransportStore, useTransportStoreApi };
 
 // Selectors
 export const selectTask =
-  <TArgs = unknown, TReturn = unknown>(referenceOrId: string) =>
+  <TArgs = unknown, TReturn = unknown>(referenceOrId: string, appKey?: AppKey) =>
   (store: TransportStore) => {
+    const scopedReference = appKey
+      ? getScopedTaskReference(appKey, referenceOrId)
+      : referenceOrId;
+    const scopedId = appKey ? getScopedTaskId(appKey, referenceOrId) : referenceOrId;
     const ref = store.tasks[referenceOrId]
       ? referenceOrId
-      : store.taskIdToReference[referenceOrId];
+      : store.tasks[scopedReference]
+        ? scopedReference
+        : store.taskIdToReference[referenceOrId] ?? store.taskIdToReference[scopedId];
     return ref ? (store.tasks[ref] as Task<TArgs, TReturn>) : undefined;
   };
 

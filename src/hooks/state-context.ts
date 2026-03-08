@@ -1,12 +1,15 @@
 import { createContext, useContext } from "react";
-import type { GlobalStateDefinition, GlobalStateKey, GlobalStateShape } from "./states";
+import type { AppKey } from "@/apps";
+import type { StateDefinition } from "./useStateSync";
 
 export interface StateContextValue {
-  definitions: GlobalStateDefinition;
-  ensureState: <TKey extends GlobalStateKey>(key: TKey) => Promise<void>;
-  refetchState: <TKey extends GlobalStateKey>(
-    key: TKey,
-  ) => Promise<GlobalStateShape[TKey]>;
+  definitions: Record<string, StateDefinition<Record<string, unknown>, string> & { appKey: AppKey }>;
+  ensureState: <T extends Record<string, unknown>, TKey extends string>(
+    definition: StateDefinition<T, TKey>,
+  ) => Promise<void>;
+  refetchState: <T extends Record<string, unknown>, TKey extends string>(
+    definition: StateDefinition<T, TKey>,
+  ) => Promise<T>;
 }
 
 export const StateContext = createContext<StateContextValue | null>(null);

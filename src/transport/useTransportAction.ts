@@ -2,6 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { z, ZodType } from "zod";
+import { scopeLockKeys } from "@/lib/rekuest/locks";
+import {
+  getScopedTaskReference,
+  resolveActionAppKey,
+} from "@/lib/rekuest/task";
 import {
   getBlockingLock,
   selectTask,
@@ -10,10 +15,12 @@ import {
   useTransportStore,
 } from "../store";
 import { useAction } from "./action-context";
+import { useTransport } from "./transport-context";
 import type { AssignOptions, Task, TaskStatus } from "./types";
 
 export interface ActionDefinition<TArgs, TReturn> {
   name: string;
+  appKey?: string;
   description?: string;
   argsSchema: ZodType<TArgs>;
   returnSchema: ZodType<TReturn>;
@@ -80,7 +87,13 @@ export const useTransportAction = <TArgs, TReturn>(
   } = options;
 
   const action = useAction();
+  const transport = useTransport();
   const lockStoreApi = useLockStoreApi();
+  const appKey = resolveActionAppKey(definition, transport.defaultAppKey);
+  const scopedLockKeys = useMemo(
+    () => scopeLockKeys(appKey, definition.lockKeys),
+    [appKey, definition.lockKeys],
+  );
 
   // Track strictly by reference
   const [currentReference, setCurrentReference] = useState<string | null>(null);
@@ -104,9 +117,9 @@ export const useTransportAction = <TArgs, TReturn>(
   // Create a memoized selector for the current reference to prevent unnecessary rerenders
   const taskSelector = useMemo(() => {
     return currentReference
-      ? selectTask<TArgs, TReturn>(currentReference)
+      ? selectTask<TArgs, TReturn>(currentReference, appKey)
       : () => undefined;
-  }, [currentReference]);
+  }, [appKey, currentReference]);
 
   const task = useTransportStore(taskSelector) ?? null;
 
@@ -114,7 +127,7 @@ export const useTransportAction = <TArgs, TReturn>(
     isLocked,
     lockKey: blockingLockKey,
     lockingTaskId,
-  } = useBlockingLock(definition.lockKeys);
+  } = useBlockingLock(scopedLockKeys);
   const lockedBy = lockingTaskId ?? null;
 
   // --- Derived State ---
@@ -143,12 +156,12 @@ export const useTransportAction = <TArgs, TReturn>(
   useEffect(() => {
     if (!autoSubscribe || !currentReference) return;
 
-    const unsubscribe = action.subscribeToTask(currentReference, (updatedTask) => {
+    const unsubscribe = action.subscribeToTask(currentReference, appKey, (updatedTask) => {
       handleTaskUpdate(updatedTask as Task);
     });
 
     return () => unsubscribe();
-  }, [action, autoSubscribe, currentReference, handleTaskUpdate]);
+  }, [action, appKey, autoSubscribe, currentReference, handleTaskUpdate]);
 
   // --- Core Execution Logic ---
   const execute = useCallback(
@@ -160,7 +173,7 @@ export const useTransportAction = <TArgs, TReturn>(
 
       const { lockKey, lockingTaskId: currentLockingTaskId } = getBlockingLock(
         lockStoreApi.getState().locks,
-        definition.lockKeys,
+        scopedLockKeys,
       );
 
       if (lockKey) {
@@ -176,11 +189,13 @@ export const useTransportAction = <TArgs, TReturn>(
       }
 
       const reference = opts?.reference || action.createReference();
-      setCurrentReference(reference);
+      const scopedReference = getScopedTaskReference(appKey, reference);
+      setCurrentReference(scopedReference);
 
       // The transport.assign method is now strictly responsible for calling setAssignationID
       // internally once it receives the server response.
       const newTask = await action.assign<TArgs, TReturn>(
+        appKey,
         definition.name,
         parsed.data,
         { ...opts, reference },
@@ -188,7 +203,7 @@ export const useTransportAction = <TArgs, TReturn>(
 
       return newTask;
     },
-    [action, definition, lockStoreApi],
+    [action, appKey, definition, lockStoreApi, scopedLockKeys],
   );
 
   // --- Public Methods ---
@@ -202,10 +217,14 @@ export const useTransportAction = <TArgs, TReturn>(
   const call = useCallback(
     async (args: TArgs, opts?: AssignOptions): Promise<TReturn> => {
       const reference = opts?.reference || action.createReference();
+      const scopedReference = getScopedTaskReference(appKey, reference);
 
       await execute(args, { ...opts, reference });
 
-      const taskState = await action.waitForTask<TArgs, TReturn>(reference);
+      const taskState = await action.waitForTask<TArgs, TReturn>(
+        appKey,
+        scopedReference,
+      );
       const parsed = definition.returnSchema.safeParse(taskState.result);
 
       if (!parsed.success) {
@@ -216,19 +235,19 @@ export const useTransportAction = <TArgs, TReturn>(
 
       return parsed.data;
     },
-    [action, definition.returnSchema, execute],
+    [action, appKey, definition.returnSchema, execute],
   );
 
   const refresh = useCallback(async (): Promise<void> => {
     // We send the resolved currentTaskId to the server, as it needs its own assignation ID
     if (!currentTaskId) return;
-    await action.getTask(currentTaskId);
-  }, [action, currentTaskId]);
+    await action.getTask(appKey, currentTaskId);
+  }, [action, appKey, currentTaskId]);
 
   const cancel = useCallback(async (): Promise<void> => {
     if (!currentTaskId) return;
-    await action.cancelTask(currentTaskId);
-  }, [action, currentTaskId]);
+    await action.cancelTask(appKey, currentTaskId);
+  }, [action, appKey, currentTaskId]);
 
   const clear = useCallback((): void => {
     setCurrentReference(null);

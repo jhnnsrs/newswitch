@@ -1,6 +1,6 @@
 // src/transport/types.ts
 
-import type { AppDefinition } from "../../app";
+import type { AppDefinition, AppKey, AppsDefinition } from "@/apps";
 
 export type TaskStatus =
   | "pending"
@@ -14,6 +14,7 @@ export type TaskStatus =
 
 export interface Task<TArgs = unknown, TReturn = unknown> {
   id: string;
+  appKey?: AppKey;
   action: string;
   args: TArgs;
   reference: string;
@@ -472,21 +473,29 @@ export interface TransportConfig {
   };
   /** Ping interval in ms to keep connection alive (default: 30000) */
   pingInterval?: number;
+  /** Optional app-specific endpoint overrides */
+  appEndpoints?: Partial<
+    Record<
+      string,
+      {
+        apiEndpoint: string;
+        wsEndpoint?: string;
+      }
+    >
+  >;
 }
 
 export interface TransportContextValue {
   /** The API endpoint URL */
   apiEndpoint: string;
-  /** Application-level generated definitions */
+  /** Registered apps */
+  apps: AppsDefinition;
+  /** Default app key for unscoped definitions */
+  defaultAppKey: AppKey;
+  /** Default application-level generated definitions */
   app: AppDefinition;
   /** The resolved WebSocket endpoint URL */
   wsUrl: string;
-  /** Dedicated state websocket endpoint */
-  stateWsUrl: string;
-  /** Dedicated lock websocket endpoint */
-  lockWsUrl: string;
-  /** Dedicated task websocket endpoint */
-  taskWsUrl: string;
   /** Instance ID used for assignment requests */
   instanceId: string;
   /** Ping interval for the websocket manager */
@@ -495,25 +504,40 @@ export interface TransportContextValue {
   reconnect: Required<NonNullable<TransportConfig["reconnect"]>>;
   /** Submit an action assign request */
   assignAction: <TArgs>(
+    appKey: AppKey,
     actionName: string,
     args: TArgs,
     options?: AssignOptions,
   ) => Promise<AssignResponse>;
   /** Get current state of a task by ID (fetches from server) */
   fetchTask: <TArgs = unknown, TReturn = unknown>(
+    appKey: AppKey,
     taskId: string,
   ) => Promise<Task<TArgs, TReturn>>;
   /** Cancel a task */
-  fetchSessionBoundaries: (sessionId: string) => Promise<SessionBoundaries>;
-  fetchActiveSessionBoundaries: () => Promise<SessionBoundaries>;
-  cancelTaskRequest: (taskId: string) => Promise<void>;
-  pauseTaskRequest: (taskId: string) => Promise<void>;
-  unpauseTaskRequest: (taskId: string) => Promise<void>;
-  stepTaskRequest: (taskId: string) => Promise<void>;
+  fetchSessionBoundaries: (
+    appKey: AppKey,
+    sessionId: string,
+  ) => Promise<SessionBoundaries>;
+  fetchActiveSessionBoundaries: (appKey: AppKey) => Promise<SessionBoundaries>;
+  cancelTaskRequest: (appKey: AppKey, taskId: string) => Promise<void>;
+  pauseTaskRequest: (appKey: AppKey, taskId: string) => Promise<void>;
+  unpauseTaskRequest: (appKey: AppKey, taskId: string) => Promise<void>;
+  stepTaskRequest: (appKey: AppKey, taskId: string) => Promise<void>;
   /** Fetch a state from the server */
-  fetchState: <T = unknown>(stateName: string) => Promise<T>;
+  fetchState: <T = unknown>(appKey: AppKey, stateName: string) => Promise<T>;
   /** Fetch all active locks from the server */
-  fetchLocks: () => Promise<Record<string, { task_id: string }>>;
+  fetchLocks: (appKey: AppKey) => Promise<Record<string, { task_id: string }>>;
+  /** Resolve an app definition for the given key */
+  getApp: (appKey: AppKey) => AppDefinition;
+  /** Resolve API and websocket endpoints for the given app */
+  getEndpoints: (appKey: AppKey) => {
+    apiEndpoint: string;
+    wsUrl: string;
+    stateWsUrl: string;
+    lockWsUrl: string;
+    taskWsUrl: string;
+  };
 }
 
 export interface ActionContextValue {
@@ -531,28 +555,32 @@ export interface ActionContextValue {
   createReference: () => string;
   /** Assign an action with args, returns the contextual task */
   assign: <TArgs, TReturn>(
+    appKey: AppKey,
     actionName: string,
     args: TArgs,
     options?: AssignOptions,
   ) => Promise<Task<TArgs, TReturn>>;
   /** Get current state of a task by ID (fetches from server) */
   getTask: <TArgs = unknown, TReturn = unknown>(
+    appKey: AppKey,
     taskId: string,
   ) => Promise<Task<TArgs, TReturn>>;
   /** Get a task from local cache */
-  getCachedTask: (taskId: string) => Task | undefined;
+  getCachedTask: (taskId: string, appKey?: AppKey) => Task | undefined;
   /** Cancel a task */
-  cancelTask: (taskId: string) => Promise<void>;
-  pauseTask: (taskId: string) => Promise<void>;
-  unpauseTask: (taskId: string) => Promise<void>;
-  stepTask: (taskId: string) => Promise<void>;
+  cancelTask: (appKey: AppKey, taskId: string) => Promise<void>;
+  pauseTask: (appKey: AppKey, taskId: string) => Promise<void>;
+  unpauseTask: (appKey: AppKey, taskId: string) => Promise<void>;
+  stepTask: (appKey: AppKey, taskId: string) => Promise<void>;
   /** Subscribe to updates for a specific task */
   subscribeToTask: (
     taskId: string,
+    appKey: AppKey,
     callback: (task: Task) => void,
   ) => () => void;
   /** Wait until a tracked task reaches a terminal state */
   waitForTask: <TArgs = unknown, TReturn = unknown>(
+    appKey: AppKey,
     taskId: string,
   ) => Promise<Task<TArgs, TReturn>>;
   /** Manually reconnect the WebSocket */

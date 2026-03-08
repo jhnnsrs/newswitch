@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, type MutableRefObject } from "react";
+import { getScopedLockKey } from "@/lib/rekuest/locks";
+import type { AppKey } from "@/apps";
 import { useLockStoreApi } from "../store";
 import {
   FromAgentMessageType,
@@ -28,60 +30,79 @@ interface LockWebSocketSyncProps {
 export function LockWebSocketSync({ managerRef }: LockWebSocketSyncProps) {
   const transport = useTransport();
   const lockStoreApi = useLockStoreApi();
-  const channelManagerRef = useRef<SubscriptionWebSocketManager<LockChannelMessage> | null>(null);
-  const listeningKeys = useMemo(
-    () => Object.values(transport.app.locks).map((definition) => definition.key),
-    [transport.app.locks],
+  const channelManagerRef = useRef<
+    Map<AppKey, SubscriptionWebSocketManager<LockChannelMessage>>
+  >(new Map());
+  const appKeys = useMemo(
+    () => Object.keys(transport.apps) as AppKey[],
+    [transport.apps],
   );
 
   useEffect(() => {
-    const manager = new SubscriptionWebSocketManager<LockChannelMessage>({
-      name: "LockWebSocketSync",
-      wsUrl: transport.lockWsUrl,
-      pingInterval: transport.pingInterval,
-      reconnect: transport.reconnect,
-      buildListenMessage: (keys): ListenLocksMessage => ({
-        type: "LISTEN_LOCKS",
-        locks: keys,
-      }),
-      onMessage: (message) => {
-        const store = lockStoreApi.getState();
+    const managers = new Map<AppKey, SubscriptionWebSocketManager<LockChannelMessage>>();
 
-        switch (message.type) {
-          case FromAgentMessageType.LOCK:
-            store.setLock(message.key, message.assignation);
-            return;
-          case FromAgentMessageType.UNLOCK:
-            store.setLock(message.key, undefined);
-            return;
-          case FromAgentMessageType.REGISTER:
-          case FromAgentMessageType.HEARTBEAT_ANSWER:
-            return;
-          default:
-            return;
-        }
-      },
-    });
+    for (const appKey of appKeys) {
+      const app = transport.getApp(appKey);
+      const endpoints = transport.getEndpoints(appKey);
+      const listeningKeys = Object.values(app.locks).map((definition) => definition.key);
 
-    manager.updateListenKeys(listeningKeys);
-    manager.connect();
-    channelManagerRef.current = manager;
+      const manager = new SubscriptionWebSocketManager<LockChannelMessage>({
+        name: `LockWebSocketSync:${appKey}`,
+        wsUrl: endpoints.lockWsUrl,
+        pingInterval: transport.pingInterval,
+        reconnect: transport.reconnect,
+        buildListenMessage: (keys): ListenLocksMessage => ({
+          type: "LISTEN_LOCKS",
+          locks: keys,
+        }),
+        onMessage: (message) => {
+          const store = lockStoreApi.getState();
+
+          switch (message.type) {
+            case FromAgentMessageType.LOCK:
+              store.setLock(
+                getScopedLockKey(appKey, message.key),
+                message.assignation,
+              );
+              return;
+            case FromAgentMessageType.UNLOCK:
+              store.setLock(getScopedLockKey(appKey, message.key), undefined);
+              return;
+            case FromAgentMessageType.REGISTER:
+            case FromAgentMessageType.HEARTBEAT_ANSWER:
+              return;
+            default:
+              return;
+          }
+        },
+      });
+
+      manager.updateListenKeys(listeningKeys);
+      manager.connect();
+      managers.set(appKey, manager);
+    }
+
+    channelManagerRef.current = managers;
 
     if (managerRef) {
       managerRef.current = {
-        reconnect: () => manager.reconnect(),
-        disconnect: () => manager.disconnect(),
+        reconnect: () => {
+          managers.forEach((manager) => manager.reconnect());
+        },
+        disconnect: () => {
+          managers.forEach((manager) => manager.disconnect());
+        },
       };
     }
 
     return () => {
-      manager.disconnect();
-      channelManagerRef.current = null;
+      managers.forEach((manager) => manager.disconnect());
+      channelManagerRef.current = new Map();
       if (managerRef) {
         managerRef.current = null;
       }
     };
-  }, [listeningKeys, lockStoreApi, managerRef, transport]);
+  }, [appKeys, lockStoreApi, managerRef, transport]);
 
   return null;
 }

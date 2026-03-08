@@ -1,0 +1,354 @@
+import fs from "node:fs";
+import path from "node:path";
+import prettier from "prettier";
+import type { Plugin } from "vite";
+import generateHooksPlugin from "./generate-hooks";
+import generateLocksPlugin from "./generate-locks";
+import generateStatesPlugin from "./generate-states";
+
+const SRC_DIR = path.resolve(__dirname, "../src");
+const HOOKS_DIR = path.resolve(SRC_DIR, "hooks");
+const DEFAULT_APPS_DIR = path.resolve(SRC_DIR, "apps");
+
+const toPascal = (value: string) =>
+  value
+    .replace(/(^\w|[-_\s](\w))/g, (_, first: string, next?: string) =>
+      (next ?? first).toUpperCase(),
+    )
+    .replaceAll("-", "")
+    .replaceAll("_", "")
+    .replaceAll(" ", "");
+
+const normalizeOptionalString = (value?: string) => {
+  const trimmed = value?.trim();
+
+  return trimmed ? trimmed : undefined;
+};
+
+export interface GenerateAppPluginOptions {
+  key?: string;
+  name?: string;
+  hooksSchemaUrl?: string;
+  statesSchemaUrl?: string;
+  locksSchemaUrl?: string;
+  hooksWhitelist?: string[];
+  hooksBlacklist?: string[];
+  statesWhitelist?: string[];
+  statesBlacklist?: string[];
+  locksWhitelist?: string[];
+  locksBlacklist?: string[];
+}
+
+export interface GenerateAppsPluginOptions {
+  apps: GenerateAppPluginOptions[];
+  baseDir?: string;
+  defaultApp?: string;
+}
+
+interface NormalizedGenerateAppPluginOptions extends GenerateAppPluginOptions {
+  key: string;
+  name?: string;
+  symbolPrefix?: string;
+}
+
+const DEFAULT_APP_KEY = "default";
+
+const ensureCleanDir = (dirPath: string) => {
+  fs.rmSync(dirPath, { force: true, recursive: true });
+  fs.mkdirSync(dirPath, { recursive: true });
+};
+
+const formatAndWrite = async (filePath: string, content: string) => {
+  const formatted = await prettier.format(content, {
+    parser: "typescript",
+    singleQuote: true,
+    trailingComma: "all",
+  });
+
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  fs.writeFileSync(filePath, formatted);
+};
+
+const invokeBuildStart = async (
+  hook: Plugin["buildStart"],
+  context: unknown,
+) => {
+  if (!hook) {
+    return;
+  }
+
+  if (typeof hook === "function") {
+    await hook.call(context as never, {} as never);
+    return;
+  }
+
+  if ("handler" in hook) {
+    await hook.handler.call(context as never, {} as never);
+  }
+};
+
+const walkFiles = (dirPath: string): string[] => {
+  if (!fs.existsSync(dirPath)) {
+    return [];
+  }
+
+  return fs.readdirSync(dirPath, { recursive: true })
+    .filter((entry) => typeof entry === "string")
+    .map((entry) => path.resolve(dirPath, entry))
+    .filter((entry) => fs.statSync(entry).isFile());
+};
+
+const toPosixRelativeImport = (importPath: string) =>
+  importPath.replaceAll(path.sep, "/").replace(/\.(ts|tsx)$/, "");
+
+const normalizeApps = (
+  apps: GenerateAppPluginOptions[],
+): NormalizedGenerateAppPluginOptions[] => {
+  const normalizedApps = apps.map((app, index) => {
+    const explicitKey = normalizeOptionalString(app.key);
+    const legacyName = normalizeOptionalString(app.name);
+    const key = explicitKey ?? legacyName;
+
+    if (!key) {
+      throw new Error(
+        `App at index ${index} must define a "key" or a legacy "name".`,
+      );
+    }
+
+    const normalizedName = explicitKey ? legacyName : undefined;
+    const symbolPrefix =
+      key === DEFAULT_APP_KEY ? undefined : normalizeOptionalString(toPascal(key));
+
+    return {
+      ...app,
+      key,
+      name: normalizedName,
+      symbolPrefix,
+    };
+  });
+
+  const seenKeys = new Map<string, string>();
+  const seenNames = new Map<string, string>();
+  const seenPrefixes = new Map<string, string>();
+
+  for (const app of normalizedApps) {
+    if (seenKeys.has(app.key)) {
+      throw new Error(
+        `Duplicate app key "${app.key}" found for apps "${seenKeys.get(app.key)}" and "${app.key}".`,
+      );
+    }
+    seenKeys.set(app.key, app.key);
+
+    if (app.name) {
+      if (seenNames.has(app.name)) {
+        throw new Error(
+          `Duplicate app name "${app.name}" found for app keys "${seenNames.get(app.name)}" and "${app.key}".`,
+        );
+      }
+      seenNames.set(app.name, app.key);
+    }
+
+    if (app.symbolPrefix) {
+      if (seenPrefixes.has(app.symbolPrefix)) {
+        throw new Error(
+          `Duplicate app prefix "${app.symbolPrefix}" generated from app keys for app keys "${seenPrefixes.get(app.symbolPrefix)}" and "${app.key}".`,
+        );
+      }
+      seenPrefixes.set(app.symbolPrefix, app.key);
+    }
+  }
+
+  return normalizedApps;
+};
+
+const writeShimTree = async (
+  sourceDir: string,
+  targetDir: string,
+  importPrefix: string,
+) => {
+  ensureCleanDir(targetDir);
+
+  const files = walkFiles(sourceDir);
+  for (const filePath of files) {
+    const relativeFilePath = path.relative(sourceDir, filePath);
+    const targetFilePath = path.resolve(targetDir, relativeFilePath);
+    const importPath = toPosixRelativeImport(
+      path.posix.join(importPrefix, relativeFilePath.replaceAll(path.sep, "/")),
+    );
+
+    await formatAndWrite(
+      targetFilePath,
+      `export * from '${importPath}';\n`,
+    );
+  }
+};
+
+export default function generateAppsPlugin(
+  options: GenerateAppsPluginOptions,
+): Plugin {
+  const normalizedApps = normalizeApps(options.apps);
+  const appsDir = path.resolve(SRC_DIR, options.baseDir ?? path.relative(SRC_DIR, DEFAULT_APPS_DIR));
+  const defaultApp = options.defaultApp ?? normalizedApps[0]?.key ?? "default";
+
+  if (!normalizedApps.some((app) => app.key === defaultApp)) {
+    throw new Error(`Default app "${defaultApp}" is not present in the configured apps.`);
+  }
+
+  return {
+    name: "vite-plugin-generate-apps",
+    async buildStart() {
+      ensureCleanDir(appsDir);
+
+      for (const app of normalizedApps) {
+        const appRootDir = path.resolve(appsDir, app.key);
+        const appHooksDir = path.resolve(appRootDir, "hooks");
+        const appActionsDir = path.resolve(appHooksDir, "actions");
+        const appStatesDir = path.resolve(appHooksDir, "states");
+        const appLocksDir = path.resolve(appHooksDir, "locks");
+
+        ensureCleanDir(appHooksDir);
+
+        const hooksPlugin = generateHooksPlugin({
+          schemaUrl: app.hooksSchemaUrl,
+          whitelist: app.hooksWhitelist,
+          blacklist: app.hooksBlacklist,
+          outputDir: appActionsDir,
+          importPathToUseAction: "../useTransportAction",
+          indexImportPathToUseAction: "../useTransportAction",
+          appKey: app.key,
+          symbolPrefix: app.symbolPrefix,
+        });
+        const statesPlugin = generateStatesPlugin({
+          schemaUrl: app.statesSchemaUrl,
+          whitelist: app.statesWhitelist,
+          blacklist: app.statesBlacklist,
+          outputDir: appStatesDir,
+          importPathToSync: "../useStateSync",
+          appKey: app.key,
+          symbolPrefix: app.symbolPrefix,
+        });
+        const locksPlugin = generateLocksPlugin({
+          schemaUrl: app.locksSchemaUrl,
+          whitelist: app.locksWhitelist,
+          blacklist: app.locksBlacklist,
+          outputDir: appLocksDir,
+          importPathToSync: "../useLockSync",
+          appKey: app.key,
+          symbolPrefix: app.symbolPrefix,
+        });
+
+        await invokeBuildStart(hooksPlugin.buildStart, this);
+        await invokeBuildStart(statesPlugin.buildStart, this);
+        await invokeBuildStart(locksPlugin.buildStart, this);
+
+        await formatAndWrite(
+          path.resolve(appHooksDir, "useTransportAction.ts"),
+          `export * from '@/transport/useTransportAction';\n`,
+        );
+
+        await formatAndWrite(
+          path.resolve(appHooksDir, "useStateSync.tsx"),
+          `export * from '@/hooks/useStateSync';\n`,
+        );
+
+        await formatAndWrite(
+          path.resolve(appHooksDir, "useLockSync.tsx"),
+          `export * from '@/hooks/useLockSync';\n`,
+        );
+
+        await formatAndWrite(
+          path.resolve(appRootDir, "app.ts"),
+          `
+import {
+  globalActionDefinition,
+  type GlobalActionDefinition,
+} from './hooks/actions';
+import {
+  globalLockDefinition,
+  type GlobalLockDefinition,
+} from './hooks/locks';
+import {
+  globalStateDefinition,
+  type GlobalStateDefinition,
+} from './hooks/states';
+
+export interface AppDefinition<TAppKey extends string = string> {
+  key: TAppKey;
+  actions: GlobalActionDefinition;
+  locks: GlobalLockDefinition;
+  states: GlobalStateDefinition;
+}
+
+export const appDefinition = {
+  key: '${app.key}',
+  actions: globalActionDefinition,
+  locks: globalLockDefinition,
+  states: globalStateDefinition,
+} satisfies AppDefinition<'${app.key}'>;
+`,
+        );
+      }
+
+      await writeShimTree(
+        path.resolve(appsDir, defaultApp, "hooks", "actions"),
+        path.resolve(HOOKS_DIR, "actions"),
+        `@/apps/${defaultApp}/hooks/actions`,
+      );
+      await writeShimTree(
+        path.resolve(HOOKS_DIR, "actions"),
+        path.resolve(HOOKS_DIR, "generated"),
+        "@/hooks/actions",
+      );
+      await writeShimTree(
+        path.resolve(appsDir, defaultApp, "hooks", "states"),
+        path.resolve(HOOKS_DIR, "states"),
+        `@/apps/${defaultApp}/hooks/states`,
+      );
+      await writeShimTree(
+        path.resolve(appsDir, defaultApp, "hooks", "locks"),
+        path.resolve(HOOKS_DIR, "locks"),
+        `@/apps/${defaultApp}/hooks/locks`,
+      );
+
+      const appImports = normalizedApps
+        .map(
+          (app) =>
+            `import { appDefinition as ${toPascal(app.key)}AppDefinition } from './${app.key}/app';`,
+        )
+        .join("\n");
+
+      const appEntries = normalizedApps
+        .map((app) => `  ${JSON.stringify(app.key)}: ${toPascal(app.key)}AppDefinition,`)
+        .join("\n");
+
+      await formatAndWrite(
+        path.resolve(appsDir, "index.ts"),
+        `
+${appImports}
+
+export const appsDefinition = {
+${appEntries}
+} as const;
+
+export type AppsDefinition = typeof appsDefinition;
+export type AppKey = keyof AppsDefinition;
+export type AppDefinition = AppsDefinition[AppKey];
+export const defaultAppKey = '${defaultApp}' satisfies AppKey;
+export const appDefinition = appsDefinition[defaultAppKey];
+`,
+      );
+
+      await formatAndWrite(
+        path.resolve(SRC_DIR, "app.ts"),
+        `
+export {
+  appDefinition,
+  appsDefinition,
+  defaultAppKey,
+} from './apps';
+export type { AppDefinition, AppKey, AppsDefinition } from './apps';
+`,
+      );
+    },
+  };
+}
