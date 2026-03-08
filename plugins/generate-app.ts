@@ -236,8 +236,8 @@ export default function generateAppsPlugin(
           whitelist: app.hooksWhitelist,
           blacklist: app.hooksBlacklist,
           outputDir: appActionsDir,
-          importPathToUseAction: "../useTransportAction",
-          indexImportPathToUseAction: "../useTransportAction",
+          importPathToUseAction: '../useAction',
+          indexImportPathToUseAction: '../useAction',
           appKey: app.key,
           symbolPrefix: app.symbolPrefix,
         });
@@ -265,18 +265,23 @@ export default function generateAppsPlugin(
         await invokeBuildStart(locksPlugin.buildStart, this);
 
         await formatAndWrite(
-          path.resolve(appHooksDir, "useTransportAction.ts"),
-          `export * from '@/transport/useTransportAction';\n`,
+          path.resolve(appHooksDir, 'useAction.ts'),
+          `export * from '${rekuestImportPath}/task/useAction';\nexport { useAction as default } from '${rekuestImportPath}/task/useAction';\n`,
+        );
+
+        await formatAndWrite(
+          path.resolve(appHooksDir, 'useTransportAction.ts'),
+          `export { useAction as useTransportAction } from './useAction';\nexport type { ActionDefinition, UseTransportActionOptions, UseTransportActionResult } from '${rekuestImportPath}/task';\nexport { useAction as default } from './useAction';\n`,
         );
 
         await formatAndWrite(
           path.resolve(appHooksDir, "useStateSync.tsx"),
-          `export * from '@/hooks/useStateSync';\n`,
+          `export * from '${rekuestImportPath}/state';\n`,
         );
 
         await formatAndWrite(
           path.resolve(appHooksDir, "useLockSync.tsx"),
-          `export * from '@/hooks/useLockSync';\n`,
+          `export * from '${rekuestImportPath}/locks';\n`,
         );
 
         await formatAndWrite(

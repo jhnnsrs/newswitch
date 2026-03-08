@@ -1,8 +1,5 @@
 import { z } from 'zod';
-import {
-  useTransportAction,
-  type ActionDefinition,
-} from '../useTransportAction';
+import { useAction, type ActionDefinition } from '../useAction';
 
 // --- Shared Models ---
 
@@ -50,7 +47,7 @@ export const MoveStageDefinition: ActionDefinition<
  * undefined
  */
 export const useMoveStage = () => {
-  return useTransportAction(MoveStageDefinition);
+  return useAction(MoveStageDefinition);
 };
 
 /** Optimistic state hooks for move_stage */

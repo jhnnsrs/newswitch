@@ -1,8 +1,5 @@
 import { z } from 'zod';
-import {
-  useTransportAction,
-  type ActionDefinition,
-} from '../useTransportAction';
+import { useAction, type ActionDefinition } from '../useAction';
 
 // --- Shared Models ---
 
@@ -43,7 +40,7 @@ export const ToggleObjectiveDefinition = MikrosckopeToggleObjectiveDefinition;
  * undefined
  */
 export const useMikrosckopeToggleObjective = () => {
-  return useTransportAction(MikrosckopeToggleObjectiveDefinition);
+  return useAction(MikrosckopeToggleObjectiveDefinition);
 };
 
 export const useToggleObjective = useMikrosckopeToggleObjective;

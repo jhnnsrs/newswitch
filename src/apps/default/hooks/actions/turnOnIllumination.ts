@@ -1,8 +1,5 @@
 import { z } from 'zod';
-import {
-  useTransportAction,
-  type ActionDefinition,
-} from '../useTransportAction';
+import { useAction, type ActionDefinition } from '../useAction';
 
 // --- Shared Models ---
 
@@ -51,5 +48,5 @@ export const TurnOnIlluminationDefinition: ActionDefinition<
  * undefined
  */
 export const useTurnOnIllumination = () => {
-  return useTransportAction(TurnOnIlluminationDefinition);
+  return useAction(TurnOnIlluminationDefinition);
 };

@@ -1,8 +1,5 @@
 import { z } from 'zod';
-import {
-  useTransportAction,
-  type ActionDefinition,
-} from '../useTransportAction';
+import { useAction, type ActionDefinition } from '../useAction';
 
 // --- Shared Models ---
 
@@ -34,5 +31,5 @@ export const SwitchObjectiveDefinition: ActionDefinition<
  * undefined
  */
 export const useSwitchObjective = () => {
-  return useTransportAction(SwitchObjectiveDefinition);
+  return useAction(SwitchObjectiveDefinition);
 };

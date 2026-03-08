@@ -1,8 +1,5 @@
 import { z } from 'zod';
-import {
-  useTransportAction,
-  type ActionDefinition,
-} from '../useTransportAction';
+import { useAction, type ActionDefinition } from '../useAction';
 
 // --- Shared Models ---
 
@@ -50,7 +47,7 @@ export const DeactivateDetectorDefinition =
  * undefined
  */
 export const useMikrosckopeDeactivateDetector = () => {
-  return useTransportAction(MikrosckopeDeactivateDetectorDefinition);
+  return useAction(MikrosckopeDeactivateDetectorDefinition);
 };
 
 export const useDeactivateDetector = useMikrosckopeDeactivateDetector;

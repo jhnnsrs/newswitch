@@ -1,8 +1,5 @@
 import { z } from 'zod';
-import {
-  useTransportAction,
-  type ActionDefinition,
-} from '../useTransportAction';
+import { useAction, type ActionDefinition } from '../useAction';
 
 // --- Shared Models ---
 
@@ -53,7 +50,7 @@ export const TurnOffIlluminationChannelDefinition =
  * undefined
  */
 export const useMikrosckopeTurnOffIlluminationChannel = () => {
-  return useTransportAction(MikrosckopeTurnOffIlluminationChannelDefinition);
+  return useAction(MikrosckopeTurnOffIlluminationChannelDefinition);
 };
 
 export const useTurnOffIlluminationChannel =

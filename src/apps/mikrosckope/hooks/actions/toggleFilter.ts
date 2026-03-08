@@ -1,8 +1,5 @@
 import { z } from 'zod';
-import {
-  useTransportAction,
-  type ActionDefinition,
-} from '../useTransportAction';
+import { useAction, type ActionDefinition } from '../useAction';
 
 // --- Shared Models ---
 
@@ -61,7 +58,7 @@ export const ToggleFilterDefinition = MikrosckopeToggleFilterDefinition;
  * undefined
  */
 export const useMikrosckopeToggleFilter = () => {
-  return useTransportAction(MikrosckopeToggleFilterDefinition);
+  return useAction(MikrosckopeToggleFilterDefinition);
 };
 
 export const useToggleFilter = useMikrosckopeToggleFilter;

@@ -1,8 +1,5 @@
 import { z } from 'zod';
-import {
-  useTransportAction,
-  type ActionDefinition,
-} from '../useTransportAction';
+import { useAction, type ActionDefinition } from '../useAction';
 
 // --- Shared Models ---
 
@@ -44,7 +41,7 @@ export const StartLiveViewDefinition = MikrosckopeStartLiveViewDefinition;
  * undefined
  */
 export const useMikrosckopeStartLiveView = () => {
-  return useTransportAction(MikrosckopeStartLiveViewDefinition);
+  return useAction(MikrosckopeStartLiveViewDefinition);
 };
 
 export const useStartLiveView = useMikrosckopeStartLiveView;

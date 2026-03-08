@@ -1,8 +1,5 @@
 import { z } from 'zod';
-import {
-  useTransportAction,
-  type ActionDefinition,
-} from '../useTransportAction';
+import { useAction, type ActionDefinition } from '../useAction';
 
 // --- Shared Models ---
 
@@ -46,7 +43,7 @@ export const FailingCameraDefinition = MikrosckopeFailingCameraDefinition;
  * undefined
  */
 export const useMikrosckopeFailingCamera = () => {
-  return useTransportAction(MikrosckopeFailingCameraDefinition);
+  return useAction(MikrosckopeFailingCameraDefinition);
 };
 
 export const useFailingCamera = useMikrosckopeFailingCamera;

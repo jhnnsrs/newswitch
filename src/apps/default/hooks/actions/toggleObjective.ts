@@ -1,8 +1,5 @@
 import { z } from 'zod';
-import {
-  useTransportAction,
-  type ActionDefinition,
-} from '../useTransportAction';
+import { useAction, type ActionDefinition } from '../useAction';
 
 // --- Shared Models ---
 
@@ -31,5 +28,5 @@ export const ToggleObjectiveDefinition: ActionDefinition<
  * undefined
  */
 export const useToggleObjective = () => {
-  return useTransportAction(ToggleObjectiveDefinition);
+  return useAction(ToggleObjectiveDefinition);
 };

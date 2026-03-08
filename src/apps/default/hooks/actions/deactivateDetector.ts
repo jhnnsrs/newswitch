@@ -1,8 +1,5 @@
 import { z } from 'zod';
-import {
-  useTransportAction,
-  type ActionDefinition,
-} from '../useTransportAction';
+import { useAction, type ActionDefinition } from '../useAction';
 
 // --- Shared Models ---
 
@@ -40,5 +37,5 @@ export const DeactivateDetectorDefinition: ActionDefinition<
  * undefined
  */
 export const useDeactivateDetector = () => {
-  return useTransportAction(DeactivateDetectorDefinition);
+  return useAction(DeactivateDetectorDefinition);
 };

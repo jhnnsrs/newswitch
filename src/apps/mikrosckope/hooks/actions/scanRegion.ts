@@ -1,8 +1,5 @@
 import { z } from 'zod';
-import {
-  useTransportAction,
-  type ActionDefinition,
-} from '../useTransportAction';
+import { useAction, type ActionDefinition } from '../useAction';
 
 // --- Shared Models ---
 
@@ -505,7 +502,7 @@ export const ScanRegionDefinition = MikrosckopeScanRegionDefinition;
  * undefined
  */
 export const useMikrosckopeScanRegion = () => {
-  return useTransportAction(MikrosckopeScanRegionDefinition);
+  return useAction(MikrosckopeScanRegionDefinition);
 };
 
 export const useScanRegion = useMikrosckopeScanRegion;

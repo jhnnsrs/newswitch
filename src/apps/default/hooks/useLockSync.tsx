@@ -1,1 +1,1 @@
-export * from '@/hooks/useLockSync';
+export * from '@/lib/rekuest/locks';

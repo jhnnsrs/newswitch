@@ -1,8 +1,5 @@
 import { z } from 'zod';
-import {
-  useTransportAction,
-  type ActionDefinition,
-} from '../useTransportAction';
+import { useAction, type ActionDefinition } from '../useAction';
 
 // --- Shared Models ---
 
@@ -43,7 +40,7 @@ export const LongStuffRunningDefinition = MikrosckopeLongStuffRunningDefinition;
  * undefined
  */
 export const useMikrosckopeLongStuffRunning = () => {
-  return useTransportAction(MikrosckopeLongStuffRunningDefinition);
+  return useAction(MikrosckopeLongStuffRunningDefinition);
 };
 
 export const useLongStuffRunning = useMikrosckopeLongStuffRunning;

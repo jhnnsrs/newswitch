@@ -1,8 +1,5 @@
 import { z } from 'zod';
-import {
-  useTransportAction,
-  type ActionDefinition,
-} from '../useTransportAction';
+import { useAction, type ActionDefinition } from '../useAction';
 
 // --- Shared Models ---
 
@@ -89,7 +86,7 @@ export const CalibrateLightPathDefinition =
  * undefined
  */
 export const useMikrosckopeCalibrateLightPath = () => {
-  return useTransportAction(MikrosckopeCalibrateLightPathDefinition);
+  return useAction(MikrosckopeCalibrateLightPathDefinition);
 };
 
 export const useCalibrateLightPath = useMikrosckopeCalibrateLightPath;

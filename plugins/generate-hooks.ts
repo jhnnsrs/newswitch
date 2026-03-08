@@ -5,7 +5,7 @@ import type { Plugin } from "vite";
 
 // --- CONFIG ---
 const OUTPUT_DIR = path.resolve(__dirname, "../src/hooks/generated");
-const IMPORT_PATH_TO_USE_ACTION = "../../transport/useTransportAction";
+const IMPORT_PATH_TO_USE_ACTION = '../../lib/rekuest/task/useAction';
 
 // --- PLUGIN OPTIONS ---
 export interface GenerateHooksPluginOptions {
@@ -385,7 +385,7 @@ export const ${baseName}Definition = ${defName};`
 
   return `
 import { z } from 'zod';
-import { useTransportAction, type ActionDefinition } from '${importPathToUseAction}';
+import { useAction, type ActionDefinition } from '${importPathToUseAction}';
 
 // --- Shared Models ---
 ${namedTypesCode}
@@ -414,7 +414,7 @@ ${definitionAlias}
  * ${impl.description}
  */
 export const ${qualifiedHookName} = () => {
-  return useTransportAction(${defName});
+  return useAction(${defName});
 };
 ${qualifiedHookName !== hookName ? `
 export const ${hookName} = ${qualifiedHookName};` : ""}

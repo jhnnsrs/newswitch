@@ -1,8 +1,5 @@
 import { z } from 'zod';
-import {
-  useTransportAction,
-  type ActionDefinition,
-} from '../useTransportAction';
+import { useAction, type ActionDefinition } from '../useAction';
 
 // --- Shared Models ---
 
@@ -33,5 +30,5 @@ export const CaptureImageDefinition: ActionDefinition<
  * undefined
  */
 export const useCaptureImage = () => {
-  return useTransportAction(CaptureImageDefinition);
+  return useAction(CaptureImageDefinition);
 };

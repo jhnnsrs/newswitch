@@ -1,8 +1,5 @@
 import { z } from 'zod';
-import {
-  useTransportAction,
-  type ActionDefinition,
-} from '../useTransportAction';
+import { useAction, type ActionDefinition } from '../useAction';
 
 // --- Shared Models ---
 
@@ -33,5 +30,5 @@ export const StartLiveViewDefinition: ActionDefinition<
  * undefined
  */
 export const useStartLiveView = () => {
-  return useTransportAction(StartLiveViewDefinition);
+  return useAction(StartLiveViewDefinition);
 };

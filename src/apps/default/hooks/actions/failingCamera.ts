@@ -1,8 +1,5 @@
 import { z } from 'zod';
-import {
-  useTransportAction,
-  type ActionDefinition,
-} from '../useTransportAction';
+import { useAction, type ActionDefinition } from '../useAction';
 
 // --- Shared Models ---
 
@@ -35,5 +32,5 @@ export const FailingCameraDefinition: ActionDefinition<
  * undefined
  */
 export const useFailingCamera = () => {
-  return useTransportAction(FailingCameraDefinition);
+  return useAction(FailingCameraDefinition);
 };

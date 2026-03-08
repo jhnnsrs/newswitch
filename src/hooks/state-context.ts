@@ -1,6 +1,6 @@
 import { createContext, useContext } from "react";
 import type { AppKey } from "@/apps";
-import type { StateDefinition } from "./useStateSync";
+import type { StateDefinition } from "@/lib/rekuest/state";
 
 export interface StateContextValue {
   definitions: Record<string, StateDefinition<Record<string, unknown>, string> & { appKey: AppKey }>;

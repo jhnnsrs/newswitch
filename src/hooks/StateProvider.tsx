@@ -1,10 +1,14 @@
 import type { ReactNode } from "react";
 import { useCallback, useMemo, useRef } from "react";
-import { getScopedStateKey, getStateDefinitionsRecord, resolveStateDefinition } from "@/lib/rekuest/state";
+import {
+  getScopedStateKey,
+  getStateDefinitionsRecord,
+  resolveStateDefinition,
+  type StateDefinition,
+} from "@/lib/rekuest/state";
 import { useGlobalStateStoreApi } from "../store";
 import { useTransport } from "../transport/transport-context";
 import { StateContext, type StateContextValue } from "./state-context";
-import type { StateDefinition } from "./useStateSync";
 
 interface TransportStateResponse<TState> {
   state: TState;

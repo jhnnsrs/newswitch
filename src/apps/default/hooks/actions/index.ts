@@ -1,4 +1,4 @@
-import type { ActionDefinition } from '../useTransportAction';
+import type { ActionDefinition } from '../useAction';
 import { ClearExpanseDefinition } from './clearExpanse';
 import { SetIlluminationIntensityDefinition } from './setIlluminationIntensity';
 import { LongStuffRunningDefinition } from './longStuffRunning';

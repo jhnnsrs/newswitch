@@ -1,4 +1,4 @@
-import type { ActionDefinition } from '../useTransportAction';
+import type { ActionDefinition } from '../useAction';
 import { MikrosckopeClearExpanseDefinition } from './clearExpanse';
 import { MikrosckopeSetIlluminationIntensityDefinition } from './setIlluminationIntensity';
 import { MikrosckopeLongStuffRunningDefinition } from './longStuffRunning';
