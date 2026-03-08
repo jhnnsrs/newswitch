@@ -1,9 +1,13 @@
 import { useCallback, useMemo, useRef, type ReactNode } from 'react';
-import { getScopedTaskReference } from '@/lib/rekuest/task';
 import {
+  getRegistryTasks,
+  selectIsConnected,
+  selectIsReconnecting,
+  selectReconnectAttempt,
+  selectRegistryVersion,
   selectTask,
-  useTransportStore,
-  useTransportStoreApi,
+  useTransportRuntimeStore,
+  useTransportStoreRegistry,
 } from '@/lib/rekuest/task/store';
 import { ActionContext } from '@/transport/action-context';
 import {
@@ -29,18 +33,13 @@ type WaitForTaskAppKey = Parameters<ActionContextValue['waitForTask']>[0];
 
 export function ActionProvider({ children }: ActionProviderProps) {
   const transport = useTransport();
-  const transportStoreApi = useTransportStoreApi();
+  const transportStoreRegistry = useTransportStoreRegistry();
   const managerRef = useRef<TransportWebSocketSyncHandle | null>(null);
 
-  const isConnected = useTransportStore((s) => s.isConnected);
-  const isReconnecting = useTransportStore((s) => s.isReconnecting);
-  const reconnectAttempt = useTransportStore((s) => s.reconnectAttempt);
-  const tasks = useTransportStore((s) => s.tasks);
-
-  const addTask = useTransportStore((s) => s.addTask);
-  const updateTask = useTransportStore((s) => s.updateTask);
-  const getTaskFromStore = useTransportStore((s) => s.getTask);
-  const setAssignationID = useTransportStore((s) => s.setAssignationID);
+  const isConnected = useTransportRuntimeStore(selectIsConnected);
+  const isReconnecting = useTransportRuntimeStore(selectIsReconnecting);
+  const reconnectAttempt = useTransportRuntimeStore(selectReconnectAttempt);
+  const registryVersion = useTransportRuntimeStore(selectRegistryVersion);
 
   const createReference = useCallback(() => {
     return `local-${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -53,10 +52,10 @@ export function ActionProvider({ children }: ActionProviderProps) {
       args: TArgs,
       options?: AssignOptions,
     ): Promise<Task<TArgs, TReturn>> => {
+      const storeApi = transportStoreRegistry.getStoreApi(appKey);
       const reference = options?.reference || createReference();
-      const scopedReference = getScopedTaskReference(appKey, reference);
 
-      addTask(appKey, actionName, reference, args, 'pending');
+      storeApi.getState().addTask(actionName, reference, args, 'pending');
 
       try {
         const data = await transport.assignAction(appKey, actionName, args, {
@@ -64,18 +63,21 @@ export function ActionProvider({ children }: ActionProviderProps) {
           reference,
         });
 
-        setAssignationID(appKey, reference, data.task_id);
-        updateTask(scopedReference, { status: data.status }, appKey);
+        storeApi.getState().setAssignationID(reference, data.task_id);
+        storeApi.getState().updateTask(reference, { status: data.status });
 
-        return getTaskFromStore<TArgs, TReturn>(scopedReference, appKey)!;
+        return storeApi.getState().getTask<TArgs, TReturn>(reference)!;
       } catch (error: unknown) {
         const message =
           error instanceof Error ? error.message : 'Unknown transport error';
-        updateTask(scopedReference, { status: 'failed', error: message }, appKey);
+        storeApi.getState().updateTask(reference, {
+          status: 'failed',
+          error: message,
+        });
         throw error;
       }
     },
-    [addTask, createReference, getTaskFromStore, setAssignationID, transport, updateTask],
+    [createReference, transport, transportStoreRegistry],
   );
 
   const getTask: ActionContextValue['getTask'] = useCallback(
@@ -84,16 +86,16 @@ export function ActionProvider({ children }: ActionProviderProps) {
       taskId: string,
     ): Promise<Task<TArgs, TReturn>> => {
       const task = await transport.fetchTask<TArgs, TReturn>(appKey, taskId);
-      updateTask(taskId, task, appKey);
+      transportStoreRegistry.getStoreApi(appKey).getState().updateTask(taskId, task);
       return task;
     },
-    [transport, updateTask],
+    [transport, transportStoreRegistry],
   );
 
   const getCachedTask = useCallback(
     (taskId: string, appKey?: CachedTaskAppKey): Task | undefined =>
-      getTaskFromStore(taskId, appKey),
-    [getTaskFromStore],
+      transportStoreRegistry.getStoreApi(appKey).getState().getTask(taskId),
+    [transportStoreRegistry],
   );
 
   const updateTaskStatus = useCallback(
@@ -104,9 +106,9 @@ export function ActionProvider({ children }: ActionProviderProps) {
       appKey?: CachedTaskAppKey,
     ) => {
       await request();
-      updateTask(taskId, { status }, appKey);
+      transportStoreRegistry.getStoreApi(appKey).getState().updateTask(taskId, { status });
     },
-    [updateTask],
+    [transportStoreRegistry],
   );
 
   const cancelTask = useCallback(
@@ -163,13 +165,18 @@ export function ActionProvider({ children }: ActionProviderProps) {
       appKey: SubscribeAppKey,
       callback: (task: Task) => void,
     ): (() => void) => {
-      return transportStoreApi.subscribe(selectTask(taskId, appKey), (task) => {
-        if (task) {
+      const storeApi = transportStoreRegistry.getStoreApi(appKey);
+
+      return storeApi.subscribe((state, previousState) => {
+        const task = selectTask(taskId)(state);
+        const previousTask = selectTask(taskId)(previousState);
+
+        if (task && task !== previousTask) {
           callback(task as Task);
         }
       });
     },
-    [transportStoreApi],
+    [transportStoreRegistry],
   );
 
   const waitForTask: ActionContextValue['waitForTask'] = useCallback(
@@ -177,7 +184,10 @@ export function ActionProvider({ children }: ActionProviderProps) {
       appKey: WaitForTaskAppKey,
       taskId: string,
     ): Promise<Task<TArgs, TReturn>> => {
-      const cachedTask = getTaskFromStore<TArgs, TReturn>(taskId, appKey);
+      const cachedTask = transportStoreRegistry
+        .getStoreApi(appKey)
+        .getState()
+        .getTask<TArgs, TReturn>(taskId);
 
       if (cachedTask?.status === 'completed') {
         return Promise.resolve(cachedTask);
@@ -220,7 +230,7 @@ export function ActionProvider({ children }: ActionProviderProps) {
         });
       });
     },
-    [getTaskFromStore, subscribeToTask],
+    [subscribeToTask, transportStoreRegistry],
   );
 
   const reconnect = useCallback(() => {
@@ -231,10 +241,16 @@ export function ActionProvider({ children }: ActionProviderProps) {
     managerRef.current?.disconnect();
   }, []);
 
+  void registryVersion;
+
+  const tasks = getRegistryTasks(transportStoreRegistry);
+
   const tasksMap = useMemo(() => {
     const map = new Map<string, Task>();
-    for (const [id, task] of Object.entries(tasks)) {
-      map.set(id, task);
+    for (const [appKey, appTasks] of Object.entries(tasks)) {
+      for (const [reference, task] of Object.entries(appTasks)) {
+        map.set(`${appKey}:${reference}`, task);
+      }
     }
     return map;
   }, [tasks]);

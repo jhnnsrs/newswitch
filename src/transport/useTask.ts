@@ -46,10 +46,10 @@ export const useTask = <TArgs = unknown, TReturn = unknown>(
   const action = useAction();
   const scopedAppKey = appKey as Parameters<typeof action.getTask>[0];
   const taskSelector = useMemo(
-    () => (taskId ? selectTask<TArgs, TReturn>(taskId, appKey) : () => undefined),
-    [appKey, taskId],
+    () => (taskId ? selectTask<TArgs, TReturn>(taskId) : () => undefined),
+    [taskId],
   );
-  const task = useTransportStore(taskSelector) ?? null;
+  const task = useTransportStore(appKey, taskSelector) ?? null;
 
   // Derived state
   const status = task?.status ?? null;

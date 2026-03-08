@@ -1,6 +1,6 @@
 import { useBlockingLock } from './store';
 import { useTransport } from '@/transport/transport-context';
-import { getScopedLockKey, resolveLockAppKey } from './keys';
+import { resolveLockAppKey } from './keys';
 import type {
   LockDefinition,
   UseLockSyncOptions,
@@ -14,9 +14,7 @@ export const useLockSync = <T extends string>(
   void options;
   const transport = useTransport();
   const appKey = resolveLockAppKey(definition, transport.defaultAppKey);
-  const blockingLock = useBlockingLock([
-    getScopedLockKey(appKey, definition.key),
-  ]);
+  const blockingLock = useBlockingLock(appKey, [definition.key]);
 
   return {
     isLocked: blockingLock.isLocked,

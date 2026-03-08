@@ -1,7 +1,13 @@
 import { useEffect, useMemo, useRef, type MutableRefObject } from "react";
 import type { AppKey } from "@/apps";
 import { toast } from "sonner";
-import { useTransportStore, useTransportStoreApi } from "@/lib/rekuest/task/store";
+import {
+  getRegistryTasks,
+  selectRegistryVersion,
+  useTransportRuntimeStore,
+  useTransportRuntimeStoreApi,
+  useTransportStoreRegistry,
+} from "@/lib/rekuest/task/store";
 import {
   FromAgentMessageType,
   type CriticalEvent,
@@ -54,13 +60,9 @@ interface TaskWebSocketSyncProps {
 
 export function TaskWebSocketSync({ managerRef }: TaskWebSocketSyncProps) {
   const transport = useTransport();
-  const transportStoreApi = useTransportStoreApi();
-  const tasks = useTransportStore((state) => state.tasks);
-  const setConnected = useTransportStore((state) => state.setConnected);
-  const setReconnecting = useTransportStore((state) => state.setReconnecting);
-  const setReconnectAttempt = useTransportStore((state) => state.setReconnectAttempt);
-  const setUnconnectable = useTransportStore((state) => state.setUnconnectable);
-  const resetReconnect = useTransportStore((state) => state.resetReconnect);
+  const transportStoreRegistry = useTransportStoreRegistry();
+  const runtimeStoreApi = useTransportRuntimeStoreApi();
+  const registryVersion = useTransportRuntimeStore(selectRegistryVersion);
   const channelManagerRef = useRef<
     Map<AppKey, SubscriptionWebSocketManager<TaskChannelMessage>>
   >(new Map());
@@ -70,21 +72,21 @@ export function TaskWebSocketSync({ managerRef }: TaskWebSocketSyncProps) {
     [transport.apps],
   );
 
+  const tasksByApp = useMemo(
+    () => getRegistryTasks(transportStoreRegistry),
+    [registryVersion, transportStoreRegistry],
+  );
+
   const listeningKeysByApp = useMemo(() => {
     return Object.fromEntries(
       appKeys.map((appKey) => [
         appKey,
-        Object.values(tasks)
-          .filter(
-            (task) =>
-              task.appKey === appKey &&
-              !TERMINAL_TASK_STATUSES.has(task.status) &&
-              task.id !== task.reference,
-          )
+        Object.values(tasksByApp[appKey] ?? {})
+          .filter((task) => !TERMINAL_TASK_STATUSES.has(task.status) && task.id !== task.reference)
           .map((task) => task.id),
       ]),
     ) as Record<AppKey, string[]>;
-  }, [appKeys, tasks]);
+  }, [appKeys, tasksByApp]);
 
   useEffect(() => {
     const managers = new Map<AppKey, SubscriptionWebSocketManager<TaskChannelMessage>>();
@@ -101,27 +103,27 @@ export function TaskWebSocketSync({ managerRef }: TaskWebSocketSyncProps) {
           tasks: keys,
         }),
         onOpen: () => {
-          setConnected(true);
-          resetReconnect();
+          runtimeStoreApi.getState().setConnected(true);
+          runtimeStoreApi.getState().resetReconnect();
         },
         onClose: () => {
-          setConnected(false);
+          runtimeStoreApi.getState().setConnected(false);
         },
         onManualReconnect: () => {
-          setReconnectAttempt(0);
-          setUnconnectable(false);
-          setReconnecting(false);
+          runtimeStoreApi.getState().setReconnectAttempt(0);
+          runtimeStoreApi.getState().setUnconnectable(false);
+          runtimeStoreApi.getState().setReconnecting(false);
         },
         onReconnectScheduled: (attempt) => {
-          setReconnectAttempt(attempt);
-          setReconnecting(true);
+          runtimeStoreApi.getState().setReconnectAttempt(attempt);
+          runtimeStoreApi.getState().setReconnecting(true);
         },
         onMaxReconnectAttemptsReached: () => {
-          setUnconnectable(true);
-          setReconnecting(false);
+          runtimeStoreApi.getState().setUnconnectable(true);
+          runtimeStoreApi.getState().setReconnecting(false);
         },
         onMessage: (message) => {
-          const store = transportStoreApi.getState();
+          const store = transportStoreRegistry.getStoreApi(appKey).getState();
 
           switch (message.type) {
             case FromAgentMessageType.PROGRESS:
@@ -132,7 +134,6 @@ export function TaskWebSocketSync({ managerRef }: TaskWebSocketSyncProps) {
                   progress: message.progress,
                   progressMessage: message.message,
                 },
-                appKey,
               );
               return;
             case FromAgentMessageType.YIELD:
@@ -142,11 +143,10 @@ export function TaskWebSocketSync({ managerRef }: TaskWebSocketSyncProps) {
                   status: "running",
                   result: message.returns,
                 },
-                appKey,
               );
               return;
             case FromAgentMessageType.DONE: {
-              const existingTask = store.getTask(message.assignation, appKey);
+              const existingTask = store.getTask(message.assignation);
               if (existingTask?.notify) {
                 toast.success(`Task completed: ${existingTask.action}`, {
                   description: `Task ${message.assignation} finished successfully`,
@@ -160,7 +160,6 @@ export function TaskWebSocketSync({ managerRef }: TaskWebSocketSyncProps) {
                     ? { result: message.returns }
                     : {}),
                 },
-                appKey,
               );
               return;
             }
@@ -171,7 +170,6 @@ export function TaskWebSocketSync({ managerRef }: TaskWebSocketSyncProps) {
                   status: "failed",
                   error: message.error,
                 },
-                appKey,
               );
               return;
             case FromAgentMessageType.CRITICAL:
@@ -181,21 +179,20 @@ export function TaskWebSocketSync({ managerRef }: TaskWebSocketSyncProps) {
                   status: "failed",
                   error: message.error,
                 },
-                appKey,
               );
               toast.error(`Critical error in task: ${message.error}`);
               return;
             case FromAgentMessageType.PAUSED:
-              store.updateTask(message.assignation, { status: "paused" }, appKey);
+              store.updateTask(message.assignation, { status: "paused" });
               return;
             case FromAgentMessageType.RESUMED:
-              store.updateTask(message.assignation, { status: "running" }, appKey);
+              store.updateTask(message.assignation, { status: "running" });
               return;
             case FromAgentMessageType.CANCELLED:
-              store.updateTask(message.assignation, { status: "cancelled" }, appKey);
+              store.updateTask(message.assignation, { status: "cancelled" });
               return;
             case FromAgentMessageType.INTERRUPTED:
-              store.updateTask(message.assignation, { status: "interrupted" }, appKey);
+              store.updateTask(message.assignation, { status: "interrupted" });
               return;
             case FromAgentMessageType.LOG: {
               const logMethod =
@@ -246,13 +243,9 @@ export function TaskWebSocketSync({ managerRef }: TaskWebSocketSyncProps) {
     appKeys,
     listeningKeysByApp,
     managerRef,
-    resetReconnect,
-    setConnected,
-    setReconnectAttempt,
-    setReconnecting,
-    setUnconnectable,
+    runtimeStoreApi,
     transport,
-    transportStoreApi,
+    transportStoreRegistry,
   ]);
 
   useEffect(() => {

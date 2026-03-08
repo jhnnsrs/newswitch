@@ -1,4 +1,5 @@
 // src/transport/WebSocketManager.ts
+import { defaultAppKey } from "@/apps";
 import { toast } from "sonner";
 import type { StoreApi } from "zustand/vanilla";
 import type { LockStore } from "@/lib/rekuest/locks/store";
@@ -225,7 +226,7 @@ export class WebSocketManager {
         }
 
         case FromAgentMessageType.LOCK: {
-          lockStore.setLock(message.key, message.assignation);
+          lockStore.setLock(defaultAppKey, message.key, message.assignation);
           console.log(
             `[WebSocketManager] Locked state "${message.key}" with assigniation ID "${message.assignation}"`,
           );
@@ -233,7 +234,7 @@ export class WebSocketManager {
         }
 
         case FromAgentMessageType.UNLOCK: {
-          lockStore.setLock(message.key, undefined);
+          lockStore.setLock(defaultAppKey, message.key, undefined);
           console.log(`[WebSocketManager] Unlocked state "${message.key}"`);
           break;
         }
@@ -343,13 +344,13 @@ export class WebSocketManager {
         }
 
         case FromAgentMessageType.STATE_PATCH: {
-          globalStateStore.applyEnvelope(message.envelope);
+          globalStateStore.setState(defaultAppKey, message.state, message.value);
           console.log(
             `[WebSocketManager] Applied patch to state ${message.envelope.state_name} with rev ${message.envelope.rev}`,
           );
           break;
         }
-
+          globalStateStore.applyEnvelope(defaultAppKey, message.envelope);
         default: {
           const _exhaustiveCheck: never = message;
           console.warn(

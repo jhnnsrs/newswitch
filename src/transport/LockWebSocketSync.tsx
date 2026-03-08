@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, type MutableRefObject } from "react";
-import { getScopedLockKey } from "@/lib/rekuest/locks";
 import type { AppKey } from "@/apps";
-import { useLockStoreApi } from "@/lib/rekuest/locks/store";
+import { useLockStoreRegistry } from "@/lib/rekuest/locks/store";
 import {
   FromAgentMessageType,
   type ListenLocksMessage,
@@ -29,7 +28,7 @@ interface LockWebSocketSyncProps {
 
 export function LockWebSocketSync({ managerRef }: LockWebSocketSyncProps) {
   const transport = useTransport();
-  const lockStoreApi = useLockStoreApi();
+  const lockStoreRegistry = useLockStoreRegistry();
   const channelManagerRef = useRef<
     Map<AppKey, SubscriptionWebSocketManager<LockChannelMessage>>
   >(new Map());
@@ -56,17 +55,14 @@ export function LockWebSocketSync({ managerRef }: LockWebSocketSyncProps) {
           locks: keys,
         }),
         onMessage: (message) => {
-          const store = lockStoreApi.getState();
+          const store = lockStoreRegistry.getStoreApi(appKey).getState();
 
           switch (message.type) {
             case FromAgentMessageType.LOCK:
-              store.setLock(
-                getScopedLockKey(appKey, message.key),
-                message.assignation,
-              );
+              store.setLock(message.key, message.assignation);
               return;
             case FromAgentMessageType.UNLOCK:
-              store.setLock(getScopedLockKey(appKey, message.key), undefined);
+              store.setLock(message.key, undefined);
               return;
             case FromAgentMessageType.REGISTER:
             case FromAgentMessageType.HEARTBEAT_ANSWER:
@@ -102,7 +98,7 @@ export function LockWebSocketSync({ managerRef }: LockWebSocketSyncProps) {
         managerRef.current = null;
       }
     };
-  }, [appKeys, lockStoreApi, managerRef, transport]);
+  }, [appKeys, lockStoreRegistry, managerRef, transport]);
 
   return null;
 }

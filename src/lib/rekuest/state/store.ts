@@ -1,11 +1,9 @@
+import { createContext, useContext } from 'react';
+import { useStore } from 'zustand';
 import { applyPatch, type Operation } from 'fast-json-patch';
-import { createStore } from 'zustand/vanilla';
+import { createStore, type StoreApi } from 'zustand/vanilla';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
-import { createScopedStoreHooks } from '@/lib/rekuest/createScopedStore';
-
-type GlobalStateRecord = Record<string, unknown>;
-type StateMetaRecord<TValue> = Record<string, TValue | undefined>;
 
 export interface Envelope {
   state_name: string;
@@ -16,10 +14,10 @@ export interface Envelope {
 }
 
 export interface GlobalStateStore {
-  states: GlobalStateRecord;
-  stateRevisions: StateMetaRecord<number>;
-  loading: StateMetaRecord<boolean>;
-  errors: StateMetaRecord<Error | null>;
+  states: Record<string, unknown>;
+  stateRevisions: Record<string, number | undefined>;
+  loading: Record<string, boolean | undefined>;
+  errors: Record<string, Error | null | undefined>;
   setState: (key: string, value: unknown) => void;
   setStateSnapshot: (key: string, value: unknown, revision: number) => void;
   applyEnvelope: (envelope: Envelope) => void;
@@ -39,7 +37,7 @@ export const createGlobalStateStore = () =>
         loading: {},
         errors: {},
 
-        setState: (key: string, value: unknown) => {
+        setState: (key, value) => {
           set((state) => {
             state.states[key] = value;
             state.errors[key] = null;
@@ -47,7 +45,7 @@ export const createGlobalStateStore = () =>
           });
         },
 
-        setStateSnapshot: (key: string, value: unknown, revision: number) => {
+        setStateSnapshot: (key, value, revision) => {
           set((state) => {
             state.states[key] = value;
             state.errors[key] = null;
@@ -55,7 +53,7 @@ export const createGlobalStateStore = () =>
           });
         },
 
-        applyEnvelope: (envelope: Envelope) => {
+        applyEnvelope: (envelope) => {
           const { state_name: key, patches: operations } = envelope;
           const currentState = get().states[key];
           const currentRevision = get().stateRevisions[key] ?? 0;
@@ -103,6 +101,7 @@ export const createGlobalStateStore = () =>
             delete state.states[key];
             delete state.loading[key];
             delete state.errors[key];
+            delete state.stateRevisions[key];
           });
         },
 
@@ -111,26 +110,93 @@ export const createGlobalStateStore = () =>
             state.states = {};
             state.loading = {};
             state.errors = {};
+            state.stateRevisions = {};
           });
         },
       })),
     ),
   );
 
-const {
-  StoreContext: GlobalStateStoreContext,
-  useScopedStore: useGlobalStateStore,
-  useStoreApi: useGlobalStateStoreApi,
-} = createScopedStoreHooks<
-  GlobalStateStore,
-  ReturnType<typeof createGlobalStateStore>
->('GlobalStateStore');
+export interface GlobalStateStoreRegistry {
+  defaultAppKey: string;
+  getStoreApi: (appKey?: string) => StoreApi<GlobalStateStore>;
+  getStoreEntries: () => Array<[string, StoreApi<GlobalStateStore>]>;
+}
 
-export { GlobalStateStoreContext, useGlobalStateStore, useGlobalStateStoreApi };
+export const createGlobalStateStoreRegistry = (
+  defaultAppKey: string,
+): GlobalStateStoreRegistry => {
+  const stores = new Map<string, StoreApi<GlobalStateStore>>();
+
+  const getStoreApi = (appKey = defaultAppKey) => {
+    const existingStore = stores.get(appKey);
+    if (existingStore) {
+      return existingStore;
+    }
+
+    const nextStore = createGlobalStateStore();
+    stores.set(appKey, nextStore);
+    return nextStore;
+  };
+
+  return {
+    defaultAppKey,
+    getStoreApi,
+    getStoreEntries: () => Array.from(stores.entries()),
+  };
+};
+
+export const GlobalStateStoreContext = createContext<GlobalStateStoreRegistry | null>(
+  null,
+);
+
+export const useGlobalStateStoreRegistry = (): GlobalStateStoreRegistry => {
+  const registry = useContext(GlobalStateStoreContext);
+
+  if (!registry) {
+    throw new Error('Missing GlobalStateStoreProvider');
+  }
+
+  return registry;
+};
+
+export function useGlobalStateStoreApi(appKey?: string) {
+  return useGlobalStateStoreRegistry().getStoreApi(appKey);
+}
+
+export function useGlobalStateStore<TSelected>(
+  selector: (state: GlobalStateStore) => TSelected,
+): TSelected;
+export function useGlobalStateStore<TSelected>(
+  appKey: string,
+  selector: (state: GlobalStateStore) => TSelected,
+): TSelected;
+export function useGlobalStateStore<TSelected>(
+  appKeyOrSelector: string | ((state: GlobalStateStore) => TSelected),
+  maybeSelector?: (state: GlobalStateStore) => TSelected,
+): TSelected {
+  const registry = useGlobalStateStoreRegistry();
+  const appKey = typeof appKeyOrSelector === 'string'
+    ? appKeyOrSelector
+    : registry.defaultAppKey;
+  const selector = typeof appKeyOrSelector === 'string'
+    ? maybeSelector
+    : appKeyOrSelector;
+
+  if (!selector) {
+    throw new Error('Missing state selector');
+  }
+
+  return useStore(registry.getStoreApi(appKey), selector);
+}
 
 export const selectState = <T = unknown>(key: string) =>
   (store: GlobalStateStore): T | undefined =>
     store.states[key] as T | undefined;
+
+export const selectRevision = (key: string) =>
+  (store: GlobalStateStore): number =>
+    store.stateRevisions[key] ?? 0;
 
 export const selectLoading = (key: string) => (store: GlobalStateStore) =>
   store.loading[key] ?? false;

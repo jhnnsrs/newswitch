@@ -1,9 +1,8 @@
 import { createContext, useContext } from "react";
-import type { AppKey } from "@/apps";
 import type { StateDefinition } from "@/lib/rekuest/state";
 
 export interface StateContextValue {
-  definitions: Record<string, StateDefinition<Record<string, unknown>, string> & { appKey: AppKey }>;
+  definitions: Record<string, StateDefinition<Record<string, unknown>, string> & { appKey: string }>;
   ensureState: <T extends Record<string, unknown>, TKey extends string>(
     definition: StateDefinition<T, TKey>,
   ) => Promise<void>;

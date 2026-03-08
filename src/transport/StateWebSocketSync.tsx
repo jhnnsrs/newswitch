@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useRef, type MutableRefObject } from "react";
 import type { AppKey } from "@/apps";
-import { getScopedStateKey } from "@/lib/rekuest/state";
 import type { Envelope as StateStoreEnvelope } from "@/lib/rekuest/state/store";
-import { useGlobalStateStoreApi } from "@/lib/rekuest/state/store";
+import { useGlobalStateStoreRegistry } from "@/lib/rekuest/state/store";
 import {
   FromAgentMessageType,
   type ListenStatesMessage,
@@ -30,7 +29,7 @@ interface StateWebSocketSyncProps {
 
 export function StateWebSocketSync({ managerRef }: StateWebSocketSyncProps) {
   const transport = useTransport();
-  const globalStateStoreApi = useGlobalStateStoreApi();
+  const globalStateStoreRegistry = useGlobalStateStoreRegistry();
   const channelManagerRef = useRef<
     Map<AppKey, SubscriptionWebSocketManager<StateChannelMessage>>
   >(new Map());
@@ -57,23 +56,14 @@ export function StateWebSocketSync({ managerRef }: StateWebSocketSyncProps) {
           states: keys,
         }),
         onMessage: (message) => {
-          const store = globalStateStoreApi.getState();
+          const store = globalStateStoreRegistry.getStoreApi(appKey).getState();
 
           switch (message.type) {
             case FromAgentMessageType.STATE_UPDATE:
-              store.setState(
-                getScopedStateKey(appKey, message.state),
-                message.value,
-              );
+              store.setState(message.state, message.value);
               return;
             case FromAgentMessageType.STATE_PATCH:
-              store.applyEnvelope({
-                ...(message.envelope as unknown as StateStoreEnvelope),
-                state_name: getScopedStateKey(
-                  appKey,
-                  (message.envelope as StateStoreEnvelope).state_name,
-                ),
-              });
+              store.applyEnvelope(message.envelope as unknown as StateStoreEnvelope);
               return;
             case FromAgentMessageType.REGISTER:
             case FromAgentMessageType.HEARTBEAT_ANSWER:
@@ -109,7 +99,7 @@ export function StateWebSocketSync({ managerRef }: StateWebSocketSyncProps) {
         managerRef.current = null;
       }
     };
-  }, [appKeys, globalStateStoreApi, managerRef, transport]);
+  }, [appKeys, globalStateStoreRegistry, managerRef, transport]);
 
   return null;
 }

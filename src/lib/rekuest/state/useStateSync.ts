@@ -2,12 +2,13 @@ import { useCallback, useEffect } from 'react';
 import {
   selectError,
   selectLoading,
+  selectRevision,
   selectState,
   useGlobalStateStore,
 } from './store';
 import { useTransport } from '@/transport/transport-context';
 import { useStateContext } from '@/hooks/state-context';
-import { getScopedStateKey, resolveStateAppKey } from './definitions';
+import { resolveStateAppKey } from './definitions';
 import type {
   StateDefinition,
   UseStateSyncOptions,
@@ -38,18 +39,15 @@ export const useStateSync = <
   void subscribe;
 
   const appKey = resolveStateAppKey(definition, transport.defaultAppKey);
-  const scopedStateKey = getScopedStateKey(appKey, definition.key);
 
-  const rawData = useGlobalStateStore(selectState<T>(scopedStateKey)) ?? null;
-  const revision = useGlobalStateStore(
-    (state) => state.stateRevisions[scopedStateKey] ?? 0,
-  );
+  const rawData = useGlobalStateStore(appKey, selectState<T>(definition.key)) ?? null;
+  const revision = useGlobalStateStore(appKey, selectRevision(definition.key));
 
   const data =
     rawData && selector ? selector(rawData) : (rawData as unknown as U | null);
 
-  const loading = useGlobalStateStore(selectLoading(scopedStateKey));
-  const error = useGlobalStateStore(selectError(scopedStateKey));
+  const loading = useGlobalStateStore(appKey, selectLoading(definition.key));
+  const error = useGlobalStateStore(appKey, selectError(definition.key));
 
   const refetch = useCallback(async () => {
     await stateContext.refetchState(definition);

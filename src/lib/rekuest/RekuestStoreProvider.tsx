@@ -1,22 +1,23 @@
 import type { ReactNode } from 'react';
 import { useMemo } from 'react';
 import {
-  createLockStore,
+  createLockStoreRegistry,
   LockStoreContext,
 } from '@/lib/rekuest/locks/store';
 import {
-  createGlobalStateStore,
+  createGlobalStateStoreRegistry,
   GlobalStateStoreContext,
 } from '@/lib/rekuest/state/store';
 import {
-  createTransportStore,
+  createTransportStoreRegistry,
   TransportStoreContext,
 } from '@/lib/rekuest/task/store';
+import { defaultAppKey } from '@/apps';
 
 export interface RekuestStoreBundle {
-  globalStateStore: ReturnType<typeof createGlobalStateStore>;
-  transportStore: ReturnType<typeof createTransportStore>;
-  lockStore: ReturnType<typeof createLockStore>;
+  globalStateStore: ReturnType<typeof createGlobalStateStoreRegistry>;
+  transportStore: ReturnType<typeof createTransportStoreRegistry>;
+  lockStore: ReturnType<typeof createLockStoreRegistry>;
 }
 
 export interface RekuestStoreProviderProps {
@@ -27,9 +28,9 @@ export interface RekuestStoreProviderProps {
 const scopedBundles = new Map<string, RekuestStoreBundle>();
 
 const createRekuestStoreBundle = (): RekuestStoreBundle => ({
-  globalStateStore: createGlobalStateStore(),
-  transportStore: createTransportStore(),
-  lockStore: createLockStore(),
+  globalStateStore: createGlobalStateStoreRegistry(defaultAppKey),
+  transportStore: createTransportStoreRegistry(defaultAppKey),
+  lockStore: createLockStoreRegistry(defaultAppKey),
 });
 
 const getScopedBundle = (scope: string): RekuestStoreBundle => {
