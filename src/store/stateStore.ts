@@ -39,6 +39,15 @@ export interface GlobalStateStore {
     (key: string, value: unknown): void;
   };
 
+  setStateSnapshot: {
+    <TKey extends GlobalStateKey>(
+      key: TKey,
+      value: GlobalStateShape[TKey],
+      revision: number,
+    ): void;
+    (key: string, value: unknown, revision: number): void;
+  };
+
   /** Apply a JSON patch to a state (RFC 6902 format) */
   applyEnvelope: (envelope: Envelope) => void;
 
@@ -75,6 +84,14 @@ export const createGlobalStateStore = () =>
           state.states[key] = value;
           state.errors[key] = null;
           state.stateRevisions[key] = 0;
+        });
+      },
+
+      setStateSnapshot: (key: string, value: unknown, revision: number) => {
+        set((state) => {
+          state.states[key] = value;
+          state.errors[key] = null;
+          state.stateRevisions[key] = revision;
         });
       },
 

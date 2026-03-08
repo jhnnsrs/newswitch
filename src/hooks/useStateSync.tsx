@@ -1,5 +1,5 @@
 // src/hooks/useStateSync.ts
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect } from "react";
 import { ZodType } from "zod";
 import {
   selectError,
@@ -7,7 +7,7 @@ import {
   selectState,
   useGlobalStateStore,
 } from "../store";
-import { useTransport } from "../transport/transport-context";
+import { useStateContext } from "./state-context";
 
 // --- Interfaces ---
 
@@ -49,81 +49,37 @@ export const buildUseState = <T extends Record<string, unknown>>(
 
 // --- The Core Hook ---
 
-export const useStateSync = <T extends Record<string, unknown>, U = T>(
-  definition: StateDefinition<T>,
+export const useStateSync = <
+  T extends Record<string, unknown>,
+  U = T,
+  TKey extends string = string,
+>(
+  definition: StateDefinition<T, TKey>,
   options: UseStateSyncOptions<T, U> = {},
 ): UseStateSyncResult<U> => {
   const { subscribe = false, fetchOnMount = true, selector } = options;
+  const stateContext = useStateContext();
+  void subscribe;
+  const stateKey = definition.key as keyof typeof stateContext.definitions;
 
-  // 1. Get raw state
   const rawData = useGlobalStateStore(selectState<T>(definition.key)) ?? null;
   const revision = useGlobalStateStore((state) => state.stateRevisions[definition.key] ?? 0);
 
-  // 2. Apply selector logic
-  // If rawData exists and selector exists, use selector.
-  // Otherwise, cast rawData to U (which is safe because U defaults to T if no selector).
   const data =
     rawData && selector ? selector(rawData) : (rawData as unknown as U | null);
 
   const loading = useGlobalStateStore(selectLoading(definition.key));
   const error = useGlobalStateStore(selectError(definition.key));
-  const { setState, setLoading, setError } = useGlobalStateStore();
-  const { fetchState } = useTransport();
-
-  const hasFetchedRef = useRef(false);
-  const schemaRef = useRef(definition.schema);
-
-  const fetchData = useCallback(async () => {
-    try {
-      setLoading(definition.key, true);
-      setError(definition.key, null);
-
-      const response = await fetchState<{ state: T; revision: number }>(
-        definition.key,
-      );
-
-      const parsed = schemaRef.current.safeParse(response.state);
-      if (!parsed.success) {
-        console.error(
-          `[${definition.key}] Validation Failed:`,
-          parsed.error,
-          response.state,
-        );
-        setError(
-          definition.key,
-          new Error(`Validation failed for ${definition.key}`),
-        );
-      } else {
-        setState(definition.key, parsed.data);
-      }
-    } catch (err) {
-      setError(definition.key, err as Error);
-    } finally {
-      setLoading(definition.key, false);
-    }
-  }, [fetchState, definition.key, setError, setLoading, setState]);
 
   const refetch = useCallback(async () => {
-    await fetchData();
-  }, [fetchData]);
+    await stateContext.refetchState(stateKey);
+  }, [stateContext, stateKey]);
 
   useEffect(() => {
-    if (fetchOnMount && !hasFetchedRef.current) {
-      hasFetchedRef.current = true;
-      fetchData();
+    if (fetchOnMount) {
+      void stateContext.ensureState(stateKey);
     }
-  }, [fetchOnMount, fetchData]);
-
-  useEffect(() => {
-    if (subscribe) {
-      console.log(`[useStateSync] Subscribing to ${definition.key}`);
-    }
-    return () => {
-      if (subscribe) {
-        console.log(`[useStateSync] Unsubscribing from ${definition.key}`);
-      }
-    };
-  }, [subscribe, definition.key]);
+  }, [fetchOnMount, stateContext, stateKey]);
 
   return { data, loading, error, refetch, revision };
 };

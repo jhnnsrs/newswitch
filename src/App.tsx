@@ -9,6 +9,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "./components/ui/tooltip";
+import { StateProvider } from "./hooks/StateProvider";
 import { cn } from "./lib/utils";
 import { IndexPage, ReplayPage } from "./pages";
 import { LockStoreProvider, StoreProvider } from "./store";
@@ -29,9 +30,11 @@ function ScopedRoute({
 }) {
   return (
     <StoreProvider scope={scope}>
-      <ActionProvider>
-        {children}
-      </ActionProvider>
+      <StateProvider>
+        <ActionProvider>
+          {children}
+        </ActionProvider>
+      </StateProvider>
     </StoreProvider>
   );
 }

@@ -5,6 +5,7 @@ import type {
   AssignInput,
   AssignOptions,
   AssignResponse,
+  SessionBoundaries,
   Task,
   TransportConfig,
   TransportContextValue,
@@ -155,6 +156,74 @@ export function TransportProvider({ children, config }: TransportProviderProps) 
     [config.apiEndpoint],
   );
 
+
+  const fetchActiveSessionBoundaries = useCallback(
+    async (): Promise<SessionBoundaries> => {
+      const url = `${config.apiEndpoint.replace(/\/$/, "")}/active_session_boundaries`;
+      const response = await fetch(url);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(
+          `Failed to fetch session boundaries: ${response.status} ${errorText}`,
+        );
+      }
+
+      const data = (await response.json()) as {
+        session_id: string;
+        start_revision: number;
+        end_revision: number;
+        start_time: string;
+        end_time: string;
+
+      };
+      console.log("Fetched active session boundaries:", data); // Debug log
+
+      return {
+        sessionStart: new Date(data.start_time),
+        sessionEnd: new Date(data.end_time),
+        startRevision: data.start_revision,
+        endRevision: data.end_revision,
+        sessionId: data.session_id,
+
+      };
+    },
+    [config.apiEndpoint],
+  );
+
+  const fetchSessionBoundaries = useCallback(
+    async (sessionId: string): Promise<SessionBoundaries> => {
+      const url = `${config.apiEndpoint.replace(/\/$/, "")}/session_boundaries/${sessionId}`;
+      const response = await fetch(url);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(
+          `Failed to fetch session boundaries: ${response.status} ${errorText}`,
+        );
+      }
+
+      const data = (await response.json()) as {
+        session_id: string;
+        start_revision: number;
+        end_revision: number;
+        start_time: string;
+        end_time: string;
+
+      };
+
+      return {
+        sessionStart: new Date(data.start_time),
+        sessionEnd: new Date(data.end_time),
+        startRevision: data.start_revision,
+        endRevision: data.end_revision,
+        sessionId: data.session_id,
+
+      };
+    },
+    [config.apiEndpoint],
+  );
+
   const fetchLocks = useCallback(async () => {
     const url = `${config.apiEndpoint.replace(/\/$/, "")}/locks`;
     const response = await fetch(url);
@@ -182,6 +251,8 @@ export function TransportProvider({ children, config }: TransportProviderProps) 
       fetchState,
       fetchTask,
       instanceId: config.instanceId,
+        fetchActiveSessionBoundaries,
+        fetchSessionBoundaries,
       pauseTaskRequest: createTaskMutation("pause"),
       pingInterval,
       reconnect,
@@ -197,6 +268,8 @@ export function TransportProvider({ children, config }: TransportProviderProps) 
       fetchLocks,
       fetchState,
       fetchTask,
+      fetchActiveSessionBoundaries,
+      fetchSessionBoundaries,
       pingInterval,
       reconnect,
       wsUrl,

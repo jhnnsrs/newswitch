@@ -417,6 +417,15 @@ export type ToAgentMessage =
   | KickMessage
   | ProtocolErrorMessage;
 
+
+export type SessionBoundaries = {
+  sessionStart: Date;
+  sessionEnd: Date;
+  startRevision: number;
+  endRevision: number;
+  sessionId: string;
+};
+
 // WebSocket message is now the FromAgentMessage
 export type WebSocketMessage = FromAgentMessage;
 
@@ -464,6 +473,8 @@ export interface TransportContextValue {
     taskId: string,
   ) => Promise<Task<TArgs, TReturn>>;
   /** Cancel a task */
+  fetchSessionBoundaries: (sessionId: string) => Promise<SessionBoundaries>;
+  fetchActiveSessionBoundaries: () => Promise<SessionBoundaries>;
   cancelTaskRequest: (taskId: string) => Promise<void>;
   pauseTaskRequest: (taskId: string) => Promise<void>;
   unpauseTaskRequest: (taskId: string) => Promise<void>;
