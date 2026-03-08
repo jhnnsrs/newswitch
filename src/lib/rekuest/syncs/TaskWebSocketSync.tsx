@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef } from "react";
-import type { AppKey } from "@/apps";
+import { useCallback, useEffect, useRef } from "react";
+import type { AppKey } from "@/lib/rekuest/types";
 import { toast } from "sonner";
 import {
   useTaskStoreRegistry,
@@ -20,38 +20,32 @@ const defaultConnectionState: TransportSocketConnectionState = {
   reconnectAttempt: 0,
 };
 
-export function TaskWebSocketSync() {
-  const transport = useTransport();
-  const transportStoreRegistry = useTaskStoreRegistry();
-  const runtimeStoreApi = useTransportStoreApi();
-  const subscriptionsRef = useRef(new Map<AppKey, TransportMessageSubscription>());
-  const connectionSubscriptionsRef = useRef(new Map<AppKey, () => void>());
-  const connectionStatesRef = useRef(new Map<AppKey, TransportSocketConnectionState>());
+export interface TaskWebSocketSyncProps {
+  appKey: AppKey;
+}
 
-  const appKeys = useMemo(
-    () => Object.keys(transport.apps) as AppKey[],
-    [transport.apps],
+export function TaskWebSocketSync({ appKey }: TaskWebSocketSyncProps) {
+  const transport = useTransport();
+  const taskStoreRegistry = useTaskStoreRegistry();
+  const runtimeStoreApi = useTransportStoreApi();
+  const subscriptionRef = useRef<TransportMessageSubscription | null>(null);
+  const connectionSubscriptionRef = useRef<(() => void) | null>(null);
+  const connectionStateRef = useRef<TransportSocketConnectionState>(
+    defaultConnectionState,
   );
 
-  const syncConnectionState = () => {
-    const states = appKeys.map(
-      (appKey) => connectionStatesRef.current.get(appKey) ?? defaultConnectionState,
-    );
+  const syncConnectionState = useCallback(() => {
     const runtimeStore = runtimeStoreApi.getState();
+    const state = connectionStateRef.current;
 
-    runtimeStore.setConnected(states.some((state) => state.isConnected));
-    runtimeStore.setReconnecting(states.some((state) => state.isReconnecting));
-    runtimeStore.setUnconnectable(states.some((state) => state.isUnconnectable));
-    runtimeStore.setReconnectAttempt(
-      states.reduce(
-        (maxAttempt, state) => Math.max(maxAttempt, state.reconnectAttempt),
-        0,
-      ),
-    );
-  };
+    runtimeStore.setConnected(state.isConnected);
+    runtimeStore.setReconnecting(state.isReconnecting);
+    runtimeStore.setUnconnectable(state.isUnconnectable);
+    runtimeStore.setReconnectAttempt(state.reconnectAttempt);
+  }, [runtimeStoreApi]);
 
-  const handleMessage = (appKey: AppKey, message: TaskTransportMessage) => {
-    const store = transportStoreRegistry.getStoreApi(appKey).getState();
+  const handleMessage = useCallback((appKey: AppKey, message: TaskTransportMessage) => {
+    const store = taskStoreRegistry.getStoreApi(appKey).getState();
 
     switch (message.type) {
       case TaskEventType.PROGRESS:
@@ -118,72 +112,40 @@ export function TaskWebSocketSync() {
         return;
       }
     }
-  };
+  }, [taskStoreRegistry]);
 
   useEffect(() => {
-    for (const appKey of appKeys) {
-      const existingSubscription = subscriptionsRef.current.get(appKey);
+    subscriptionRef.current?.unsubscribe();
+    connectionSubscriptionRef.current?.();
 
-      if (existingSubscription) {
-        continue;
-      }
-
-      subscriptionsRef.current.set(
-        appKey,
-        transport.subscribeToMessages({
-          appKey,
-          topic: "tasks",
-          listener: (message) => handleMessage(appKey, message),
-        }),
-      );
-
-      if (!connectionSubscriptionsRef.current.has(appKey)) {
-        connectionSubscriptionsRef.current.set(
-          appKey,
-          transport.subscribeToConnectionState(appKey, (state) => {
-            connectionStatesRef.current.set(appKey, state);
-            syncConnectionState();
-          }),
-        );
-      }
-    }
-
-    subscriptionsRef.current.forEach((subscription, appKey) => {
-      if (!appKeys.includes(appKey)) {
-        subscription.unsubscribe();
-        subscriptionsRef.current.delete(appKey);
-      }
+    subscriptionRef.current = transport.subscribeToMessages({
+      appKey,
+      topic: "tasks",
+      listener: (message) => handleMessage(appKey, message),
     });
 
-    connectionSubscriptionsRef.current.forEach((unsubscribe, appKey) => {
-      if (!appKeys.includes(appKey)) {
-        unsubscribe();
-        connectionSubscriptionsRef.current.delete(appKey);
-        connectionStatesRef.current.delete(appKey);
-      }
-    });
+    connectionSubscriptionRef.current = transport.subscribeToConnectionState(
+      appKey,
+      (state) => {
+        connectionStateRef.current = state;
+        syncConnectionState();
+      },
+    );
 
     syncConnectionState();
-  }, [appKeys, runtimeStoreApi, transport, transportStoreRegistry]);
-
-  useEffect(() => {
-    const subscriptions = subscriptionsRef.current;
-    const connectionSubscriptions = connectionSubscriptionsRef.current;
-    const connectionStates = connectionStatesRef.current;
-
     return () => {
-      subscriptions.forEach((subscription) => subscription.unsubscribe());
-      subscriptions.clear();
-      connectionSubscriptions.forEach((unsubscribe) => unsubscribe());
-      connectionSubscriptions.clear();
-      connectionStates.clear();
+      subscriptionRef.current?.unsubscribe();
+      subscriptionRef.current = null;
+      connectionSubscriptionRef.current?.();
+      connectionSubscriptionRef.current = null;
+      connectionStateRef.current = defaultConnectionState;
       const runtimeStore = runtimeStoreApi.getState();
       runtimeStore.setConnected(false);
       runtimeStore.setReconnecting(false);
       runtimeStore.setUnconnectable(false);
       runtimeStore.setReconnectAttempt(0);
     };
-  }, [runtimeStoreApi]);
+  }, [appKey, runtimeStoreApi, taskStoreRegistry, transport]);
 
   return null;
 }

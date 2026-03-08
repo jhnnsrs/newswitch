@@ -1,9 +1,13 @@
 import { z, ZodType } from 'zod';
 import type { AssignOptions, Task, TaskStatus } from '@/lib/rekuest/transport/types';
 
-export interface ActionDefinition<TArgs, TReturn> {
+export interface ActionDefinition<
+  TArgs,
+  TReturn,
+  TAppKey extends string = string,
+> {
   name: string;
-  appKey: string;
+  appKey: TAppKey;
   description?: string;
   argsSchema: ZodType<TArgs>;
   returnSchema: ZodType<TReturn>;

@@ -155,8 +155,7 @@ export const createTaskStore = () =>
   );
 
 export interface TaskStoreRegistry {
-  defaultAppKey: string;
-  getStoreApi: (appKey?: string) => StoreApi<TaskStore>;
+  getStoreApi: (appKey: string) => StoreApi<TaskStore>;
   getStoreEntries: () => Array<[string, StoreApi<TaskStore>]>;
 }
 
@@ -205,23 +204,10 @@ export function useTaskStoreApi(appKey: string) {
 }
 
 export function useTaskStore<TSelected>(
-  selector: (state: TaskStore) => TSelected,
-): TSelected;
-export function useTaskStore<TSelected>(
   appKey: string,
   selector: (state: TaskStore) => TSelected,
-): TSelected;
-export function useTaskStore<TSelected>(
-  appKeyOrSelector: string | ((state: TaskStore) => TSelected),
-  maybeSelector?: (state: TaskStore) => TSelected,
 ): TSelected {
   const registry = useTaskStoreRegistry();
-  const appKey = typeof appKeyOrSelector === 'string'
-    ? appKeyOrSelector
-    : registry.defaultAppKey;
-  const selector = typeof appKeyOrSelector === 'string'
-    ? maybeSelector
-    : appKeyOrSelector;
 
   if (!selector) {
     throw new Error('Missing task selector');

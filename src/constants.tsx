@@ -5,7 +5,6 @@ export const BACKEND_WS =
   window.__agent_ws_url__ || import.meta.env.VITE_WEBSOCKET_URL;
 
 
-
-
+  
 export const H264_STREAM_PATH = BACKEND_API + "/stream/h264";
 export const ZSTD_STREAM_PATH = BACKEND_API + "/stream/zstd";

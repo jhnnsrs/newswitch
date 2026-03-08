@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from 'react';
-import type { AppKey } from '@/apps';
+import type { AppKey } from '@/lib/rekuest/types';
 import { selectTask, useTaskStore } from '@/lib/rekuest/task/store';
 import { useTransport } from '@/lib/rekuest/transport/transport-context';
 import type { Task } from '@/lib/rekuest/transport/types';

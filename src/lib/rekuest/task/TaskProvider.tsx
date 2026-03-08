@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, type ReactNode } from 'react';
+import { useCallback, useMemo, type ReactNode } from 'react';
 import {
   getRegistryTasks,
   selectTask,
@@ -12,10 +12,6 @@ import {
   useTransportStore,
 } from '@/lib/rekuest/transport/store';
 import { TaskContext } from './task-context';
-import {
-  TransportWebSocketSync,
-  type TransportWebSocketSyncHandle,
-} from '@/lib/rekuest/syncs/TransportWebSocketSync';
 import { useTransport } from '@/lib/rekuest/transport/transport-context';
 import type {
   AssignOptions,
@@ -36,7 +32,6 @@ type WaitForTaskAppKey = Parameters<TaskContextValue['waitForTask']>[0];
 export function TaskProvider({ children }: TaskProviderProps) {
   const transport = useTransport();
   const taskStoreRegistry = useTaskStoreRegistry();
-  const managerRef = useRef<TransportWebSocketSyncHandle | null>(null);
 
   const isConnected = useTransportStore(selectIsConnected);
   const isReconnecting = useTransportStore(selectIsReconnecting);
@@ -236,12 +231,12 @@ export function TaskProvider({ children }: TaskProviderProps) {
   );
 
   const reconnect = useCallback(() => {
-    managerRef.current?.reconnect();
-  }, []);
+    transport.reconnectSocket();
+  }, [transport]);
 
   const disconnect = useCallback(() => {
-    managerRef.current?.disconnect();
-  }, []);
+    transport.disconnectSocket();
+  }, [transport]);
 
   void registryVersion;
 
@@ -302,7 +297,6 @@ export function TaskProvider({ children }: TaskProviderProps) {
 
   return (
     <TaskContext.Provider value={contextValue}>
-      <TransportWebSocketSync ref={managerRef} />
       {children}
     </TaskContext.Provider>
   );

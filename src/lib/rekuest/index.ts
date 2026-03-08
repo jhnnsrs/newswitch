@@ -1,9 +1,14 @@
 export { createScopedProvider } from './createScopedProvider';
+export { LiveSync } from './LiveSync';
+export type { LiveSyncProps } from './LiveSync';
 export type {
   CreateScopedProviderOptions,
   ScopedProviderProps,
 } from './createScopedProvider';
 export type {
+  AppDefinition,
+  AppKey,
+  AppsDefinition,
   RekuestAppDefinition,
   RekuestAppsDefinition,
 } from './types';

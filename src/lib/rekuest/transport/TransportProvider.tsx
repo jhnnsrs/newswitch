@@ -1,12 +1,13 @@
 import type { ReactNode } from 'react';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
-import type { AppKey, AppsDefinition } from '@/apps';
+import type { AppKey, AppsDefinition } from '@/lib/rekuest/types';
 import { TransportContext } from './transport-context';
 import type {
   AssignInput,
   AssignOptions,
   AssignResponse,
   FromAgentMessage,
+  RevisedStatesSnapshotMap,
   SessionBoundaries,
   Task,
   TransportConfig,
@@ -154,17 +155,23 @@ export function TransportProvider({ children, config, apps }: TransportProviderP
             apiEndpoint,
             wsUrl,
             stateWsUrl: createChannelWsUrl(wsUrl, 'states', {
-              stateKeys: Object.values(apps[appKey].states).map(
+              stateKeys: Object.values(
+                apps[appKey].states as Record<string, { key: string }>,
+              ).map(
                 (definition) => definition.key,
               ),
             }),
             lockWsUrl: createChannelWsUrl(wsUrl, 'locks', {
-              lockKeys: Object.values(apps[appKey].locks).map(
+              lockKeys: Object.values(
+                apps[appKey].locks as Record<string, { key: string }>,
+              ).map(
                 (definition) => definition.key,
               ),
             }),
             taskWsUrl: createChannelWsUrl(wsUrl, 'tasks', {
-              actionKeys: Object.values(apps[appKey].actions).map(
+              actionKeys: Object.values(
+                apps[appKey].actions as Record<string, { name: string }>,
+              ).map(
                 (definition) => definition.name,
               ),
             }),
@@ -385,7 +392,7 @@ export function TransportProvider({ children, config, apps }: TransportProviderP
       ws.onmessage = (event) => {
         const message = JSON.parse(event.data) as FromAgentMessage;
         state.listeners.forEach((listener) => {
-          listener(message as TransportTopicMessageMap<typeof topic>);
+          listener(message as TransportTopicMessageMap[typeof topic]);
         });
       };
 
@@ -637,6 +644,32 @@ export function TransportProvider({ children, config, apps }: TransportProviderP
     [getEndpoints],
   );
 
+  const fetchStateCheckout = useCallback(
+    async (
+      appKey: AppKey,
+      globalRevisionId: string | number,
+      stateKeys: string[],
+    ): Promise<RevisedStatesSnapshotMap> => {
+      const { apiEndpoint } = getEndpoints(appKey);
+      const url = new URL(`${apiEndpoint.replace(/\/$/, '')}/states/checkout`);
+      url.searchParams.set('global_revision_id', String(globalRevisionId));
+
+      for (const stateKey of stateKeys) {
+        url.searchParams.append('state_keys', stateKey);
+      }
+
+      const response = await fetch(url.toString());
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to checkout states: ${response.status} ${errorText}`);
+      }
+
+      return (await response.json()) as RevisedStatesSnapshotMap;
+    },
+    [getEndpoints],
+  );
+
   const fetchLocks = useCallback(
     async (appKey: AppKey): Promise<Record<string, { task_id: string }>> => {
       const { apiEndpoint } = getEndpoints(appKey);
@@ -738,6 +771,7 @@ export function TransportProvider({ children, config, apps }: TransportProviderP
       assignAction,
       fetchTask,
       fetchState,
+      fetchStateCheckout,
       fetchLocks,
       fetchSessionBoundaries,
       fetchActiveSessionBoundaries,
@@ -764,6 +798,7 @@ export function TransportProvider({ children, config, apps }: TransportProviderP
       fetchLocks,
       fetchSessionBoundaries,
       fetchState,
+      fetchStateCheckout,
       fetchTask,
       getApp,
       getEndpoints,

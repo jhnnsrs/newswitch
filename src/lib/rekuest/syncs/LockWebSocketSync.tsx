@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef } from "react";
-import type { AppKey } from "@/apps";
+import { useEffect, useRef } from "react";
+import type { AppKey } from "@/lib/rekuest/types";
 import { useLockStoreRegistry } from "@/lib/rekuest/locks/store";
 import {
   LockEventType,
@@ -8,14 +8,14 @@ import {
 } from "@/lib/rekuest/transport/types";
 import { useTransport } from "../transport/transport-context";
 
-export function LockWebSocketSync() {
+export interface LockWebSocketSyncProps {
+  appKey: AppKey;
+}
+
+export function LockWebSocketSync({ appKey }: LockWebSocketSyncProps) {
   const transport = useTransport();
   const lockStoreRegistry = useLockStoreRegistry();
-  const subscriptionsRef = useRef(new Map<AppKey, TransportMessageSubscription>());
-  const appKeys = useMemo(
-    () => Object.keys(transport.apps) as AppKey[],
-    [transport.apps],
-  );
+  const subscriptionRef = useRef<TransportMessageSubscription | null>(null);
 
   useEffect(() => {
     const handleMessage = (appKey: AppKey, message: LockTransportMessage) => {
@@ -31,39 +31,18 @@ export function LockWebSocketSync() {
       }
     };
 
-    for (const appKey of appKeys) {
-      const existingSubscription = subscriptionsRef.current.get(appKey);
-
-      if (existingSubscription) {
-        continue;
-      }
-
-      subscriptionsRef.current.set(
-        appKey,
-        transport.subscribeToMessages({
-          appKey,
-          topic: "locks",
-          listener: (message) => handleMessage(appKey, message),
-        }),
-      );
-    }
-
-    subscriptionsRef.current.forEach((subscription, appKey) => {
-      if (!appKeys.includes(appKey)) {
-        subscription.unsubscribe();
-        subscriptionsRef.current.delete(appKey);
-      }
+    subscriptionRef.current?.unsubscribe();
+    subscriptionRef.current = transport.subscribeToMessages({
+      appKey,
+      topic: "locks",
+      listener: (message) => handleMessage(appKey, message),
     });
-  }, [appKeys, lockStoreRegistry, transport]);
-
-  useEffect(() => {
-    const subscriptions = subscriptionsRef.current;
 
     return () => {
-      subscriptions.forEach((subscription) => subscription.unsubscribe());
-      subscriptions.clear();
+      subscriptionRef.current?.unsubscribe();
+      subscriptionRef.current = null;
     };
-  }, []);
+  }, [appKey, lockStoreRegistry, transport]);
 
   return null;
 }

@@ -1,4 +1,4 @@
-import type { AppDefinition, AppKey, AppsDefinition } from '@/apps';
+import type { AppDefinition, AppKey, AppsDefinition } from '@/lib/rekuest/types';
 
 export type TaskStatus =
   | 'pending'
@@ -89,6 +89,13 @@ export interface AssignResponse {
   task_id: string;
   status: TaskStatus;
 }
+
+export interface RevisedStateSnapshot<T = unknown> {
+  value: T;
+  revision: number;
+}
+
+export type RevisedStatesSnapshotMap = Record<string, RevisedStateSnapshot>;
 
 export type LogLevel = 'DEBUG' | 'INFO' | 'ERROR' | 'WARN' | 'CRITICAL';
 
@@ -488,6 +495,11 @@ export interface TransportContextValue {
   unpauseTaskRequest: (appKey: AppKey, taskId: string) => Promise<void>;
   stepTaskRequest: (appKey: AppKey, taskId: string) => Promise<void>;
   fetchState: <T = unknown>(appKey: AppKey, stateName: string) => Promise<T>;
+  fetchStateCheckout: (
+    appKey: AppKey,
+    globalRevisionId: string | number,
+    stateKeys: string[],
+  ) => Promise<RevisedStatesSnapshotMap>;
   fetchLocks: (appKey: AppKey) => Promise<Record<string, { task_id: string }>>;
   getApp: (appKey: AppKey) => AppDefinition;
   getEndpoints: (appKey: AppKey) => {

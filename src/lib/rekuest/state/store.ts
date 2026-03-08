@@ -20,6 +20,9 @@ export interface GlobalStateStore {
   errors: Record<string, Error | null | undefined>;
   setState: (key: string, value: unknown) => void;
   setStateSnapshot: (key: string, value: unknown, revision: number) => void;
+  setStateSnapshots: (
+    snapshots: Record<string, { value: unknown; revision: number }>,
+  ) => void;
   applyEnvelope: (envelope: Envelope) => void;
   setLoading: (key: string, loading: boolean) => void;
   setError: (key: string, error: Error | null) => void;
@@ -50,6 +53,16 @@ export const createGlobalStateStore = () =>
             state.states[key] = value;
             state.errors[key] = null;
             state.stateRevisions[key] = revision;
+          });
+        },
+
+        setStateSnapshots: (snapshots) => {
+          set((state) => {
+            for (const [key, snapshot] of Object.entries(snapshots)) {
+              state.states[key] = snapshot.value;
+              state.errors[key] = null;
+              state.stateRevisions[key] = snapshot.revision;
+            }
           });
         },
 
@@ -125,8 +138,9 @@ export interface GlobalStateStoreRegistry {
 
 export const createGlobalStateStoreRegistry = (): GlobalStateStoreRegistry => {
   const stores = new Map<string, StoreApi<GlobalStateStore>>();
+  const defaultAppKey = 'default';
 
-  const getStoreApi = (appKey: string) => {
+  const getStoreApi = (appKey = defaultAppKey) => {
     const existingStore = stores.get(appKey);
     if (existingStore) {
       return existingStore;
@@ -138,6 +152,7 @@ export const createGlobalStateStoreRegistry = (): GlobalStateStoreRegistry => {
   };
 
   return {
+    defaultAppKey,
     getStoreApi,
     getStoreEntries: () => Array.from(stores.entries()),
   };

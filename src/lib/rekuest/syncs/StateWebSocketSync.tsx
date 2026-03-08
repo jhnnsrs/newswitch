@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef } from "react";
-import type { AppKey } from "@/apps";
+import { useEffect, useRef } from "react";
+import type { AppKey } from "@/lib/rekuest/types";
 import type { Envelope as StateStoreEnvelope } from "@/lib/rekuest/state/store";
 import { useGlobalStateStoreRegistry } from "@/lib/rekuest/state/store";
 import {
@@ -9,14 +9,14 @@ import {
 } from "@/lib/rekuest/transport/types";
 import { useTransport } from "../transport/transport-context";
 
-export function StateWebSocketSync() {
+export interface StateWebSocketSyncProps {
+  appKey: AppKey;
+}
+
+export function StateWebSocketSync({ appKey }: StateWebSocketSyncProps) {
   const transport = useTransport();
   const globalStateStoreRegistry = useGlobalStateStoreRegistry();
-  const subscriptionsRef = useRef(new Map<AppKey, TransportMessageSubscription>());
-  const appKeys = useMemo(
-    () => Object.keys(transport.apps) as AppKey[],
-    [transport.apps],
-  );
+  const subscriptionRef = useRef<TransportMessageSubscription | null>(null);
 
   useEffect(() => {
     const handleMessage = (appKey: AppKey, message: StateTransportMessage) => {
@@ -32,39 +32,18 @@ export function StateWebSocketSync() {
       }
     };
 
-    for (const appKey of appKeys) {
-      const existingSubscription = subscriptionsRef.current.get(appKey);
-
-      if (existingSubscription) {
-        continue;
-      }
-
-      subscriptionsRef.current.set(
-        appKey,
-        transport.subscribeToMessages({
-          appKey,
-          topic: "states",
-          listener: (message) => handleMessage(appKey, message),
-        }),
-      );
-    }
-
-    subscriptionsRef.current.forEach((subscription, appKey) => {
-      if (!appKeys.includes(appKey)) {
-        subscription.unsubscribe();
-        subscriptionsRef.current.delete(appKey);
-      }
+    subscriptionRef.current?.unsubscribe();
+    subscriptionRef.current = transport.subscribeToMessages({
+      appKey,
+      topic: "states",
+      listener: (message) => handleMessage(appKey, message),
     });
-  }, [appKeys, globalStateStoreRegistry, transport]);
-
-  useEffect(() => {
-    const subscriptions = subscriptionsRef.current;
 
     return () => {
-      subscriptions.forEach((subscription) => subscription.unsubscribe());
-      subscriptions.clear();
+      subscriptionRef.current?.unsubscribe();
+      subscriptionRef.current = null;
     };
-  }, []);
+  }, [appKey, globalStateStoreRegistry, transport]);
 
   return null;
 }

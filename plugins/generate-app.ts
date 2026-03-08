@@ -72,6 +72,25 @@ import { ${baseHookName} } from '${rekuestImportPath}/task';
 export const ${qualifiedHookName} = () => ${baseHookName}('${appKey}');${aliasExport}`;
 };
 
+const buildTaskStoreHookContent = (
+  appKey: string,
+  symbolPrefix: string | undefined,
+  rekuestImportPath: string,
+) => {
+  const qualifiedHookName = `use${symbolPrefix ?? ''}TaskStore`;
+
+  const aliasExport = symbolPrefix
+    ? `\nexport const useTaskStore = ${qualifiedHookName};\n`
+    : '';
+
+  return `
+import { useTaskStore as useBaseTaskStore, type TaskStore } from '${rekuestImportPath}/task';
+
+export const ${qualifiedHookName} = <TSelected>(
+  selector: (state: TaskStore) => TSelected,
+): TSelected => useBaseTaskStore('${appKey}', selector);${aliasExport}`;
+};
+
 const ensureCleanDir = (dirPath: string) => {
   fs.rmSync(dirPath, { force: true, recursive: true });
   fs.mkdirSync(dirPath, { recursive: true });
@@ -105,20 +124,6 @@ const invokeBuildStart = async (
     await hook.handler.call(context as never, {} as never);
   }
 };
-
-const walkFiles = (dirPath: string): string[] => {
-  if (!fs.existsSync(dirPath)) {
-    return [];
-  }
-
-  return fs.readdirSync(dirPath, { recursive: true })
-    .filter((entry) => typeof entry === "string")
-    .map((entry) => path.resolve(dirPath, entry))
-    .filter((entry) => fs.statSync(entry).isFile());
-};
-
-const toPosixRelativeImport = (importPath: string) =>
-  importPath.replaceAll(path.sep, "/").replace(/\.(ts|tsx)$/, "");
 
 const normalizeApps = (
   apps: GenerateAppPluginOptions[],
@@ -274,6 +279,15 @@ export default function generateAppsPlugin(
             app.key,
             app.symbolPrefix,
             'Step',
+            rekuestImportPath,
+          ),
+        );
+
+        await formatAndWrite(
+          path.resolve(appHooksDir, 'useTaskStore.ts'),
+          buildTaskStoreHookContent(
+            app.key,
+            app.symbolPrefix,
             rekuestImportPath,
           ),
         );
