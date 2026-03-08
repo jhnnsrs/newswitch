@@ -11,7 +11,7 @@ import {
 } from '@/lib/rekuest/task/store';
 import { useTaskContext } from '@/lib/rekuest/task/task-context';
 import { useTransport } from '@/lib/rekuest/transport/transport-context';
-import type { AssignOptions, Task } from '@/transport/types';
+import type { AssignOptions, Task } from '@/lib/rekuest/transport/types';
 import { resolveActionAppKey } from './keys';
 import type {
   ActionDefinition,

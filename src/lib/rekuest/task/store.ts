@@ -4,7 +4,7 @@ import { createStore, type StoreApi } from 'zustand/vanilla';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 import type { TransportStore as RuntimeTransportStore } from '@/lib/rekuest/transport/store';
-import type { Task, TaskStatus } from '@/transport/types';
+import type { Task, TaskStatus } from '@/lib/rekuest/transport/types';
 
 const resolveTaskReference = (
   state: Pick<TaskStore, 'tasks' | 'taskIdToReference'>,

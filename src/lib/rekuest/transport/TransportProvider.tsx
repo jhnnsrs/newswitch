@@ -15,7 +15,7 @@ import type {
   TransportSocketConnectionState,
   TransportSubscriptionTopic,
   TransportTopicMessageMap,
-} from '@/transport/types';
+} from '@/lib/rekuest/transport/types';
 
 const DEFAULT_RECONNECT_CONFIG = {
   maxAttempts: 5,

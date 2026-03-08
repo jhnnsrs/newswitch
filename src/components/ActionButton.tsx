@@ -8,8 +8,8 @@ import {
 import { useBlockingLock } from "@/lib/rekuest/locks/store";
 import { useAction } from "@/lib/rekuest/task";
 import { type ActionDefinition } from "@/lib/rekuest/task/types";
+import { type AssignOptions } from "@/lib/rekuest/transport/types";
 import { cn } from "@/lib/utils";
-import { type AssignOptions } from "@/transport/types";
 import { type VariantProps } from "class-variance-authority";
 import React, { type ButtonHTMLAttributes } from "react";
 import { toast } from "sonner";

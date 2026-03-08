@@ -6,7 +6,7 @@ import {
   StateEventType,
   type StateTransportMessage,
   type TransportMessageSubscription,
-} from "../../../transport/types";
+} from "@/lib/rekuest/transport/types";
 import { useTransport } from "../transport/transport-context";
 
 export function StateWebSocketSync() {

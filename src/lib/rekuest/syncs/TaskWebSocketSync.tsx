@@ -10,7 +10,7 @@ import {
   type TransportMessageSubscription,
   type TransportSocketConnectionState,
   type TaskTransportMessage,
-} from "../../../transport/types";
+} from "@/lib/rekuest/transport/types";
 import { useTransport } from "../transport/transport-context";
 
 const defaultConnectionState: TransportSocketConnectionState = {

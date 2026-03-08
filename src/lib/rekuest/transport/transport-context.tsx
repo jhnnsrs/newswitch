@@ -1,5 +1,5 @@
 import { createContext, useContext } from 'react';
-import type { TransportContextValue } from '@/transport/types';
+import type { TransportContextValue } from '@/lib/rekuest/transport/types';
 
 export const TransportContext = createContext<TransportContextValue | null>(null);
 

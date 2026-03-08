@@ -22,7 +22,7 @@ import type {
   Task,
   TaskContextValue,
   TaskStatus,
-} from '@/transport/types';
+} from '@/lib/rekuest/transport/types';
 
 export interface TaskProviderProps {
   children: ReactNode;

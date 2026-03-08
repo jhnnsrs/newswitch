@@ -2,7 +2,7 @@ import { useCallback, useMemo } from 'react';
 import type { AppKey } from '@/apps';
 import { selectTask, useTaskStore } from '@/lib/rekuest/task/store';
 import { useTransport } from '@/lib/rekuest/transport/transport-context';
-import type { Task } from '@/transport/types';
+import type { Task } from '@/lib/rekuest/transport/types';
 import { useTaskContext } from './task-context';
 
 export interface UseTaskOptions {

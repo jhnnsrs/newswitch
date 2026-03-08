@@ -5,7 +5,7 @@ import {
   LockEventType,
   type LockTransportMessage,
   type TransportMessageSubscription,
-} from "../../../transport/types";
+} from "@/lib/rekuest/transport/types";
 import { useTransport } from "../transport/transport-context";
 
 export function LockWebSocketSync() {
