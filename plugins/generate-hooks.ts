@@ -3,17 +3,16 @@ import path from "node:path";
 import prettier from "prettier";
 import type { Plugin } from "vite";
 
-// --- CONFIG ---
-const OUTPUT_DIR = path.resolve(__dirname, "../src/hooks/generated");
-const IMPORT_PATH_TO_USE_ACTION = '../../lib/rekuest/task/useAction';
-
 // --- PLUGIN OPTIONS ---
 export interface GenerateHooksPluginOptions {
   schemaUrl?: string;
   whitelist?: string[];
   blacklist?: string[];
+  /** Absolute output directory for generated action hooks */
   outputDir?: string;
+  /** Import path used inside generated action hook files */
   importPathToUseAction?: string;
+  /** Import path used inside the generated actions index file */
   indexImportPathToUseAction?: string;
   appKey?: string;
   symbolPrefix?: string;
@@ -435,8 +434,8 @@ export default function generateHooksPlugin(
     schemaUrl,
     whitelist,
     blacklist,
-    outputDir = OUTPUT_DIR,
-    importPathToUseAction = IMPORT_PATH_TO_USE_ACTION,
+    outputDir,
+    importPathToUseAction,
     indexImportPathToUseAction = importPathToUseAction,
     appKey,
     hookNamePrefix,
@@ -447,6 +446,12 @@ export default function generateHooksPlugin(
     name: "vite-plugin-generate-hooks",
     async buildStart() {
       if (!schemaUrl) return;
+      if (!outputDir || !importPathToUseAction || !indexImportPathToUseAction) {
+        console.warn(
+          "⚠️ [GenHooks] Missing required generator options: outputDir, importPathToUseAction, or indexImportPathToUseAction.",
+        );
+        return;
+      }
 
       try {
         const response = await fetch(schemaUrl);

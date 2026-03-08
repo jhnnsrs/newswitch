@@ -1,5 +1,5 @@
 import { H264_STREAM_PATH } from "@/constants";
-import type { Detector } from "@/hooks/generated";
+import type { Detector } from "@/apps/default/hooks/actions";
 import JMuxer from "jmuxer";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {

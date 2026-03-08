@@ -3,10 +3,6 @@ import path from "node:path";
 import prettier from "prettier";
 import type { Plugin } from "vite";
 
-// --- CONFIG ---
-const OUTPUT_DIR = path.resolve(__dirname, "../src/hooks/states"); // Output folder
-const IMPORT_PATH_TO_SYNC = "../useStateSync"; // Relative path
-
 // --- PLUGIN OPTIONS ---
 export interface GenerateStatesPluginOptions {
   /** URL to fetch the states schema from */
@@ -15,9 +11,9 @@ export interface GenerateStatesPluginOptions {
   whitelist?: string[];
   /** If provided, these state keys will be skipped */
   blacklist?: string[];
-  /** Output directory for generated state files */
+  /** Absolute output directory for generated state files */
   outputDir?: string;
-  /** Relative import path to the state sync module */
+  /** Import path to the state module used by generated files */
   importPathToSync?: string;
   /** App key to embed into generated definitions */
   appKey?: string;
@@ -352,8 +348,8 @@ export default function generateStatesPlugin(
     schemaUrl,
     whitelist,
     blacklist,
-    outputDir = OUTPUT_DIR,
-    importPathToSync = IMPORT_PATH_TO_SYNC,
+    outputDir,
+    importPathToSync,
     appKey,
     hookNamePrefix,
     symbolPrefix = hookNamePrefix,
@@ -365,6 +361,12 @@ export default function generateStatesPlugin(
       if (!schemaUrl) {
         console.warn(
           "⚠️ [GenStates] No schemaUrl provided, skipping state hook generation.",
+        );
+        return;
+      }
+      if (!outputDir || !importPathToSync) {
+        console.warn(
+          "⚠️ [GenStates] Missing required generator options: outputDir or importPathToSync.",
         );
         return;
       }
@@ -486,7 +488,7 @@ export default function generateStatesPlugin(
 
       // Generate Barrel file + global state definition registry
       const indexCode = `
-import type { StateDefinition } from '../useStateSync';
+import type { StateDefinition } from '${importPathToSync}';
 ${stateDefinitionImports}
 
 ${barrelExports}

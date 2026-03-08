@@ -1,4 +1,4 @@
-import { useStageState, type StageKubeSchema, type StageKubeStateSchema } from "@/hooks/states";
+import { useStageState, type StageKubeSchema, type StageKubeStateSchema } from "@/apps/default/hooks/states";
 import { type z } from "zod";
 import { useThreeAffine } from "./useThreeAffine";
 

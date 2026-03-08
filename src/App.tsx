@@ -9,10 +9,10 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "./components/ui/tooltip";
-import { appsDefinition, defaultAppKey, type AppKey } from "./apps";
 import { cn } from "./lib/utils";
 import { createScopedProvider } from "./lib/rekuest";
 import { IndexPage, ReplayPage } from "./pages";
+import { appsDefinition } from "./apps";
 
 // The backend API URL is either injected into the global scope by the
 // electron app or taken from environment variables, allowing for flexibility in different deployment scenarios.
@@ -21,21 +21,18 @@ const BACKEND_WS =
   window.__agent_ws_url__ || import.meta.env.VITE_WEBSOCKET_URL;
 
 
-  
-const scopedTransportConfig: Partial<
-  Record<AppKey, { apiEndpoint: string; wsEndpoint?: string }>
-> = {
-  [defaultAppKey]: {
-    apiEndpoint: BACKEND_API,
-    wsEndpoint: BACKEND_WS,
-  },
-};
+
 
 
 
 const ScopedAppsProvider = createScopedProvider({
   definition: appsDefinition,
-  config: scopedTransportConfig,
+  config: {
+    default: {
+      apiEndpoint: BACKEND_API,
+      wsEndpoint: BACKEND_WS,
+    },
+  },
   instanceId: "microscope-control-panel",
 });
 

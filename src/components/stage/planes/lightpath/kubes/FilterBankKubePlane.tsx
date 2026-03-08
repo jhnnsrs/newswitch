@@ -1,4 +1,4 @@
-import { useFilterBankState, type FilterBankKubeSchema } from "@/hooks/states";
+import { useFilterBankState, type FilterBankKubeSchema } from "@/apps/default/hooks/states";
 import * as THREE from "three";
 import { type z } from "zod";
 import { useThreeAffine } from "./useThreeAffine";

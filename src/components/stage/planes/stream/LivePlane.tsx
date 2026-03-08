@@ -1,4 +1,4 @@
-import type { Detector } from "@/hooks/generated";
+import type { Detector } from "@/apps/default/hooks/actions";
 import { useCurrentAffineTransform } from "@/hooks/useCurrentAffineTransform";
 import { useFrame } from "@react-three/fiber";
 import { useMemo, useRef } from "react";

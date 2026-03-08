@@ -1,5 +1,5 @@
 import { Card } from "@/components/ui/card";
-import { useExpanseState } from "@/hooks/states";
+import { useExpanseState } from "@/apps/default/hooks/states";
 import { useSelectionStore } from "@/store/imageStore";
 import { useModeStore } from "@/store/modeStore";
 import { useViewStore } from "@/store/viewStore";

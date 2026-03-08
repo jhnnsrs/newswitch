@@ -1,4 +1,4 @@
-import type { FilterBankKubeStateSchema } from "@/hooks/states";
+import type { FilterBankKubeStateSchema } from "@/apps/default/hooks/states";
 import { type z } from "zod";
 import { KubePanelLayout } from "./KubePanelLayout";
 

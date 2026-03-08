@@ -1,4 +1,4 @@
-import type { DichroicKubeSchema } from "@/hooks/states";
+import type { DichroicKubeSchema } from "@/apps/default/hooks/states";
 import * as THREE from "three";
 import { type z } from "zod";
 import { useThreeAffine } from "./useThreeAffine";

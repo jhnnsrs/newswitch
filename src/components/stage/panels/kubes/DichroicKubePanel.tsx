@@ -1,4 +1,4 @@
-import type { DichroicKubeStateSchema } from "@/hooks/states";
+import type { DichroicKubeStateSchema } from "@/apps/default/hooks/states";
 import { type z } from "zod";
 import { KubePanelLayout } from "./KubePanelLayout";
 

@@ -81,7 +81,6 @@ export default defineConfig(({ mode }) => {
   // Load env file based on mode
   const env = loadEnv(mode, process.cwd(), "");
   const apps = parseApps(env);
-  const defaultApp = env.VITE_DEFAULT_APP || apps[0]?.key || "default";
 
   return {
     plugins: [
@@ -94,27 +93,19 @@ export default defineConfig(({ mode }) => {
             statesSchemaUrl: env.VITE_SCHEMA_STATES_URL,
             locksSchemaUrl: env.VITE_SCHEMA_LOCKS_URL,
           },
-          {
-            name: "mikrosckope",
-            hooksSchemaUrl: env.VITE_SCHEMA_IMPLEMENTATION_URL,
-            statesSchemaUrl: env.VITE_SCHEMA_STATES_URL,
-            locksSchemaUrl: env.VITE_SCHEMA_LOCKS_URL,
-          },
         ],
         baseDir: env.VITE_APPS_DIR || "apps",
-        defaultApp,
         rekuestImportPath: env.VITE_REKUEST_IMPORT_PATH || "@/lib/rekuest",
       }),
       tailwindcss(),
-      ViteHookManifest({
-        hooksDir: `src/apps/${defaultApp}/hooks/actions`,
-        outDir: "blok.json", // Optional: custom name/location
-      }),
     ],
     resolve: {
-      alias: {
-        "@": path.resolve(__dirname, "./src"),
-      },
+      alias: [
+        {
+          find: "@",
+          replacement: path.resolve(__dirname, "./src"),
+        },
+      ],
     },
   };
 });

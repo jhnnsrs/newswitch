@@ -2,7 +2,7 @@ import type { ObjectiveKubeStateSchema } from "@/hooks/states/ExpanseState";
 import { Html } from "@react-three/drei";
 import { type z } from "zod";
 import { useThreeAffine } from "./useThreeAffine";
-import { useObjectiveState, type ObjectiveTurretKubeSchema } from "@/hooks/states";
+import { useObjectiveState, type ObjectiveTurretKubeSchema } from "@/apps/default/hooks/states";
 
 type ObjectiveTurretData = z.infer<typeof ObjectiveTurretKubeSchema>;
 

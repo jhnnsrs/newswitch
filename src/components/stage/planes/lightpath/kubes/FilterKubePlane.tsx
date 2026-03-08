@@ -2,7 +2,7 @@ import type { FilterKubeStateSchema } from "@/hooks/states/ExpanseState";
 import * as THREE from "three";
 import { type z } from "zod";
 import { useThreeAffine } from "./useThreeAffine";
-import type { FilterKubeSchema } from "@/hooks/states";
+import type { FilterKubeSchema } from "@/apps/default/hooks/states";
 
 type FilterData = z.infer<typeof FilterKubeSchema>;
 

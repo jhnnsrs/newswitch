@@ -1,15 +1,16 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useLockSync } from "@/hooks/useLockSync";
+import { useLock } from "@/hooks/useLock";
 import { selectTask, useTaskStore } from "@/lib/rekuest/task/store";
 import { Bug } from "lucide-react";
 
 interface SyncKeyDebugProps {
   syncKey: string;
+  appKey: string;
 }
 
-export function SyncKeyDebug({ syncKey }: SyncKeyDebugProps) {
-  const syncKeyState = useLockSync({ key: syncKey });
+export function SyncKeyDebug({ syncKey, appKey }: SyncKeyDebugProps) {
+  const syncKeyState = useLock({ key: syncKey, appKey });
   const task = useTaskStore(
     syncKeyState?.lockingTaskId
       ? selectTask(syncKeyState.lockingTaskId)

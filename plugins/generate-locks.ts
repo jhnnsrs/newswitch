@@ -4,10 +4,6 @@ import prettier from "prettier";
 import zod from "zod";
 import type { Plugin } from "vite";
 
-// --- CONFIG ---
-const OUTPUT_DIR = path.resolve(__dirname, "../src/hooks/locks"); // Output folder
-const IMPORT_PATH_TO_SYNC = "../useLockSync"; // Relative path
-
 // --- PLUGIN OPTIONS ---
 export interface GenerateStatesPluginOptions {
   /** URL to fetch the states schema from */
@@ -16,9 +12,9 @@ export interface GenerateStatesPluginOptions {
   whitelist?: string[];
   /** If provided, these lock keys will be skipped */
   blacklist?: string[];
-  /** Output directory for generated lock files */
+  /** Absolute output directory for generated lock files */
   outputDir?: string;
-  /** Relative import path to the lock sync module */
+  /** Import path to the lock module used by generated files */
   importPathToSync?: string;
   /** App key to embed into generated definitions */
   appKey?: string;
@@ -105,7 +101,7 @@ export const ${baseName}Definition = ${defName};`
     : "";
 
   return `
-import { useLockSync, type LockDefinition, type UseLockSyncOptions} from '${importPathToSync}';
+import { useLock, type LockDefinition, type UseLockOptions} from '${importPathToSync}';
 
 
 // --- Definition ---
@@ -118,8 +114,8 @@ export const ${defName}: LockDefinition<"${key}"> = {
 /**
  * Hook to sync ${key}
  */
-export const ${qualifiedHookName} = (options?: UseLockSyncOptions) => {
-  return useLockSync<"${key}">(${defName}, options);
+export const ${qualifiedHookName} = (options?: UseLockOptions) => {
+  return useLock<"${key}">(${defName}, options);
 };
 ${qualifiedHookName !== hookName ? `
 export const ${hookName} = ${qualifiedHookName};` : ""}${compatibilityAliases}`;
@@ -133,8 +129,8 @@ export default function generateLocksPlugin(
     schemaUrl,
     whitelist,
     blacklist,
-    outputDir = OUTPUT_DIR,
-    importPathToSync = IMPORT_PATH_TO_SYNC,
+    outputDir,
+    importPathToSync,
     appKey,
     hookNamePrefix,
     symbolPrefix = hookNamePrefix,
@@ -148,6 +144,12 @@ export default function generateLocksPlugin(
       if (!schemaUrl) {
         console.warn(
           "⚠️ [GenStates] No schemaUrl provided, skipping state hook generation.",
+        );
+        return;
+      }
+      if (!outputDir || !importPathToSync) {
+        console.warn(
+          "⚠️ [GenLocks] Missing required generator options: outputDir or importPathToSync.",
         );
         return;
       }
@@ -261,7 +263,7 @@ export default function generateLocksPlugin(
         .join("\n");
 
       const indexCode = `
-import type { LockDefinition } from '../useLockSync';
+import type { LockDefinition } from '${importPathToSync}';
 ${lockDefinitionImports}
 
 ${barrelExports}

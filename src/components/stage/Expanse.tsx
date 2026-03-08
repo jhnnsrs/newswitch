@@ -1,4 +1,4 @@
-import { useCameraState } from "@/hooks/states";
+import { useCameraState } from "@/apps/default/hooks/states";
 import { Canvas } from "@react-three/fiber";
 import { CameraMatrixSync } from "./CameraMatrixSync";
 import { CameraController } from "./cameras/CameraController";

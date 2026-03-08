@@ -7,7 +7,6 @@ import generateLocksPlugin from "./generate-locks";
 import generateStatesPlugin from "./generate-states";
 
 const SRC_DIR = path.resolve(__dirname, "../src");
-const HOOKS_DIR = path.resolve(SRC_DIR, "hooks");
 const DEFAULT_APPS_DIR = path.resolve(SRC_DIR, "apps");
 
 const toPascal = (value: string) =>
@@ -42,7 +41,6 @@ export interface GenerateAppPluginOptions {
 export interface GenerateAppsPluginOptions {
   apps: GenerateAppPluginOptions[];
   baseDir?: string;
-  defaultApp?: string;
   rekuestImportPath?: string;
 }
 
@@ -182,40 +180,15 @@ const normalizeApps = (
   return normalizedApps;
 };
 
-const writeShimTree = async (
-  sourceDir: string,
-  targetDir: string,
-  importPrefix: string,
-) => {
-  ensureCleanDir(targetDir);
-
-  const files = walkFiles(sourceDir);
-  for (const filePath of files) {
-    const relativeFilePath = path.relative(sourceDir, filePath);
-    const targetFilePath = path.resolve(targetDir, relativeFilePath);
-    const importPath = toPosixRelativeImport(
-      path.posix.join(importPrefix, relativeFilePath.replaceAll(path.sep, "/")),
-    );
-
-    await formatAndWrite(
-      targetFilePath,
-      `export * from '${importPath}';\n`,
-    );
-  }
-};
 
 export default function generateAppsPlugin(
   options: GenerateAppsPluginOptions,
 ): Plugin {
   const normalizedApps = normalizeApps(options.apps);
-  const appsDir = path.resolve(SRC_DIR, options.baseDir ?? path.relative(SRC_DIR, DEFAULT_APPS_DIR));
-  const defaultApp = options.defaultApp ?? normalizedApps[0]?.key ?? "default";
+  const appsDir = options.baseDir ? path.resolve(options.baseDir) : DEFAULT_APPS_DIR;
   const rekuestImportPath =
     options.rekuestImportPath ?? DEFAULT_REKUEST_IMPORT_PATH;
 
-  if (!normalizedApps.some((app) => app.key === defaultApp)) {
-    throw new Error(`Default app "${defaultApp}" is not present in the configured apps.`);
-  }
 
   return {
     name: "vite-plugin-generate-apps",
@@ -236,8 +209,8 @@ export default function generateAppsPlugin(
           whitelist: app.hooksWhitelist,
           blacklist: app.hooksBlacklist,
           outputDir: appActionsDir,
-          importPathToUseAction: '../useAction',
-          indexImportPathToUseAction: '../useAction',
+          importPathToUseAction: `${rekuestImportPath}/task`,
+          indexImportPathToUseAction: `${rekuestImportPath}/task`,
           appKey: app.key,
           symbolPrefix: app.symbolPrefix,
         });
@@ -246,7 +219,7 @@ export default function generateAppsPlugin(
           whitelist: app.statesWhitelist,
           blacklist: app.statesBlacklist,
           outputDir: appStatesDir,
-          importPathToSync: "../useStateSync",
+          importPathToSync: `${rekuestImportPath}/state`,
           appKey: app.key,
           symbolPrefix: app.symbolPrefix,
         });
@@ -255,7 +228,7 @@ export default function generateAppsPlugin(
           whitelist: app.locksWhitelist,
           blacklist: app.locksBlacklist,
           outputDir: appLocksDir,
-          importPathToSync: "../useLockSync",
+          importPathToSync: `${rekuestImportPath}/locks`,
           appKey: app.key,
           symbolPrefix: app.symbolPrefix,
         });
@@ -264,25 +237,6 @@ export default function generateAppsPlugin(
         await invokeBuildStart(statesPlugin.buildStart, this);
         await invokeBuildStart(locksPlugin.buildStart, this);
 
-        await formatAndWrite(
-          path.resolve(appHooksDir, 'useAction.ts'),
-          `export * from '${rekuestImportPath}/task/useAction';\nexport { useAction as default } from '${rekuestImportPath}/task/useAction';\n`,
-        );
-
-        await formatAndWrite(
-          path.resolve(appHooksDir, 'useTransportAction.ts'),
-          `export { useAction as useTransportAction } from './useAction';\nexport type { ActionDefinition, UseTransportActionOptions, UseTransportActionResult } from '${rekuestImportPath}/task';\nexport { useAction as default } from './useAction';\n`,
-        );
-
-        await formatAndWrite(
-          path.resolve(appHooksDir, "useStateSync.tsx"),
-          `export * from '${rekuestImportPath}/state';\n`,
-        );
-
-        await formatAndWrite(
-          path.resolve(appHooksDir, "useLockSync.tsx"),
-          `export * from '${rekuestImportPath}/locks';\n`,
-        );
 
         await formatAndWrite(
           path.resolve(appHooksDir, 'useCancelTask.ts'),
@@ -355,28 +309,7 @@ export const appDefinition = {
 } satisfies AppDefinition<'${app.key}'>;
 `,
         );
-      }
-
-      await writeShimTree(
-        path.resolve(appsDir, defaultApp, "hooks", "actions"),
-        path.resolve(HOOKS_DIR, "actions"),
-        `@/apps/${defaultApp}/hooks/actions`,
-      );
-      await writeShimTree(
-        path.resolve(HOOKS_DIR, "actions"),
-        path.resolve(HOOKS_DIR, "generated"),
-        "@/hooks/actions",
-      );
-      await writeShimTree(
-        path.resolve(appsDir, defaultApp, "hooks", "states"),
-        path.resolve(HOOKS_DIR, "states"),
-        `@/apps/${defaultApp}/hooks/states`,
-      );
-      await writeShimTree(
-        path.resolve(appsDir, defaultApp, "hooks", "locks"),
-        path.resolve(HOOKS_DIR, "locks"),
-        `@/apps/${defaultApp}/hooks/locks`,
-      );
+    }
 
       const appImports = normalizedApps
         .map(
@@ -401,8 +334,6 @@ ${appEntries}
 export type AppsDefinition = typeof appsDefinition;
 export type AppKey = keyof AppsDefinition;
 export type AppDefinition = AppsDefinition[AppKey];
-export const defaultAppKey = '${defaultApp}' satisfies AppKey;
-export const appDefinition = appsDefinition[defaultAppKey];
 `,
       );
 

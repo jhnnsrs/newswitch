@@ -20,7 +20,7 @@ import {
   ScanRegionArgsSchema,
   ScanRegionDefinition,
   useScanRegion,
-} from "@/hooks/generated";
+} from "@/apps/default/hooks/actions";
 import { ActionButton } from "@/components/ActionButton";
 import { getOptionsFromZod } from "@/hooks/zodToChoices";
 

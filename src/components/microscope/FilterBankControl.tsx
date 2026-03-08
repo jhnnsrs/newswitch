@@ -6,8 +6,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useSwitchFilter, useToggleFilter } from "@/hooks/generated";
-import { useFilterBankState } from "@/hooks/states";
+import { useSwitchFilter, useToggleFilter } from "@/apps/default/hooks/actions";
+import { useFilterBankState } from "@/apps/default/hooks/states";
 import { cn } from "@/lib/utils";
 import { RotateCw } from "lucide-react";
 import { ResponsiveGrid } from "../ui/responsive-grid";

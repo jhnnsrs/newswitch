@@ -32,12 +32,12 @@ import {
   type Stack,
   type Streams,
   type Timepoint,
-} from "@/hooks/generated";
+} from "@/apps/default/hooks/actions";
 import {
   useCameraState,
   useIlluminationState,
   useStageState,
-} from "@/hooks/states";
+} from "@/apps/default/hooks/states";
 import { cn } from "@/lib/utils";
 import { usePauseTask } from "@/transport/usePauseTask";
 import useResumeTask from "@/transport/useResumeTask";

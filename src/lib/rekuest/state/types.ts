@@ -6,13 +6,13 @@ export interface StateDefinition<T, TKey extends string = string> {
   schema: ZodType<T>;
 }
 
-export interface UseStateSyncOptions<T, U = T> {
+export interface UseStateOptions<T, U = T> {
   subscribe?: boolean;
   fetchOnMount?: boolean;
   selector?: (state: T) => U;
 }
 
-export interface UseStateSyncResult<U> {
+export interface UseStateResult<U> {
   data?: U | null;
   loading: boolean;
   error: Error | null;

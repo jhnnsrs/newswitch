@@ -1,4 +1,4 @@
-import { useCameraState } from "@/hooks/states";
+import { useCameraState } from "@/apps/default/hooks/states";
 import { useMemo } from "react";
 import { LivePlane } from "./stream/LivePlane";
 

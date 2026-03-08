@@ -1,3 +1,4 @@
+import { useIOState } from "@/apps/default/hooks/states";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -8,7 +9,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useIOState } from "@/hooks/states";
 import { useTransport } from "@/lib/rekuest/transport/transport-context";
 import { Download, ImageIcon, RefreshCw } from "lucide-react";
 import { useEffect, useRef, useState } from "react";

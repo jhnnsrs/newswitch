@@ -7,7 +7,7 @@ import {
 } from '@/lib/rekuest/state';
 import { useGlobalStateStoreRegistry } from '@/lib/rekuest/state/store';
 import { useTransport } from '@/lib/rekuest/transport/transport-context';
-import { StateContext, type StateContextValue } from '@/hooks/state-context';
+import { StateContext, type StateContextValue } from '@/lib/rekuest/state/state-context';
 
 interface TransportStateResponse<TState> {
   state: TState;

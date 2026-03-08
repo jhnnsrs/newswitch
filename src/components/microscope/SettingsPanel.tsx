@@ -11,8 +11,8 @@ import {
   useKillBenedict,
   useStartLiveView,
   useStopLiveView,
-} from "@/hooks/generated";
-import { useCameraState, useObjectiveState } from "@/hooks/states";
+} from "@/apps/default/hooks/actions";
+import { useCameraState, useObjectiveState } from "@/apps/default/hooks/states";
 import { useCaptureAndDownload } from "@/hooks/useCaptureAndDownload";
 import { cn } from "@/lib/utils";
 import {

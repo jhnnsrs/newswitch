@@ -1,4 +1,4 @@
-import { useObjectiveState, type ObjectiveTurretKubeSchema } from "@/hooks/states";
+import { useObjectiveState, type ObjectiveTurretKubeSchema } from "@/apps/default/hooks/states";
 import { type z } from "zod";
 import { useThreeAffine } from "./useThreeAffine";
 

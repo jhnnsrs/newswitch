@@ -7,8 +7,8 @@ import {
   useStartLiveView,
   useStopLiveView,
   useUpdateDetector,
-} from "@/hooks/generated";
-import { useCameraState } from "@/hooks/states";
+} from "@/apps/default/hooks/actions";
+import { useCameraState } from "@/apps/default/hooks/states";
 import { cn } from "@/lib/utils";
 import { Gauge, MonitorUp, Timer } from "lucide-react";
 import { useState } from "react";

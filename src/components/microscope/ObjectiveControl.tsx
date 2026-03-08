@@ -4,8 +4,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useSwitchObjective, useToggleObjective } from "@/hooks/generated";
-import { useObjectiveState } from "@/hooks/states";
+import { useSwitchObjective, useToggleObjective } from "@/apps/default/hooks/actions";
+import { useObjectiveState } from "@/apps/default/hooks/states";
 import { cn } from "@/lib/utils";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useState } from "react";

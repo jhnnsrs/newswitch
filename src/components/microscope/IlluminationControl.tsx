@@ -9,8 +9,8 @@ import {
   useSetIlluminationIntensity,
   useTurnOffIlluminationChannel,
   useTurnOnIllumination,
-} from "@/hooks/generated";
-import { useIlluminationState } from "@/hooks/states";
+} from "@/apps/default/hooks/actions";
+import { useIlluminationState } from "@/apps/default/hooks/states";
 import { cn } from "@/lib/utils";
 import { Power, Waves } from "lucide-react";
 import { useState } from "react";

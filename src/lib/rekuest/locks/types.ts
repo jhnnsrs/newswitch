@@ -3,12 +3,12 @@ export interface LockDefinition<T extends string> {
   appKey?: string;
 }
 
-export interface UseLockSyncOptions {
+export interface UseLockOptions {
   subscribe?: boolean;
   fetchOnMount?: boolean;
 }
 
-export interface UseLockSyncResult {
+export interface UseLockResult {
   isLocked: boolean;
   lockKey: string | null;
   lockingTaskId: string | undefined;

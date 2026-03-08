@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { useDumpStatesToStdin } from "@/hooks/generated";
+import { useDumpStatesToStdin } from "@/apps/default/hooks/actions";
 import { useViewerStore } from "@/store/viewerStore";
 
 export const DebugOverlay = () => {
