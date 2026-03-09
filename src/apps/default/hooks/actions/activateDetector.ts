@@ -23,14 +23,14 @@ export const ActivateDetectorDefinition: ActionDefinition<
 > = {
   name: 'activate_detector',
   appKey: 'default',
-  description: '',
+  description: 'Activate a detector by its slot number.',
   argsSchema: ActivateDetectorArgsSchema,
   returnSchema: ActivateDetectorReturnSchema,
   lockKeys: ['camera_parameters'],
 };
 
 /**
- * undefined
+ * Activate a detector by its slot number.
  */
 export const useActivateDetector = () => {
   return useAction(ActivateDetectorDefinition);

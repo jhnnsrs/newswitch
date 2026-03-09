@@ -28,14 +28,14 @@ export const TurnOffIlluminationChannelDefinition: ActionDefinition<
 > = {
   name: 'turn_off_illumination_channel',
   appKey: 'default',
-  description: '',
+  description: 'Turn off a specific illumination channel.',
   argsSchema: TurnOffIlluminationChannelArgsSchema,
   returnSchema: TurnOffIlluminationChannelReturnSchema,
   lockKeys: ['illumination'],
 };
 
 /**
- * undefined
+ * Turn off a specific illumination channel.
  */
 export const useTurnOffIlluminationChannel = () => {
   return useAction(TurnOffIlluminationChannelDefinition);

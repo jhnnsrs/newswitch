@@ -27,14 +27,14 @@ export const DeactivateDetectorDefinition: ActionDefinition<
 > = {
   name: 'deactivate_detector',
   appKey: 'default',
-  description: '',
+  description: 'Deactivate a detector by its slot number.',
   argsSchema: DeactivateDetectorArgsSchema,
   returnSchema: DeactivateDetectorReturnSchema,
   lockKeys: ['camera_parameters'],
 };
 
 /**
- * undefined
+ * Deactivate a detector by its slot number.
  */
 export const useDeactivateDetector = () => {
   return useAction(DeactivateDetectorDefinition);

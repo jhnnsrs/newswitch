@@ -18,14 +18,14 @@ export const ClearExpanseDefinition: ActionDefinition<
 > = {
   name: 'clear_expanse',
   appKey: 'default',
-  description: '',
+  description: 'Clear the expanse state, removing all current images.',
   argsSchema: ClearExpanseArgsSchema,
   returnSchema: ClearExpanseReturnSchema,
   lockKeys: ['expanse_state'],
 };
 
 /**
- * undefined
+ * Clear the expanse state, removing all current images.
  */
 export const useClearExpanse = () => {
   return useAction(ClearExpanseDefinition);

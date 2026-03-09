@@ -2,18 +2,18 @@ import {
   useLock,
   type LockDefinition,
   type UseLockOptions,
-} from "@/lib/rekuest/locks";
+} from '@/lib/rekuest/locks';
 
 // --- Definition ---
-export const IlluminationDefinition: LockDefinition<"illumination"> = {
-  // Lock schema for illumination (You can add a "description" field in your schema for better documentation)
-  appKey: "default",
-  key: "illumination", // The ID used by the backend
+export const IlluminationDefinition: LockDefinition<'illumination'> = {
+  // Lock schema for illumination
+  appKey: 'default',
+  key: 'illumination',
 };
 
 /**
  * Hook to sync illumination
  */
 export const useIlluminationLock = (options?: UseLockOptions) => {
-  return useLock<"illumination">(IlluminationDefinition, options);
+  return useLock<'illumination'>(IlluminationDefinition, options);
 };

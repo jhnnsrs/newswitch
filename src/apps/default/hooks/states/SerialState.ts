@@ -1,5 +1,5 @@
-import { z } from "zod";
-import { buildUseState, type StateDefinition } from "@/lib/rekuest/state";
+import { z } from 'zod';
+import { buildUseState, type StateDefinition } from '@/lib/rekuest/state';
 
 // --- Sub-Schemas ---
 
@@ -14,10 +14,10 @@ export type SerialState = z.infer<typeof SerialStateSchema>;
 // --- Definition ---
 export const SerialStateDefinition: StateDefinition<
   SerialState,
-  "SerialState"
+  'SerialState'
 > = {
-  appKey: "default",
-  key: "SerialState", // The ID used by the backend
+  appKey: 'default',
+  key: 'SerialState',
   schema: SerialStateSchema,
 };
 

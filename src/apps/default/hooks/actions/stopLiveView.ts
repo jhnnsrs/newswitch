@@ -20,14 +20,16 @@ export const StopLiveViewDefinition: ActionDefinition<
 > = {
   name: 'stop_live_view',
   appKey: 'default',
-  description: '',
+  description:
+    'Call this to stop streaming frames captured by the detector\nto connected video clients.',
   argsSchema: StopLiveViewArgsSchema,
   returnSchema: StopLiveViewReturnSchema,
   lockKeys: ['camera_parameters'],
 };
 
 /**
- * undefined
+ * Call this to stop streaming frames captured by the detector
+to connected video clients.
  */
 export const useStopLiveView = () => {
   return useAction(StopLiveViewDefinition);

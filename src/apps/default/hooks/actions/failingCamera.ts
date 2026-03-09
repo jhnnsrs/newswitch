@@ -22,14 +22,14 @@ export const FailingCameraDefinition: ActionDefinition<
 > = {
   name: 'failing_camera',
   appKey: 'default',
-  description: '',
+  description: 'A function that always fails to test lock release.',
   argsSchema: FailingCameraArgsSchema,
   returnSchema: FailingCameraReturnSchema,
   lockKeys: ['stage_position'],
 };
 
 /**
- * undefined
+ * A function that always fails to test lock release.
  */
 export const useFailingCamera = () => {
   return useAction(FailingCameraDefinition);

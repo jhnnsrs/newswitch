@@ -6,22 +6,24 @@ import { useAction, type ActionDefinition } from '@/lib/rekuest/task';
 // --- Schemas ---
 export const MoveStageArgsSchema = z.object({
   /** X position (micrometers) */
-  x: z.number().describe('X position (micrometers)').optional(),
+  x: z.number().describe('X position (micrometers)').nullable().optional(),
   /** Y position (micrometers) */
-  y: z.number().describe('Y position (micrometers)').optional(),
+  y: z.number().describe('Y position (micrometers)').nullable().optional(),
   /** Z position (micrometers) */
-  z: z.number().describe('Z position (micrometers)').optional(),
+  z: z.number().describe('Z position (micrometers)').nullable().optional(),
   /** A (rotation) position */
-  a: z.number().describe('A (rotation) position').optional(),
+  a: z.number().describe('A (rotation) position').nullable().optional(),
   /** If True, move to absolute position; if False, relative move */
   is_absolute: z
     .boolean()
     .describe('If True, move to absolute position; if False, relative move')
+    .nullable()
     .optional(),
   /** Step size in micrometers for movement simulation (default: 1.0) */
   step_size: z
     .number()
     .describe('Step size in micrometers for movement simulation (default: 1.0)')
+    .nullable()
     .optional(),
 });
 export const MoveStageReturnSchema = z.object({});
@@ -37,14 +39,14 @@ export const MoveStageDefinition: ActionDefinition<
 > = {
   name: 'move_stage',
   appKey: 'default',
-  description: '',
+  description: 'Move the stage to a new position.',
   argsSchema: MoveStageArgsSchema,
   returnSchema: MoveStageReturnSchema,
   lockKeys: ['stage_position'],
 };
 
 /**
- * undefined
+ * Move the stage to a new position.
  */
 export const useMoveStage = () => {
   return useAction(MoveStageDefinition);

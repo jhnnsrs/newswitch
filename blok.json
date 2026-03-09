@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-03-09T20:17:35.685Z",
+  "generatedAt": "2026-03-09T20:45:17.892Z",
   "app": {
     "name": "newswitch",
     "version": "0.0.0",
@@ -497,7 +497,7 @@
         "kill_benedict": {
           "optimistics": [],
           "definition": {
-            "description": "A function that simulates a critical failure to test error handling and lock release.",
+            "description": "Move the stage to a specified position with a long execution time to test optimistic updates.",
             "collections": [],
             "name": "Kill Benedict",
             "stateful": true,
@@ -2535,9 +2535,9 @@
           "dynamic": false,
           "logo": null,
           "locks": [
-            "io",
+            "camera_parameters",
             "expanse_state",
-            "camera_parameters"
+            "io"
           ]
         },
         "dump_states_to_stdin": {
@@ -2563,12 +2563,12 @@
           "dynamic": false,
           "logo": null,
           "locks": [
-            "stage_position",
             "camera_parameters",
-            "objective",
             "expanse_state",
+            "filter_bank",
             "illumination",
-            "filter_bank"
+            "objective",
+            "stage_position"
           ]
         },
         "start_live_view": {
@@ -6282,12 +6282,12 @@
           "dynamic": false,
           "logo": null,
           "locks": [
-            "stage_position",
-            "io",
-            "hook_registry",
+            "camera_parameters",
             "expanse_state",
+            "hook_registry",
             "illumination",
-            "camera_parameters"
+            "io",
+            "stage_position"
           ]
         },
         "calibrate_light_path": {
@@ -8298,10 +8298,10 @@
           "dynamic": false,
           "logo": null,
           "locks": [
-            "stage_position",
-            "io",
+            "camera_parameters",
             "expanse_state",
-            "camera_parameters"
+            "io",
+            "stage_position"
           ]
         }
       },

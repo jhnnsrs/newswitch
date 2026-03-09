@@ -20,14 +20,16 @@ export const StartLiveViewDefinition: ActionDefinition<
 > = {
   name: 'start_live_view',
   appKey: 'default',
-  description: '',
+  description:
+    'Call this to begin streaming frames captured by the detector\nto connected video clients.',
   argsSchema: StartLiveViewArgsSchema,
   returnSchema: StartLiveViewReturnSchema,
   lockKeys: ['camera_parameters'],
 };
 
 /**
- * undefined
+ * Call this to begin streaming frames captured by the detector
+to connected video clients.
  */
 export const useStartLiveView = () => {
   return useAction(StartLiveViewDefinition);

@@ -21,14 +21,14 @@ export const SwitchObjectiveDefinition: ActionDefinition<
 > = {
   name: 'switch_objective',
   appKey: 'default',
-  description: '',
+  description: 'Switch to a specific objective slot.',
   argsSchema: SwitchObjectiveArgsSchema,
   returnSchema: SwitchObjectiveReturnSchema,
   lockKeys: ['objective'],
 };
 
 /**
- * undefined
+ * Switch to a specific objective slot.
  */
 export const useSwitchObjective = () => {
   return useAction(SwitchObjectiveDefinition);

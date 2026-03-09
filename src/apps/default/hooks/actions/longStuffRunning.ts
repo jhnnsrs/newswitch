@@ -20,14 +20,15 @@ export const LongStuffRunningDefinition: ActionDefinition<
 > = {
   name: 'long_stuff_running',
   appKey: 'default',
-  description: '',
+  description:
+    'A long-running function to test optimistic updates and progress.',
   argsSchema: LongStuffRunningArgsSchema,
   returnSchema: LongStuffRunningReturnSchema,
   lockKeys: [],
 };
 
 /**
- * undefined
+ * A long-running function to test optimistic updates and progress.
  */
 export const useLongStuffRunning = () => {
   return useAction(LongStuffRunningDefinition);

@@ -1,10 +1,10 @@
-import { z } from "zod";
-import { buildUseState, type StateDefinition } from "@/lib/rekuest/state";
+import { z } from 'zod';
+import { buildUseState, type StateDefinition } from '@/lib/rekuest/state';
 
 // --- Sub-Schemas ---
 export const DetectorSchema = z
   .object({
-    __identifier: z.literal("detector").default("detector"),
+    __identifier: z.literal('detector').default('detector'),
     slot: z.number(),
     name: z.string(),
     width: z.number(),
@@ -22,12 +22,15 @@ export const DetectorSchema = z
     is_acquiring: z.boolean(),
     data_type: z.string(),
   })
-  .brand("detector");
+  .brand('detector')
+  .describe('Shared state for detector parameters.');
 
 // --- Main Schema ---
 export const CameraStateSchema = z.object({
   is_acquiring: z.boolean(),
-  detectors: z.array(DetectorSchema),
+  detectors: z.array(
+    DetectorSchema.describe('Shared state for detector parameters.'),
+  ),
 });
 
 // --- Type ---
@@ -36,10 +39,10 @@ export type CameraState = z.infer<typeof CameraStateSchema>;
 // --- Definition ---
 export const CameraStateDefinition: StateDefinition<
   CameraState,
-  "CameraState"
+  'CameraState'
 > = {
-  appKey: "default",
-  key: "CameraState", // The ID used by the backend
+  appKey: 'default',
+  key: 'CameraState',
   schema: CameraStateSchema,
 };
 

@@ -2,20 +2,18 @@ import { z } from 'zod';
 import { useAction, type ActionDefinition } from '@/lib/rekuest/task';
 
 // --- Shared Models ---
-
-/** The newly active filter. */
 export const FilterSchema = z
   .object({
-    slot: z.number().optional(),
-    name: z.string().optional(),
-    center_wavelength: z.number().optional(),
-    bandwidth: z.number().optional(),
-    transmission: z.number().optional(),
-    is_active: z.boolean().optional(),
+    __identifier: z.literal('filter').default('filter'),
+    slot: z.number(),
+    name: z.string(),
+    center_wavelength: z.number(),
+    bandwidth: z.number(),
+    transmission: z.number(),
+    is_active: z.boolean(),
   })
-  .brand('filter');
-/** The newly active filter. */
-export type Filter = z.infer<typeof FilterSchema>;
+  .brand('filter')
+  .describe('The newly active filter.');
 
 // --- Schemas ---
 export const ToggleFilterArgsSchema = z.object({});
@@ -35,14 +33,14 @@ export const ToggleFilterDefinition: ActionDefinition<
 > = {
   name: 'toggle_filter',
   appKey: 'default',
-  description: '',
+  description: 'Toggle to the next filter in the wheel.',
   argsSchema: ToggleFilterArgsSchema,
   returnSchema: ToggleFilterReturnSchema,
   lockKeys: ['filter_bank'],
 };
 
 /**
- * undefined
+ * Toggle to the next filter in the wheel.
  */
 export const useToggleFilter = () => {
   return useAction(ToggleFilterDefinition);

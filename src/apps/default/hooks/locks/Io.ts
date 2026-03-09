@@ -2,18 +2,18 @@ import {
   useLock,
   type LockDefinition,
   type UseLockOptions,
-} from "@/lib/rekuest/locks";
+} from '@/lib/rekuest/locks';
 
 // --- Definition ---
-export const IoDefinition: LockDefinition<"io"> = {
-  // Lock schema for io (You can add a "description" field in your schema for better documentation)
-  appKey: "default",
-  key: "io", // The ID used by the backend
+export const IoDefinition: LockDefinition<'io'> = {
+  // Lock schema for io
+  appKey: 'default',
+  key: 'io',
 };
 
 /**
  * Hook to sync io
  */
 export const useIoLock = (options?: UseLockOptions) => {
-  return useLock<"io">(IoDefinition, options);
+  return useLock<'io'>(IoDefinition, options);
 };

@@ -2,30 +2,28 @@ import { z } from 'zod';
 import { useAction, type ActionDefinition } from '@/lib/rekuest/task';
 
 // --- Shared Models ---
-
-/** Shared state for detector parameters. */
 export const DetectorSchema = z
   .object({
-    slot: z.number().optional(),
-    name: z.string().optional(),
-    width: z.number().optional(),
-    height: z.number().optional(),
-    is_active: z.boolean().optional(),
-    current_exposure_time: z.number().optional(),
-    current_gain: z.number().optional(),
-    current_colormap: z.string().optional(),
-    pixel_size_um: z.number().optional(),
+    __identifier: z.literal('detector').default('detector'),
+    slot: z.number(),
+    name: z.string(),
+    width: z.number(),
+    height: z.number(),
+    is_active: z.boolean(),
+    current_exposure_time: z.number(),
+    current_gain: z.number(),
+    current_colormap: z.string(),
+    pixel_size_um: z.number(),
     preset_exposure_times: z.array(z.number()),
-    max_exposure_time: z.number().optional(),
-    min_exposure_time: z.number().optional(),
-    max_gain: z.number().optional(),
-    min_gain: z.number().optional(),
-    is_acquiring: z.boolean().optional(),
-    data_type: z.string().optional(),
+    max_exposure_time: z.number(),
+    min_exposure_time: z.number(),
+    max_gain: z.number(),
+    min_gain: z.number(),
+    is_acquiring: z.boolean(),
+    data_type: z.string(),
   })
-  .brand('detector');
-/** Shared state for detector parameters. */
-export type Detector = z.infer<typeof DetectorSchema>;
+  .brand('detector')
+  .describe('Shared state for detector parameters.');
 
 // --- Schemas ---
 export const UpdateDetectorArgsSchema = z.object({
@@ -35,9 +33,10 @@ export const UpdateDetectorArgsSchema = z.object({
   exposure_time: z
     .number()
     .describe('Exposure time in seconds (optional)')
+    .nullable()
     .optional(),
   /** Gain value (optional) */
-  gain: z.number().describe('Gain value (optional)').optional(),
+  gain: z.number().describe('Gain value (optional)').nullable().optional(),
 });
 export const UpdateDetectorReturnSchema = z.object({
   /** Shared state for detector parameters. */
@@ -55,14 +54,14 @@ export const UpdateDetectorDefinition: ActionDefinition<
 > = {
   name: 'update_detector',
   appKey: 'default',
-  description: '',
+  description: 'Update detector settings.',
   argsSchema: UpdateDetectorArgsSchema,
   returnSchema: UpdateDetectorReturnSchema,
   lockKeys: ['camera_parameters'],
 };
 
 /**
- * undefined
+ * Update detector settings.
  */
 export const useUpdateDetector = () => {
   return useAction(UpdateDetectorDefinition);

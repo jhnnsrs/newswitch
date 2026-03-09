@@ -18,14 +18,14 @@ export const MoveHomeDefinition: ActionDefinition<
 > = {
   name: 'move_home',
   appKey: 'default',
-  description: '',
+  description: 'Move stage to home position.',
   argsSchema: MoveHomeArgsSchema,
   returnSchema: MoveHomeReturnSchema,
   lockKeys: ['stage_position'],
 };
 
 /**
- * undefined
+ * Move stage to home position.
  */
 export const useMoveHome = () => {
   return useAction(MoveHomeDefinition);

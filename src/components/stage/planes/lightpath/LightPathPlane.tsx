@@ -1,20 +1,18 @@
-import { useKubeStateStore } from "@/store/kubeStateStore";
+import { LightPathSchema, useLightPathState } from "@/apps/default/hooks/states";
+import { useKubeStore } from "@/store/kubeStore";
 import { useModeStore } from "@/store/modeStore";
 import { Suspense, useEffect, useRef } from "react";
 import * as THREE from "three";
+import { type z } from "zod";
+import { ObjectiveTurretKubePlane } from "../kubes/ObjectiveTurretKubePlane";
 import { LightPathEdges } from "./edges/LightPathEdges";
 import { DetectorKubePlane } from "./kubes/DetectorKubePlane";
 import { DichroicKubePlane } from "./kubes/DichroicKube";
+import { FilterBankKubePlane } from "./kubes/FilterBankKubePlane";
 import { FilterKubePlane } from "./kubes/FilterKubePlane";
 import { IlluminationKubePlane } from "./kubes/IlluminationKubePlane";
 import { ObjectiveKubePlane } from "./kubes/ObjectiveKubePlane";
 import { StageKubePlane } from "./kubes/StageKubePlane";
-import { LightPathSchema, ObjectiveKubeSchema, useLightPathState } from "@/apps/default/hooks/states";
-import { type z } from "zod";
-import { useKubeStore } from "@/store/kubeStore";
-import { ObjectiveTurretKubePlane } from "../kubes/ObjectiveTurretKubePlane";
-import { FilterBankKubePanel } from "../../panels/kubes/FilterBankKubePanel";
-import { FilterBankKubePlane } from "./kubes/FilterBankKubePlane";
 
 export type LightPath = z.infer<typeof LightPathSchema>;
 
@@ -109,11 +107,9 @@ export const LightPathPlane = ({ path }: { path:  LightPath }) => {
               {/* Drop in the Inverted Hull Wrapper */}
               <InvertedHullOutline enabled={isSelected}>
                 {(() => {
-                  switch (kube.__brand) {
-
+                  switch (kube.__identifier) {
                     case "objective_turret_kube":
                       return <ObjectiveTurretKubePlane data={kube} />; 
-
                     case "objective_kube":
                       return <ObjectiveKubePlane data={kube} />;
                     case "detector_kube":

@@ -21,14 +21,15 @@ export const KillBenedictDefinition: ActionDefinition<
 > = {
   name: 'kill_benedict',
   appKey: 'default',
-  description: '',
+  description:
+    'Move the stage to a specified position with a long execution time to test optimistic updates.',
   argsSchema: KillBenedictArgsSchema,
   returnSchema: KillBenedictReturnSchema,
   lockKeys: ['stage_position'],
 };
 
 /**
- * undefined
+ * Move the stage to a specified position with a long execution time to test optimistic updates.
  */
 export const useKillBenedict = () => {
   return useAction(KillBenedictDefinition);

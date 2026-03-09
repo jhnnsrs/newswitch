@@ -2,10 +2,11 @@ import { z } from 'zod';
 import { useAction, type ActionDefinition } from '@/lib/rekuest/task';
 
 // --- Shared Models ---
-
-/** Shared state for affine transformation parameters. */
 export const CalibratedLightPathSchema = z
   .object({
+    __identifier: z
+      .literal('calibrated_light_path')
+      .default('calibrated_light_path'),
     /** 4x4 affine transformation matrix for mapping between coordinate systems */
     affine_matrix: z
       .array(z.array(z.number()))
@@ -13,38 +14,28 @@ export const CalibratedLightPathSchema = z
         '4x4 affine transformation matrix for mapping between coordinate systems',
       ),
     /** Field of view width in micrometers */
-    fov_width: z
-      .number()
-      .describe('Field of view width in micrometers')
-      .optional(),
+    fov_width: z.number().describe('Field of view width in micrometers'),
     /** Field of view height in micrometers */
-    fov_height: z
-      .number()
-      .describe('Field of view height in micrometers')
-      .optional(),
+    fov_height: z.number().describe('Field of view height in micrometers'),
     /** Hash of the light path configuration this affine matrix corresponds to */
     light_path_state_hash: z
       .string()
       .describe(
         'Hash of the light path configuration this affine matrix corresponds to',
-      )
-      .optional(),
+      ),
   })
-  .brand('calibrated_light_path');
-/** Shared state for affine transformation parameters. */
-export type CalibratedLightPath = z.infer<typeof CalibratedLightPathSchema>;
+  .brand('calibrated_light_path')
+  .describe('Shared state for affine transformation parameters.');
 
 // --- Schemas ---
 export const CalibrateLightPathArgsSchema = z.object({});
 export const CalibrateLightPathReturnSchema = z.object({
   /** List of acquired images with metadata. */
-  return0: z
-    .array(
-      CalibratedLightPathSchema.describe(
-        'Shared state for affine transformation parameters.',
-      ),
-    )
-    .describe('List of acquired images with metadata.'),
+  return0: z.array(
+    CalibratedLightPathSchema.describe(
+      'Shared state for affine transformation parameters.',
+    ),
+  ),
 });
 
 // --- Types ---
@@ -62,14 +53,15 @@ export const CalibrateLightPathDefinition: ActionDefinition<
 > = {
   name: 'calibrate_light_path',
   appKey: 'default',
-  description: '',
+  description:
+    'Simulate the acquisition of a multidimensional dataset based on the provided configuration.',
   argsSchema: CalibrateLightPathArgsSchema,
   returnSchema: CalibrateLightPathReturnSchema,
   lockKeys: ['camera_parameters', 'stage_position'],
 };
 
 /**
- * undefined
+ * Simulate the acquisition of a multidimensional dataset based on the provided configuration.
  */
 export const useCalibrateLightPath = () => {
   return useAction(CalibrateLightPathDefinition);

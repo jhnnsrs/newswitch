@@ -1,5 +1,5 @@
-import { z } from "zod";
-import { buildUseState, type StateDefinition } from "@/lib/rekuest/state";
+import { z } from 'zod';
+import { buildUseState, type StateDefinition } from '@/lib/rekuest/state';
 
 // --- Sub-Schemas ---
 
@@ -17,16 +17,18 @@ export const StageStateSchema = z.object({
   min_z: z.number(),
   max_a: z.number(),
   min_a: z.number(),
-  registered_step_sizes: z.array(z.number()),
+  registered_step_sizes: z
+    .array(z.number())
+    .describe('List of registered step sizes for the stage.'),
 });
 
 // --- Type ---
 export type StageState = z.infer<typeof StageStateSchema>;
 
 // --- Definition ---
-export const StageStateDefinition: StateDefinition<StageState, "StageState"> = {
-  appKey: "default",
-  key: "StageState", // The ID used by the backend
+export const StageStateDefinition: StateDefinition<StageState, 'StageState'> = {
+  appKey: 'default',
+  key: 'StageState',
   schema: StageStateSchema,
 };
 

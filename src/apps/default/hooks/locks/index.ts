@@ -1,24 +1,24 @@
-import type { LockDefinition } from "@/lib/rekuest/locks";
-import { ExpanseStateDefinition } from "./ExpanseState";
-import { IlluminationDefinition } from "./Illumination";
-import { StagePositionDefinition } from "./StagePosition";
-import { IoDefinition } from "./Io";
-import { CameraParametersDefinition } from "./CameraParameters";
-import { ObjectiveDefinition } from "./Objective";
-import { FilterBankDefinition } from "./FilterBank";
-import { HookRegistryDefinition } from "./HookRegistry";
+import type { LockDefinition } from '@/lib/rekuest/locks';
+import { ExpanseStateDefinition } from './ExpanseState';
+import { IlluminationDefinition } from './Illumination';
+import { StagePositionDefinition } from './StagePosition';
+import { IoDefinition } from './Io';
+import { CameraParametersDefinition } from './CameraParameters';
+import { ObjectiveDefinition } from './Objective';
+import { FilterBankDefinition } from './FilterBank';
+import { HookRegistryDefinition } from './HookRegistry';
 
-export { ExpanseStateDefinition, useExpanseStateLock } from "./ExpanseState";
-export { IlluminationDefinition, useIlluminationLock } from "./Illumination";
-export { StagePositionDefinition, useStagePositionLock } from "./StagePosition";
-export { IoDefinition, useIoLock } from "./Io";
+export { ExpanseStateDefinition, useExpanseStateLock } from './ExpanseState';
+export { IlluminationDefinition, useIlluminationLock } from './Illumination';
+export { StagePositionDefinition, useStagePositionLock } from './StagePosition';
+export { IoDefinition, useIoLock } from './Io';
 export {
   CameraParametersDefinition,
   useCameraParametersLock,
-} from "./CameraParameters";
-export { ObjectiveDefinition, useObjectiveLock } from "./Objective";
-export { FilterBankDefinition, useFilterBankLock } from "./FilterBank";
-export { HookRegistryDefinition, useHookRegistryLock } from "./HookRegistry";
+} from './CameraParameters';
+export { ObjectiveDefinition, useObjectiveLock } from './Objective';
+export { FilterBankDefinition, useFilterBankLock } from './FilterBank';
+export { HookRegistryDefinition, useHookRegistryLock } from './HookRegistry';
 
 export const globalLockDefinition = {
   ExpanseState: ExpanseStateDefinition,
@@ -41,6 +41,4 @@ export type GlobalLockKey = InferLockKey<
 export const globalLockKeys = Object.values(globalLockDefinition).map(
   (definition) => definition.key,
 ) as GlobalLockKey[];
-
-// Backwards-compatible alias for the requested misspelling.
 export const globalLockDefintiion = globalLockDefinition;

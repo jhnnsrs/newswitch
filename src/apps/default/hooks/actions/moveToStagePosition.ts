@@ -26,14 +26,14 @@ export const MoveToStagePositionDefinition: ActionDefinition<
 > = {
   name: 'move_to_stage_position',
   appKey: 'default',
-  description: '',
+  description: 'Move the stage to a specified position.',
   argsSchema: MoveToStagePositionArgsSchema,
   returnSchema: MoveToStagePositionReturnSchema,
   lockKeys: ['stage_position'],
 };
 
 /**
- * undefined
+ * Move the stage to a specified position.
  */
 export const useMoveToStagePosition = () => {
   return useAction(MoveToStagePositionDefinition);

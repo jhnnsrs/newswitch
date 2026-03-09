@@ -18,14 +18,14 @@ export const ToggleObjectiveDefinition: ActionDefinition<
 > = {
   name: 'toggle_objective',
   appKey: 'default',
-  description: '',
+  description: 'Toggle to the next objective in the turret.',
   argsSchema: ToggleObjectiveArgsSchema,
   returnSchema: ToggleObjectiveReturnSchema,
   lockKeys: ['objective'],
 };
 
 /**
- * undefined
+ * Toggle to the next objective in the turret.
  */
 export const useToggleObjective = () => {
   return useAction(ToggleObjectiveDefinition);

@@ -11,6 +11,7 @@ export const SetIlluminationIntensityArgsSchema = z.object({
   channel: z
     .number()
     .describe('Illumination channel number (default 1)')
+    .nullable()
     .optional(),
 });
 export const SetIlluminationIntensityReturnSchema = z.object({
@@ -33,14 +34,14 @@ export const SetIlluminationIntensityDefinition: ActionDefinition<
 > = {
   name: 'set_illumination_intensity',
   appKey: 'default',
-  description: '',
+  description: 'Set illumination intensity for a specific channel.',
   argsSchema: SetIlluminationIntensityArgsSchema,
   returnSchema: SetIlluminationIntensityReturnSchema,
   lockKeys: ['illumination'],
 };
 
 /**
- * undefined
+ * Set illumination intensity for a specific channel.
  */
 export const useSetIlluminationIntensity = () => {
   return useAction(SetIlluminationIntensityDefinition);

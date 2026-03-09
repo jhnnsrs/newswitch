@@ -22,14 +22,15 @@ export const NeverEndingFunctionDefinition: ActionDefinition<
 > = {
   name: 'never_ending_function',
   appKey: 'default',
-  description: '',
+  description:
+    'A function that never ends to test how the system handles long-running functions.',
   argsSchema: NeverEndingFunctionArgsSchema,
   returnSchema: NeverEndingFunctionReturnSchema,
   lockKeys: [],
 };
 
 /**
- * undefined
+ * A function that never ends to test how the system handles long-running functions.
  */
 export const useNeverEndingFunction = () => {
   return useAction(NeverEndingFunctionDefinition);

@@ -105,7 +105,7 @@ export const LightPathStatePlane = ({ path }: { path: LightPathState }) => {
               {/* Drop in the Inverted Hull Wrapper */}
               <InvertedHullOutline enabled={isSelected}>
                 {(() => {
-                  switch (kube.__brand) {
+                  switch (kube.__identifier) {
                     case "objective_kube_state":
                       return <ObjectiveKubePlane data={kube} />;
                     case "detector_kube_state":

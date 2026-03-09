@@ -1,53 +1,53 @@
-import type { StateDefinition } from "@/lib/rekuest/state";
-import { StageStateDefinition } from "./StageState";
-import { IlluminationStateDefinition } from "./IlluminationState";
-import { CameraStateDefinition } from "./CameraState";
-import { ObjectiveStateDefinition } from "./ObjectiveState";
-import { FilterBankStateDefinition } from "./FilterBankState";
-import { IOStateDefinition } from "./IOState";
-import { LightPathStateDefinition } from "./LightPathState";
-import { SerialStateDefinition } from "./SerialState";
-import { HookStateDefinition } from "./HookState";
-import { ExpanseStateDefinition } from "./ExpanseState";
-import { CalibrationStateDefinition } from "./CalibrationState";
+import type { StateDefinition } from '@/lib/rekuest/state';
+import { StageStateDefinition } from './StageState';
+import { IlluminationStateDefinition } from './IlluminationState';
+import { CameraStateDefinition } from './CameraState';
+import { ObjectiveStateDefinition } from './ObjectiveState';
+import { FilterBankStateDefinition } from './FilterBankState';
+import { IOStateDefinition } from './IOState';
+import { LightPathStateDefinition } from './LightPathState';
+import { SerialStateDefinition } from './SerialState';
+import { HookStateDefinition } from './HookState';
+import { ExpanseStateDefinition } from './ExpanseState';
+import { CalibrationStateDefinition } from './CalibrationState';
 
-export { createIndexedUnion } from "./utils";
+export { createIndexedUnion } from './utils';
 export {
   StageStateSchema,
   StageStateDefinition,
   useStageState,
-} from "./StageState";
-export type { StageState } from "./StageState";
+} from './StageState';
+export type { StageState } from './StageState';
 export {
   IlluminationSchema,
   IlluminationStateSchema,
   IlluminationStateDefinition,
   useIlluminationState,
-} from "./IlluminationState";
-export type { IlluminationState } from "./IlluminationState";
+} from './IlluminationState';
+export type { IlluminationState } from './IlluminationState';
 export {
   DetectorSchema,
   CameraStateSchema,
   CameraStateDefinition,
   useCameraState,
-} from "./CameraState";
-export type { CameraState } from "./CameraState";
+} from './CameraState';
+export type { CameraState } from './CameraState';
 export {
   ObjectiveLensSchema,
   ObjectiveStateSchema,
   ObjectiveStateDefinition,
   useObjectiveState,
-} from "./ObjectiveState";
-export type { ObjectiveState } from "./ObjectiveState";
+} from './ObjectiveState';
+export type { ObjectiveState } from './ObjectiveState';
 export {
   FilterSchema,
   FilterBankStateSchema,
   FilterBankStateDefinition,
   useFilterBankState,
-} from "./FilterBankState";
-export type { FilterBankState } from "./FilterBankState";
-export { IOStateSchema, IOStateDefinition, useIOState } from "./IOState";
-export type { IOState } from "./IOState";
+} from './FilterBankState';
+export type { FilterBankState } from './FilterBankState';
+export { IOStateSchema, IOStateDefinition, useIOState } from './IOState';
+export type { IOState } from './IOState';
 export {
   ObjectiveKubeSchema,
   DetectorKubeSchema,
@@ -62,21 +62,21 @@ export {
   LightPathSchema,
   LightPathStateDefinition,
   useLightPathState,
-} from "./LightPathState";
-export type { LightPathState } from "./LightPathState";
+} from './LightPathState';
+export type { LightPathState } from './LightPathState';
 export {
   SerialStateSchema,
   SerialStateDefinition,
   useSerialState,
-} from "./SerialState";
-export type { SerialState } from "./SerialState";
+} from './SerialState';
+export type { SerialState } from './SerialState';
 export {
   RegisteredHookSchema,
   HookStateSchema,
   HookStateDefinition,
   useHookState,
-} from "./HookState";
-export type { HookState } from "./HookState";
+} from './HookState';
+export type { HookState } from './HookState';
 export {
   ObjectiveKubeStateSchema,
   DetectorKubeStateSchema,
@@ -96,15 +96,15 @@ export {
   ExpanseStateSchema,
   ExpanseStateDefinition,
   useExpanseState,
-} from "./ExpanseState";
-export type { ExpanseState } from "./ExpanseState";
+} from './ExpanseState';
+export type { ExpanseState } from './ExpanseState';
 export {
   CalibratedLightPathSchema,
   CalibrationStateSchema,
   CalibrationStateDefinition,
   useCalibrationState,
-} from "./CalibrationState";
-export type { CalibrationState } from "./CalibrationState";
+} from './CalibrationState';
+export type { CalibrationState } from './CalibrationState';
 
 export const globalStateDefinition = {
   StageState: StageStateDefinition,
@@ -132,6 +132,4 @@ export type GlobalStateShape = {
 export const globalStateKeys = Object.values(globalStateDefinition).map(
   (definition) => definition.key,
 ) as GlobalStateKey[];
-
-// Backwards-compatible alias for the requested misspelling.
 export const globalStateDefintiion = globalStateDefinition;

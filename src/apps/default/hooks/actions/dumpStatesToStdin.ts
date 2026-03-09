@@ -20,7 +20,8 @@ export const DumpStatesToStdinDefinition: ActionDefinition<
 > = {
   name: 'dump_states_to_stdin',
   appKey: 'default',
-  description: '',
+  description:
+    'Dump the current states of all managers for debugging purposes.',
   argsSchema: DumpStatesToStdinArgsSchema,
   returnSchema: DumpStatesToStdinReturnSchema,
   lockKeys: [
@@ -34,7 +35,7 @@ export const DumpStatesToStdinDefinition: ActionDefinition<
 };
 
 /**
- * undefined
+ * Dump the current states of all managers for debugging purposes.
  */
 export const useDumpStatesToStdin = () => {
   return useAction(DumpStatesToStdinDefinition);
