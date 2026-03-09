@@ -243,6 +243,19 @@ export type MultidimensionalAcquisition = z.infer<
   typeof MultidimensionalAcquisitionSchema
 >;
 
+/** Represents a scale factor for a 3D volume. */
+export const ScaleSchema = z
+  .object({
+    x: z.number(),
+    y: z.number(),
+    z: z.number(),
+    cached_id: z.string().optional(),
+    affine_matrix: z.array(z.array(z.number())).optional(),
+  })
+  .brand('scale');
+/** Represents a scale factor for a 3D volume. */
+export type Scale = z.infer<typeof ScaleSchema>;
+
 /** Data class representing metadata for a kube, including its ID and affine transformation matrix. */
 export const ObjectiveKubeStateSchema = z
   .object({
@@ -602,18 +615,35 @@ export const MetadataSchema = z
 /** Data class representing metadata for an image, including its ID and affine transformation matrix. */
 export type Metadata = z.infer<typeof MetadataSchema>;
 
-/** Represents a single image captured by the detector. */
-export const ImageSchema = z
+/** Metadata for a raw array before it is saved as an image, including the light path and acquisition settings. */
+export const ArrayMetadataSchema = z
+  .object({
+    min_value: z.number(),
+    max_value: z.number(),
+  })
+  .brand('array_metadata');
+/** Metadata for a raw array before it is saved as an image, including the light path and acquisition settings. */
+export type ArrayMetadata = z.infer<typeof ArrayMetadataSchema>;
+
+/** Represents a single 3D volume captured by the detector. */
+export const FrameSchema = z
   .object({
     id: z.string(),
+    scales: z.array(
+      ScaleSchema.describe('Represents a scale factor for a 3D volume.'),
+    ),
     /** Data class representing metadata for an image, including its ID and affine transformation matrix. */
     metadata: MetadataSchema.describe(
       'Data class representing metadata for an image, including its ID and affine transformation matrix.',
     ),
+    /** Metadata for a raw array before it is saved as an image, including the light path and acquisition settings. */
+    array_metadata: ArrayMetadataSchema.describe(
+      'Metadata for a raw array before it is saved as an image, including the light path and acquisition settings.',
+    ),
   })
-  .brand('image');
-/** Represents a single image captured by the detector. */
-export type Image = z.infer<typeof ImageSchema>;
+  .brand('frame');
+/** Represents a single 3D volume captured by the detector. */
+export type Frame = z.infer<typeof FrameSchema>;
 
 // --- Schemas ---
 export const AcquireMultidimensionalAcquisitionArgsSchema = z.object({
@@ -626,8 +656,8 @@ export const AcquireMultidimensionalAcquisitionReturnSchema = z.object({
   /** List of acquired images with metadata. */
   return0: z
     .array(
-      ImageSchema.describe(
-        'Represents a single image captured by the detector.',
+      FrameSchema.describe(
+        'Represents a single 3D volume captured by the detector.',
       ),
     )
     .describe('List of acquired images with metadata.'),

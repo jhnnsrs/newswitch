@@ -3,7 +3,6 @@ import react from "@vitejs/plugin-react";
 import path from "path";
 import tailwindcss from "@tailwindcss/vite";
 import generateAppsPlugin from "./plugins/generate-app";
-import { ViteHookManifest } from "./plugins/manifest-plugin";
 
 
 // https://vite.dev/config/

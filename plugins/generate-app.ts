@@ -6,8 +6,11 @@ import generateHooksPlugin from "./generate-hooks";
 import generateLocksPlugin from "./generate-locks";
 import generateStatesPlugin from "./generate-states";
 
+const ROOT_DIR = path.resolve(__dirname, "..");
 const SRC_DIR = path.resolve(__dirname, "../src");
 const DEFAULT_APPS_DIR = path.resolve(SRC_DIR, "apps");
+const BLOK_PATH = path.resolve(ROOT_DIR, "blok.json");
+const PACKAGE_JSON_PATH = path.resolve(ROOT_DIR, "package.json");
 
 const toPascal = (value: string) =>
   value
@@ -129,8 +132,7 @@ export const ${qualifiedHookName} = <TSelected>(
 ): TSelected => useBaseLockStore('${appKey}', selector);${aliasExport}`;
 };
 
-const ensureCleanDir = (dirPath: string) => {
-  fs.rmSync(dirPath, { force: true, recursive: true });
+const ensureDir = (dirPath: string) => {
   fs.mkdirSync(dirPath, { recursive: true });
 };
 
@@ -161,6 +163,43 @@ const invokeBuildStart = async (
   if ("handler" in hook) {
     await hook.handler.call(context as never, {} as never);
   }
+};
+
+const fetchSchemaJson = async (schemaUrl?: string, label?: string) => {
+  if (!schemaUrl) {
+    return null;
+  }
+
+  try {
+    const response = await fetch(schemaUrl);
+
+    if (!response.ok) {
+      console.warn(
+        `⚠️ [GenApps] Failed to fetch ${label ?? "schema"} from ${schemaUrl}: ${response.status}`,
+      );
+      return null;
+    }
+
+    return (await response.json()) as Record<string, unknown>;
+  } catch (error) {
+    console.warn(
+      `⚠️ [GenApps] Error fetching ${label ?? "schema"} from ${schemaUrl}:`,
+      error,
+    );
+    return null;
+  }
+};
+
+const readJsonFile = (filePath: string) => {
+  try {
+    return JSON.parse(fs.readFileSync(filePath, "utf-8")) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+};
+
+const writeJsonFile = (filePath: string, value: unknown) => {
+  fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`);
 };
 
 const normalizeApps = (
@@ -236,7 +275,16 @@ export default function generateAppsPlugin(
   return {
     name: "vite-plugin-generate-apps",
     async buildStart() {
-      ensureCleanDir(appsDir);
+      ensureDir(appsDir);
+
+      const packageData = readJsonFile(PACKAGE_JSON_PATH) ?? {};
+      const scripts =
+        (packageData.scripts as Record<string, string> | undefined) ?? {};
+      const previousBlok = readJsonFile(BLOK_PATH) ?? {};
+      const previousApps =
+        (previousBlok.apps as Record<string, Record<string, unknown>> | undefined) ?? {};
+      const blokApps: Record<string, Record<string, unknown>> = {};
+      const availableApps: NormalizedGenerateAppPluginOptions[] = [];
 
       for (const app of normalizedApps) {
         const appRootDir = path.resolve(appsDir, app.key);
@@ -245,7 +293,38 @@ export default function generateAppsPlugin(
         const appStatesDir = path.resolve(appHooksDir, "states");
         const appLocksDir = path.resolve(appHooksDir, "locks");
 
-        ensureCleanDir(appHooksDir);
+        ensureDir(appRootDir);
+        ensureDir(appHooksDir);
+
+        const [hooksSchema, statesSchema, locksSchema] = await Promise.all([
+          fetchSchemaJson(app.hooksSchemaUrl, `${app.key} task schema`),
+          fetchSchemaJson(app.statesSchemaUrl, `${app.key} state schema`),
+          fetchSchemaJson(app.locksSchemaUrl, `${app.key} lock schema`),
+        ]);
+
+        const previousAppEntry = previousApps[app.key] ?? {};
+
+        blokApps[app.key] = {
+          key: app.key,
+          name: app.name ?? app.key,
+          tasks:
+            (hooksSchema?.implementations as Record<string, unknown> | undefined)
+            ?? (previousAppEntry.tasks as Record<string, unknown> | undefined)
+            ?? {},
+          states:
+            (statesSchema?.states as Record<string, unknown> | undefined)
+            ?? (previousAppEntry.states as Record<string, unknown> | undefined)
+            ?? {},
+          locks:
+            (locksSchema?.locks as Record<string, unknown> | undefined)
+            ?? (previousAppEntry.locks as Record<string, unknown> | undefined)
+            ?? {},
+          schemas: {
+            tasks: app.hooksSchemaUrl ?? null,
+            states: app.statesSchemaUrl ?? null,
+            locks: app.locksSchemaUrl ?? null,
+          },
+        };
 
         const hooksPlugin = generateHooksPlugin({
           schemaUrl: app.hooksSchemaUrl,
@@ -348,9 +427,16 @@ export default function generateAppsPlugin(
           ),
         );
 
-        await formatAndWrite(
-          path.resolve(appRootDir, "app.ts"),
-          `
+        const hasAppDefinitionFiles = [
+          path.resolve(appActionsDir, "index.ts"),
+          path.resolve(appStatesDir, "index.ts"),
+          path.resolve(appLocksDir, "index.ts"),
+        ].every((filePath) => fs.existsSync(filePath));
+
+        if (hasAppDefinitionFiles) {
+          await formatAndWrite(
+            path.resolve(appRootDir, "app.ts"),
+            `
 import {
   globalActionDefinition,
   type GlobalActionDefinition,
@@ -378,17 +464,24 @@ export const appDefinition = {
   states: globalStateDefinition,
 } satisfies AppDefinition<'${app.key}'>;
 `,
-        );
+          );
+
+          availableApps.push(app);
+        } else {
+          console.warn(
+            `⚠️ [GenApps] Skipping app registry entry for "${app.key}" because generated definitions are unavailable. Existing code was preserved.`,
+          );
+        }
     }
 
-      const appImports = normalizedApps
+      const appImports = availableApps
         .map(
           (app) =>
             `import { appDefinition as ${toPascal(app.key)}AppDefinition } from './${app.key}/app';`,
         )
         .join("\n");
 
-      const appEntries = normalizedApps
+      const appEntries = availableApps
         .map((app) => `  ${JSON.stringify(app.key)}: ${toPascal(app.key)}AppDefinition,`)
         .join("\n");
 
@@ -406,6 +499,24 @@ export type AppKey = keyof AppsDefinition;
 export type AppDefinition = AppsDefinition[AppKey];
 `,
       );
+
+      writeJsonFile(BLOK_PATH, {
+        generatedAt: new Date().toISOString(),
+        app: {
+          name: (packageData.name as string | undefined) ?? "unknown",
+          version: (packageData.version as string | undefined) ?? "0.0.0",
+          description: (packageData.description as string | undefined) ?? "",
+          startPage:
+            (packageData.homepage as string | undefined) ?? "/index.html",
+          type: (packageData.type as string | undefined) ?? "unknown",
+          scripts: {
+            dev: scripts.dev ?? "",
+            build: scripts.build ?? "",
+            preview: scripts.preview ?? "",
+          },
+        },
+        apps: blokApps,
+      });
 
       
     },

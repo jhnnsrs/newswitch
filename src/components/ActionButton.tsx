@@ -5,7 +5,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useBlockingLock } from "@/lib/rekuest/locks/store";
 import { useAction } from "@/lib/rekuest/task";
 import { type ActionDefinition } from "@/lib/rekuest/task/types";
 import { type AssignOptions } from "@/lib/rekuest/transport/types";
