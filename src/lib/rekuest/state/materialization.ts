@@ -1,6 +1,10 @@
-import { applyPatch } from 'fast-json-patch';
-import type { PatchSegment, SnapshotEnvelope } from '@/lib/rekuest/state/store';
-import type { RevisedStatesSnapshotMap } from '@/lib/rekuest/transport/types';
+import { applyPatch, type Operation } from 'fast-json-patch';
+import type { SnapshotEnvelope } from '@/lib/rekuest/state/store';
+import type {
+  RetrieverPatchEventResponse,
+  RevisedStatesSnapshotMap,
+  StateSegmentsResponse,
+} from '@/lib/rekuest/transport/types';
 
 export const DEFAULT_MAX_LOCAL_MATERIALIZATION_EVENTS = 250;
 export const DEFAULT_FORWARD_EVENT_WINDOW = 50;
@@ -12,7 +16,7 @@ export type CheckoutConfig = {
 
 export type LocalMaterializationPlan = {
   baseSnapshot: SnapshotEnvelope;
-  segments: PatchSegment[];
+  segments: StateSegmentsResponse[];
   eventCount: number;
 };
 
@@ -49,8 +53,36 @@ function hasAllStateKeys(snapshot: SnapshotEnvelope, stateKeys: string[]) {
   return stateKeys.every((stateKey) => availableKeys.has(stateKey));
 }
 
-function countSegmentEvents(segments: PatchSegment[]) {
-  return segments.reduce((count, segment) => count + segment.envelopes.length, 0);
+function countSegmentEvents(segments: StateSegmentsResponse[]) {
+  return segments.reduce((count, segment) => count + segment.patches.length, 0);
+}
+
+function normalizePatchOperations(patch: unknown): Operation[] {
+  if (Array.isArray(patch)) {
+    return patch as Operation[];
+  }
+
+  if (patch == null) {
+    return [];
+  }
+
+  return [patch as Operation];
+}
+
+function sortPatchEvents(left: RetrieverPatchEventResponse, right: RetrieverPatchEventResponse) {
+  if (left.global_current_rev !== right.global_current_rev) {
+    return left.global_current_rev - right.global_current_rev;
+  }
+
+  if (left.global_future_rev !== right.global_future_rev) {
+    return left.global_future_rev - right.global_future_rev;
+  }
+
+  if (left.current_rev !== right.current_rev) {
+    return left.current_rev - right.current_rev;
+  }
+
+  return new Date(left.timepoint).getTime() - new Date(right.timepoint).getTime();
 }
 
 /**
@@ -59,7 +91,7 @@ function countSegmentEvents(segments: PatchSegment[]) {
  */
 export function buildLocalMaterializationPlan(
   snapshots: SnapshotEnvelope[],
-  segments: PatchSegment[],
+  segments: StateSegmentsResponse[],
   stateKeys: string[],
   targetRevision: number,
   maxLocalMaterializationEvents: number,
@@ -79,17 +111,18 @@ export function buildLocalMaterializationPlan(
     .sort((left, right) => right.numericRevision - left.numericRevision);
 
   const sortedSegments = [...segments].sort(
-    (left, right) => left.from_global_rev - right.from_global_rev,
+    (left, right) => left.from_global_revision - right.from_global_revision,
   );
 
   for (const candidate of candidateSnapshots) {
     let cursor = candidate.numericRevision;
-    const collectedSegments: PatchSegment[] = [];
+    const collectedSegments: StateSegmentsResponse[] = [];
 
     while (cursor < targetRevision) {
       const nextSegment = sortedSegments.find(
         (segment) =>
-          segment.from_global_rev === cursor && segment.to_global_rev <= targetRevision,
+          segment.from_global_revision === cursor
+          && segment.to_global_revision <= targetRevision,
       );
 
       if (!nextSegment) {
@@ -97,7 +130,7 @@ export function buildLocalMaterializationPlan(
       }
 
       collectedSegments.push(nextSegment);
-      cursor = nextSegment.to_global_rev;
+      cursor = nextSegment.to_global_revision;
     }
 
     if (cursor !== targetRevision) {
@@ -121,28 +154,28 @@ export function buildLocalMaterializationPlan(
 
 export function materializeSnapshotMap(
   baseSnapshots: RevisedStatesSnapshotMap,
-  segments: PatchSegment[],
+  segments: StateSegmentsResponse[],
 ): RevisedStatesSnapshotMap {
   const materialized = deepClone(baseSnapshots);
 
   for (const segment of segments) {
-    for (const envelope of segment.envelopes) {
-      const currentState = materialized[envelope.state_name];
+    for (const patchEvent of [...segment.patches].sort(sortPatchEvents)) {
+      const currentState = materialized[patchEvent.state_id];
 
       if (!currentState) {
         throw new Error(
-          `Cannot materialize unknown state ${envelope.state_name} from cached history.`,
+          `Cannot materialize unknown state ${patchEvent.state_id} from cached history. `,
         );
       }
 
       const patchedValue = applyPatch(
         deepClone(currentState.value),
-        envelope.patches,
+        normalizePatchOperations(patchEvent.patch),
       ).newDocument;
 
-      materialized[envelope.state_name] = {
+      materialized[patchEvent.state_id] = {
         value: patchedValue,
-        revision: envelope.rev,
+        revision: patchEvent.future_rev,
       };
     }
   }

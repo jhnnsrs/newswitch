@@ -1,5 +1,4 @@
 import type { AppDefinition, AppKey, AppsDefinition } from '@/lib/rekuest/types';
-import type { PatchSegment } from '@/lib/rekuest/state/store';
 
 export type TaskStatus =
   | 'pending'
@@ -128,6 +127,24 @@ export interface StateCollectionResponse<T = unknown> {
   current_global_revision: number | null;
   count: number;
   states: Record<string, StateView<T>>;
+}
+
+export interface RetrieverPatchEventResponse {
+  timepoint: string;
+  state_id: string;
+  current_rev: number;
+  future_rev: number;
+  global_current_rev: number;
+  global_future_rev: number;
+  correlation_id: string;
+  session_id: string;
+  patch: unknown;
+}
+
+export interface StateSegmentsResponse {
+  from_global_revision: number;
+  to_global_revision: number;
+  patches: RetrieverPatchEventResponse[];
 }
 
 export interface LockView {
@@ -565,7 +582,7 @@ export interface TransportContextValue {
     fromGlobalRevisionId: string | number,
     toGlobalRevisionId: string | number,
     stateKeys: string[],
-  ) => Promise<PatchSegment[]>;
+  ) => Promise<StateSegmentsResponse>;
   fetchLocks: (appKey: AppKey) => Promise<Record<string, { task_id: string }>>;
   getApp: (appKey: AppKey) => AppDefinition;
   getEndpoints: (appKey: AppKey) => {

@@ -28,10 +28,7 @@ import {
 	type CheckoutStateOptions,
 	type StateContextValue,
 } from '@/lib/rekuest/state/state-context';
-import type {
-	Envelope as StateStoreEnvelope,
-	PatchSegment,
-} from '@/lib/rekuest/state/store';
+import type { Envelope as StateStoreEnvelope } from '@/lib/rekuest/state/store';
 import { useGlobalStateStoreRegistry } from '@/lib/rekuest/state/store';
 import { TaskContext } from '@/lib/rekuest/task/task-context';
 import {
@@ -54,6 +51,7 @@ import type {
 	LockView,
 	RevisedStatesSnapshotMap,
 	StateCollectionResponse,
+	StateSegmentsResponse,
 	Task,
 	TaskCollectionResponse,
 	TaskContextValue,
@@ -494,7 +492,7 @@ export function BundleProvider({ children }: BundleProviderProps) {
 			baseRevision: string | number;
 			baseSnapshot: RevisedStatesSnapshotMap;
 			materializedSnapshot: RevisedStatesSnapshotMap;
-			segments: PatchSegment[];
+			segments: StateSegmentsResponse[];
 		}> => {
 			const numericTargetRevision = toNumericGlobalRevision(globalRevisionId);
 
@@ -536,7 +534,7 @@ export function BundleProvider({ children }: BundleProviderProps) {
 			const materializedSnapshot = validateSnapshots(
 				appKey,
 				globalRevisionId,
-				materializeSnapshotMap(baseSnapshot, segments),
+				materializeSnapshotMap(baseSnapshot, [segments]),
 				definitions,
 			);
 
@@ -544,7 +542,7 @@ export function BundleProvider({ children }: BundleProviderProps) {
 				baseRevision,
 				baseSnapshot,
 				materializedSnapshot,
-				segments,
+				segments: [segments],
 			};
 		},
 		[definitions, fetchValidatedCheckoutSnapshot, transport],

@@ -4,6 +4,7 @@ import { applyPatch, type Operation } from 'fast-json-patch';
 import { createStore, type StateCreator, type StoreApi } from 'zustand/vanilla';
 import { devtools, subscribeWithSelector } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
+import type { StateSegmentsResponse } from '@/lib/rekuest/transport/types';
 
 export interface Envelope {
   state_name: string;
@@ -18,12 +19,6 @@ export interface Envelope {
 
 
 
-
-export interface PatchSegment {
-  from_global_rev: number;
-  to_global_rev: number;
-  patches: Envelope[];
-}
 
 export interface StateSnapshot {
   name: string;
@@ -45,7 +40,7 @@ export interface GlobalStateStore {
   latestPatches: Operation[],
 
   isLive: boolean;
-  segments: PatchSegment[];
+  segments: StateSegmentsResponse[];
   snapshots: SnapshotEnvelope[];
 
   loading: Record<string, boolean | undefined>;
@@ -62,7 +57,7 @@ export interface GlobalStateStore {
     globalRevision: string | number,
     snapshots: Record<string, { value: unknown; revision: number }>,
   ) => void;
-  upsertSegments: (segments: PatchSegment[]) => void;
+  upsertSegments: (segments: StateSegmentsResponse[]) => void;
   applyEnvelope: (envelope: Envelope) => void;
   setLoading: (key: string, loading: boolean) => void;
   setGlobalRevision: (revision: string | number | null) => void;
@@ -166,8 +161,8 @@ export const createGlobalStateStore = ({
             for (const segment of segments) {
               const existingIndex = nextSegments.findIndex(
                 (entry) =>
-                  entry.from_global_rev === segment.from_global_rev
-                  && entry.to_global_rev === segment.to_global_rev,
+                  entry.from_global_revision === segment.from_global_revision
+                  && entry.to_global_revision === segment.to_global_revision,
               );
 
               if (existingIndex >= 0) {
@@ -178,7 +173,7 @@ export const createGlobalStateStore = ({
             }
 
             nextSegments.sort(
-              (left, right) => left.from_global_rev - right.from_global_rev,
+              (left, right) => left.from_global_revision - right.from_global_revision,
             );
 
             state.segments = nextSegments;

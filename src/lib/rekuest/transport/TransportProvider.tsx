@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react';
 import { useCallback, useEffect, useMemo } from 'react';
-import type { PatchSegment } from '@/lib/rekuest/state/store';
 import type { AppKey, AppsDefinition } from '@/lib/rekuest/types';
 import {
   TransportSubscriptionManager,
@@ -15,6 +14,7 @@ import type {
   RevisedStatesSnapshotMap,
   SessionBoundaries,
   StateCollectionResponse,
+  StateSegmentsResponse,
   StateView,
   Task,
   TransportConfig,
@@ -366,7 +366,7 @@ export function TransportProvider({ children, config, apps }: TransportProviderP
       fromGlobalRevisionId: string | number,
       toGlobalRevisionId: string | number,
       stateKeys: string[],
-    ): Promise<PatchSegment[]> => {
+    ): Promise<StateSegmentsResponse> => {
       const { apiEndpoint } = getEndpoints(appKey);
       const url = new URL(`${apiEndpoint.replace(/\/$/, '')}/states/segments`);
       url.searchParams.set('from_global_revision_id', String(fromGlobalRevisionId));
@@ -383,7 +383,7 @@ export function TransportProvider({ children, config, apps }: TransportProviderP
         throw new Error(`Failed to fetch state segments: ${response.status} ${errorText}`);
       }
 
-      return (await response.json()) as PatchSegment;
+      return (await response.json()) as StateSegmentsResponse;
     },
     [getEndpoints],
   );
