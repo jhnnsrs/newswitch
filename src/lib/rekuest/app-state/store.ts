@@ -130,6 +130,7 @@ export function useAppStateStore<TSelected>(
 }
 
 export const selectAppIsLive = (store: AppStateStore) => store.isLive;
+export const selectAppIsReplayMode = (store: AppStateStore) => !store.isLive;
 export const selectAppIsConnected = (store: AppStateStore) => store.isConnected;
 export const selectAppIsReconnecting = (store: AppStateStore) => store.isReconnecting;
 export const selectAppIsUnconnectable = (store: AppStateStore) => store.isUnconnectable;

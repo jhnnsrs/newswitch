@@ -85,6 +85,22 @@ function sortPatchEvents(left: RetrieverPatchEventResponse, right: RetrieverPatc
   return new Date(left.timepoint).getTime() - new Date(right.timepoint).getTime();
 }
 
+function resolveMaterializedStateKey(
+  materialized: RevisedStatesSnapshotMap,
+  stateId: string,
+): string | null {
+  if (stateId in materialized) {
+    return stateId;
+  }
+
+  const normalizedStateId = stateId.trim().toLowerCase();
+  const matchedEntry = Object.keys(materialized).find(
+    (key) => key.trim().toLowerCase() === normalizedStateId,
+  );
+
+  return matchedEntry ?? null;
+}
+
 /**
  * Cached patch segments are stored as forward-only contiguous ranges. This
  * function finds a replay plan from a cached snapshot to the requested target.
@@ -160,9 +176,13 @@ export function materializeSnapshotMap(
 
   for (const segment of segments) {
     for (const patchEvent of [...segment.patches].sort(sortPatchEvents)) {
-      const currentState = materialized[patchEvent.state_id];
+      const resolvedStateKey = resolveMaterializedStateKey(
+        materialized,
+        patchEvent.state_id,
+      );
+      const currentState = resolvedStateKey ? materialized[resolvedStateKey] : undefined;
 
-      if (!currentState) {
+      if (!resolvedStateKey || !currentState) {
         throw new Error(
           `Cannot materialize unknown state ${patchEvent.state_id} from cached history. `,
         );
@@ -173,7 +193,7 @@ export function materializeSnapshotMap(
         normalizePatchOperations(patchEvent.patch),
       ).newDocument;
 
-      materialized[patchEvent.state_id] = {
+      materialized[resolvedStateKey] = {
         value: patchedValue,
         revision: patchEvent.future_rev,
       };

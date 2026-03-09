@@ -61,6 +61,7 @@ export interface CreateScopedProviderOptions<
   defaultScope?: string;
   debug?: boolean;
   stateUpdateIntervals?: ScopedProviderStateUpdateIntervals<TKey, TStates>;
+  latestPatchesBufferSize?: number;
   reconnect?: TransportConfig['reconnect'];
   pingInterval?: number;
 }
@@ -76,6 +77,7 @@ export interface ScopedProviderProps<
   transportConfig?: Partial<TransportConfig>;
   debug?: boolean;
   stateUpdateIntervals?: ScopedProviderStateUpdateIntervals<TKey, TStates>;
+  latestPatchesBufferSize?: number;
 }
 
 const DEFAULT_SCOPE = 'default';
@@ -235,6 +237,7 @@ export function createScopedProvider<
   reconnect,
   debug: debugOverride,
   stateUpdateIntervals: stateUpdateIntervalsOverride,
+  latestPatchesBufferSize: latestPatchesBufferSizeOverride,
   pingInterval,
 }: CreateScopedProviderOptions<TKey, TActions, TLocks, TStates>) {
   const normalizedDefinition = normalizeDefinition(definition);
@@ -247,6 +250,7 @@ export function createScopedProvider<
     instanceId: instanceIdOverride,
     debug = debugOverride,
     stateUpdateIntervals = stateUpdateIntervalsOverride,
+    latestPatchesBufferSize = latestPatchesBufferSizeOverride,
   }: ScopedProviderProps<TKey, TStates>) {
     const scopeKey = buildScopeKey(scope, revision);
     const resolvedConfig = buildTransportConfig(
@@ -264,7 +268,11 @@ export function createScopedProvider<
         apps={normalizedDefinition.apps as TransportProviderApps}
         config={resolvedConfig}
       >
-        <RekuestStoreProvider scope={scopeKey} debug={debug}>
+        <RekuestStoreProvider
+          scope={scopeKey}
+          debug={debug}
+          latestPatchesBufferSize={latestPatchesBufferSize}
+        >
           <BundleProvider>{children}</BundleProvider>
         </RekuestStoreProvider>
       </TransportProvider>

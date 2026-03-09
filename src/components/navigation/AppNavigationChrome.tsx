@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject, type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Activity, History, Loader2, PlaySquare, Radio } from "lucide-react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import { toast } from "sonner";
 import { buttonVariants, Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
@@ -11,12 +11,14 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useAppStateContext } from "@/lib/rekuest/app-state/app-state-context";
+import { selectLatestPatches, useGlobalStateStore } from "@/lib/rekuest/state/store";
 import { useStateContext } from "@/lib/rekuest/state";
 import { useTransport } from "@/lib/rekuest/transport";
 import type { AppKey } from "@/lib/rekuest/types";
 import { cn } from "@/lib/utils";
 
 const DEBOUNCE_MS = 220;
+const TIMELINE_CHANGE_LIMIT = 8;
 
 type OverlayMode = "live" | "timeline";
 
@@ -50,6 +52,68 @@ const formatTimelineLabel = (ms: number) =>
     minute: "2-digit",
     second: "2-digit",
   });
+
+const formatPatchPath = (path: string) => {
+  if (!path) {
+    return "state";
+  }
+
+  const normalizedPath = path.startsWith("/") ? path.slice(1) : path;
+  return normalizedPath || "state";
+};
+
+type AppLatestChangesProps = {
+  appKey: AppKey;
+};
+
+function AppLatestChanges({ appKey }: AppLatestChangesProps) {
+  const latestPatches = useGlobalStateStore(appKey, selectLatestPatches(TIMELINE_CHANGE_LIMIT));
+
+  const recentChanges = useMemo(() => {
+    const seen = new Set<string>();
+
+    return [...latestPatches]
+      .reverse()
+      .filter((patch) => {
+        const identity = `${patch.stateName}:${patch.path}:${patch.revision}`;
+
+        if (seen.has(identity)) {
+          return false;
+        }
+
+        seen.add(identity);
+        return true;
+      })
+      .slice(0, 4);
+  }, [latestPatches]);
+
+  if (recentChanges.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="rounded-2xl border border-border/50 bg-muted/25 p-3">
+      <div className="mb-2 flex items-center justify-between gap-2 text-xs">
+        <span className="font-semibold text-foreground">{appKey}</span>
+        <span className="text-muted-foreground">Latest changes</span>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {recentChanges.map((patch, index) => (
+          <div
+            key={`${patch.stateName}:${patch.path}:${patch.revision}:${index}`}
+            className="rounded-full border border-border/50 bg-background/70 px-2.5 py-1 text-[11px]"
+          >
+            <span className="font-medium text-foreground">{patch.stateName}</span>
+            <span className="mx-1 text-muted-foreground">/</span>
+            <span className="font-mono text-muted-foreground">{formatPatchPath(patch.path)}</span>
+            <span className="mx-1 text-muted-foreground">@</span>
+            <span className="font-mono text-foreground">{patch.revision}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 const clamp = (value: number, min: number, max: number) =>
   Math.min(max, Math.max(min, value));
@@ -159,6 +223,7 @@ function RouteNavigationBar() {
 }
 
 function TimelineFloater() {
+  const location = useLocation();
   const appStateContext = useAppStateContext();
   const transport = useTransport();
   const stateContext = useStateContext();
@@ -178,6 +243,8 @@ function TimelineFloater() {
   const [isReturningToLive, setIsReturningToLive] = useState(false);
   const lastCheckoutRevisionRef = useRef<Partial<Record<AppKey, number>>>({});
   const checkoutRef = useRef(stateContext.checkout);
+  const previousIsReplayRouteRef = useRef(false);
+  const isReplayRoute = location.pathname === "/replay";
 
   useEffect(() => {
     checkoutRef.current = stateContext.checkout;
@@ -217,6 +284,17 @@ function TimelineFloater() {
 
     return [toPercent(selectedMs, timelineBounds.startMs, timelineBounds.endMs)];
   }, [selectedMs, timelineBounds]);
+
+  const selectedRevisions = useMemo(() => {
+    if (mode !== "timeline" || selectedMs == null) {
+      return [] as Array<{ appKey: AppKey; revision: number }>;
+    }
+
+    return boundaries.map((boundary) => ({
+      appKey: boundary.appKey,
+      revision: toRevisionAtTime(boundary, selectedMs),
+    }));
+  }, [boundaries, mode, selectedMs]);
 
   useEffect(() => {
     if (appKeys.length === 0) {
@@ -273,6 +351,17 @@ function TimelineFloater() {
       setIsPreparingTimeline(false);
     }
   }, [appKeys, fetchActiveSessionBoundaries, goLiveAll, stopLiveAll]);
+
+  useEffect(() => {
+    const wasReplayRoute = previousIsReplayRouteRef.current;
+    previousIsReplayRouteRef.current = isReplayRoute;
+
+    if (!isReplayRoute || wasReplayRoute) {
+      return;
+    }
+
+    void loadTimeline();
+  }, [isReplayRoute, loadTimeline]);
 
   const returnToLive = useCallback(async () => {
     setIsReturningToLive(true);
@@ -357,18 +446,18 @@ function TimelineFloater() {
   );
 
   return (
-    <div className="pointer-events-none fixed inset-x-4 bottom-4 z-50 flex justify-end">
+    <div className="pointer-events-none fixed inset-x-4 bottom-4  z-50 flex justify-end">
       <motion.div
         layout
         transition={{ type: "spring", stiffness: 220, damping: 26 }}
         className={cn(
-          "pointer-events-auto overflow-hidden border border-border/60 bg-background/90 shadow-2xl backdrop-blur-xl dark flex-row-reverse flex items-center gap-4 p-3",
+          "pointer-events-auto overflow-hidden border border-border/60 bg-background/90 shadow-2xl backdrop-blur-xl dark flex-row-reverse flex items-center gap-4 p-3 rounded-full",
           mode === "timeline" ? "w-full rounded-3xl" : "w-auto rounded-full",
         )}
       >
-        <div className="flex items-center gap-2 p-2">
+        <div className="flex items-center gap-2 p-2 w-full">
           <Button
-            size="sm"
+            size="icon"
             variant={mode === "live" ? "default" : "outline"}
             onClick={() => {
               if (mode === "timeline") {
@@ -377,16 +466,11 @@ function TimelineFloater() {
             }}
             disabled={mode === "live" || isReturningToLive}
           >
-            {isReturningToLive ? (
-              <Loader2 className="mr-2 size-4 animate-spin" />
-            ) : (
-              <Radio className="mr-2 size-4" />
-            )}
-            Back to live
+            <Radio className="mr-2 size-4" />
           </Button>
 
           <Button
-            size="sm"
+            size="icon"
             variant={mode === "timeline" ? "default" : "outline"}
             onClick={() => {
               if (mode !== "timeline") {
@@ -400,7 +484,6 @@ function TimelineFloater() {
             ) : (
               <History className="mr-2 size-4" />
             )}
-            Timeline
           </Button>
 
           <AnimatePresence initial={false}>
@@ -411,7 +494,7 @@ function TimelineFloater() {
                 animate={{ opacity: 1, width: "100%" }}
                 exit={{ opacity: 0, width: 0 }}
                 transition={{ type: "spring", stiffness: 220, damping: 28 }}
-                className="min-w-0 flex-1"
+                className="@container min-w-0 flex-1"
               >
                 <div className="flex min-w-0 flex-col gap-3 px-3 py-2">
                   <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground">
@@ -421,6 +504,19 @@ function TimelineFloater() {
                       <span>{formatTimelineLabel(selectedMs)}</span>
                     </div>
                     <div className="font-medium">{formatTimelineLabel(timelineBounds.endMs)}</div>
+                  </div>
+
+                  <div className="flex flex-wrap justify-center gap-2 text-[11px] text-muted-foreground">
+                    {selectedRevisions.map(({ appKey, revision }) => (
+                      <div
+                        key={`${appKey}:${revision}`}
+                        className="rounded-full border border-border/50 bg-muted/30 px-2.5 py-1"
+                      >
+                        <span className="font-semibold text-foreground">{appKey}</span>
+                        <span className="mx-1">rev</span>
+                        <span className="font-mono text-foreground">{revision}</span>
+                      </div>
+                    ))}
                   </div>
 
                   <Slider
@@ -447,6 +543,7 @@ function TimelineFloater() {
                       </div>
                     ))}
                   </div>
+
                 </div>
               </motion.div>
             ) : null}
@@ -460,7 +557,6 @@ function TimelineFloater() {
 export function AppNavigationChrome({ children }: { children: ReactNode }) {
   return (
     <>
-      <RouteNavigationBar />
       <TimelineFloater />
       {children}
     </>

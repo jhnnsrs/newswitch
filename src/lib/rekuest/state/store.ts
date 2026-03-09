@@ -31,13 +31,20 @@ export interface SnapshotEnvelope {
   state_snapshots: StateSnapshot[];
 }
 
+export interface LatestPatchEntry {
+  stateName: string;
+  path: string;
+  revision: number;
+  ts: number;
+}
+
 export interface GlobalStateStore {
 
 
   states: Record<string, unknown>;
   stateRevisions: Record<string, number | undefined>;
   globalRevision: string | number | null;
-  latestPatches: Operation[],
+  latestPatches: LatestPatchEntry[],
 
   isLive: boolean;
   segments: StateSegmentsResponse[];
@@ -52,6 +59,11 @@ export interface GlobalStateStore {
   setStateSnapshot: (key: string, value: unknown, revision: number) => void;
   setStateSnapshots: (
     snapshots: Record<string, { value: unknown; revision: number }>,
+    trustedRevision?: string | number | null,
+  ) => void;
+  replaceStateSnapshots: (
+    snapshots: Record<string, { value: unknown; revision: number }>,
+    trustedRevision?: string | number | null,
   ) => void;
   cacheSnapshot: (
     globalRevision: string | number,
@@ -59,6 +71,7 @@ export interface GlobalStateStore {
   ) => void;
   upsertSegments: (segments: StateSegmentsResponse[]) => void;
   applyEnvelope: (envelope: Envelope) => void;
+  replaceLatestPatches: (patches: LatestPatchEntry[]) => void;
   setLoading: (key: string, loading: boolean) => void;
   setGlobalRevision: (revision: string | number | null) => void;
   setError: (key: string, error: Error | null) => void;
@@ -70,12 +83,23 @@ export interface GlobalStateStore {
 interface GlobalStateStoreOptions {
   debug?: boolean;
   devtoolsName?: string;
+  latestPatchesBufferSize?: number;
 }
 
 export const createGlobalStateStore = ({
   debug = false,
   devtoolsName = 'RekuestStateStore',
+  latestPatchesBufferSize = 100,
 }: GlobalStateStoreOptions = {}) => {
+  const toTrustedRevision = (revision: string | number | null | undefined) => {
+    if (revision === null || revision === undefined) {
+      return null;
+    }
+
+    const numericRevision = typeof revision === 'number' ? revision : Number(revision);
+    return Number.isFinite(numericRevision) ? numericRevision : null;
+  };
+
   const initializer: StateCreator<
     GlobalStateStore,
     [],
@@ -117,13 +141,33 @@ export const createGlobalStateStore = ({
           });
         },
 
-        setStateSnapshots: (snapshots) => {
+        setStateSnapshots: (snapshots, trustedRevision) => {
           set((state) => {
+            const normalizedTrustedRevision = toTrustedRevision(trustedRevision);
             for (const [key, snapshot] of Object.entries(snapshots)) {
               state.states[key] = snapshot.value;
               state.errors[key] = null;
-              state.stateRevisions[key] = snapshot.revision;
+              state.stateRevisions[key] = normalizedTrustedRevision ?? snapshot.revision;
             }
+          });
+        },
+
+        replaceStateSnapshots: (snapshots, trustedRevision) => {
+          set((state) => {
+            const normalizedTrustedRevision = toTrustedRevision(trustedRevision);
+
+            state.states = Object.fromEntries(
+              Object.entries(snapshots).map(([key, snapshot]) => [key, snapshot.value]),
+            );
+            state.errors = Object.fromEntries(
+              Object.keys(snapshots).map((key) => [key, null]),
+            );
+            state.stateRevisions = Object.fromEntries(
+              Object.entries(snapshots).map(([key, snapshot]) => [
+                key,
+                normalizedTrustedRevision ?? snapshot.revision,
+              ]),
+            );
           });
         },
 
@@ -195,7 +239,17 @@ export const createGlobalStateStore = ({
           }
 
           set((state) => {
-            state.latestPatches.push(...operations)
+            const nextEntries = operations.map((operation) => ({
+              stateName: key,
+              path: operation.path,
+              revision: envelope.rev,
+              ts: envelope.ts,
+            }));
+
+            state.latestPatches = [
+              ...state.latestPatches,
+              ...nextEntries,
+            ].slice(-latestPatchesBufferSize);
           });
 
           try {
@@ -210,6 +264,12 @@ export const createGlobalStateStore = ({
           } catch (err) {
             console.error(`[StateStore] Failed to apply patch to ${key}:`, err);
           }
+        },
+
+        replaceLatestPatches: (patches) => {
+          set((state) => {
+            state.latestPatches = patches.slice(-latestPatchesBufferSize);
+          });
         },
 
         setLoading: (key, loading) => {
@@ -263,6 +323,7 @@ export const createGlobalStateStore = ({
 
 interface GlobalStateStoreRegistryOptions {
   debug?: boolean;
+  latestPatchesBufferSize?: number;
 }
 
 export interface GlobalStateStoreRegistry {
@@ -272,6 +333,7 @@ export interface GlobalStateStoreRegistry {
 
 export const createGlobalStateStoreRegistry = ({
   debug = false,
+  latestPatchesBufferSize = 100,
 }: GlobalStateStoreRegistryOptions = {}): GlobalStateStoreRegistry => {
   const stores = new Map<string, StoreApi<GlobalStateStore>>();
 
@@ -284,6 +346,7 @@ export const createGlobalStateStoreRegistry = ({
     const nextStore = createGlobalStateStore({
       debug,
       devtoolsName: `RekuestStateStore/${appKey}`,
+      latestPatchesBufferSize,
     });
     stores.set(appKey, nextStore);
     return nextStore;
@@ -343,6 +406,10 @@ export const selectLoading = (key: string) => (store: GlobalStateStore) =>
 
 export const selectError = (key: string) => (store: GlobalStateStore) =>
   store.errors[key] ?? null;
+
+export const selectLatestPatches = (limit?: number) =>
+  (store: GlobalStateStore): LatestPatchEntry[] =>
+    limit == null ? store.latestPatches : store.latestPatches.slice(-limit);
 
 export const selectPath = <T = unknown>(path: string) => {
   const parts = path.split('.');

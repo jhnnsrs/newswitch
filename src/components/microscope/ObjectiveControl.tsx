@@ -67,7 +67,7 @@ export function ObjectiveControl() {
     <div className="space-y-4">
       {/* Current Objective Display */}
       {currentLens && (
-        <div className="flex items-center gap-2">
+        <div className="@container flex items-center gap-2">
           <button
             onClick={handlePrevious}
             disabled={
@@ -78,8 +78,8 @@ export function ObjectiveControl() {
             <ChevronLeft className="h-4 w-4" />
           </button>
 
-          <div className="flex-1 p-4 bg-gradient-to-r from-primary/10 to-primary/5 rounded-lg border border-primary/20">
-            <div className="flex items-center gap-4">
+          <div className="min-w-0 flex-1 rounded-lg border border-primary/20 bg-gradient-to-r from-primary/10 to-primary/5 p-4">
+            <div className="flex flex-col gap-3 @[320px]:flex-row @[320px]:items-center">
               <div className="h-14 w-14 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
                 <span className="text-xl font-bold text-primary">
                   {currentLens.magnification}×
@@ -89,10 +89,10 @@ export function ObjectiveControl() {
                 <h3 className="text-base font-semibold truncate">
                   {currentLens.name}
                 </h3>
-                <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                <div className="mt-1 grid grid-cols-1 gap-x-3 gap-y-1 text-xs text-muted-foreground @[360px]:grid-cols-3">
                   <span>NA {currentLens.numerical_aperture.toFixed(2)}</span>
                   <span>WD {currentLens.working_distance}mm</span>
-                  <span>Bin {currentLens.binning_factor}×</span>
+                  <span className="hidden @[360px]:inline">Bin {currentLens.binning_factor}×</span>
                 </div>
               </div>
             </div>
@@ -126,7 +126,7 @@ export function ObjectiveControl() {
                       onClick={() => handleSelectObjective(lens.slot)}
                       disabled={isLoading}
                       className={cn(
-                        "flex flex-col items-center justify-center min-w-[4rem] p-3 rounded-lg border transition-all",
+                        "relative flex min-w-[4rem] max-w-[5.5rem] flex-col items-center justify-center overflow-hidden rounded-lg border p-3 text-center transition-all",
                         isActive
                           ? "bg-primary text-primary-foreground border-primary"
                           : isSelected

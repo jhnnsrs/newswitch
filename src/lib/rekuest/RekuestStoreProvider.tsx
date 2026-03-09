@@ -33,31 +33,39 @@ export interface RekuestStoreProviderProps {
   children: ReactNode;
   scope?: string;
   debug?: boolean;
+  latestPatchesBufferSize?: number;
 }
 
 const scopedBundles = new Map<string, RekuestStoreBundle>();
 
-const createRekuestStoreBundle = (debug = false): RekuestStoreBundle => {
+const createRekuestStoreBundle = (
+  debug = false,
+  latestPatchesBufferSize = 100,
+): RekuestStoreBundle => {
   const transportStore = createTransportStore();
 
   return {
     appStateStore: createAppStateStoreRegistry({ debug }),
-    globalStateStore: createGlobalStateStoreRegistry({ debug }),
+    globalStateStore: createGlobalStateStoreRegistry({ debug, latestPatchesBufferSize }),
     taskStore: createTaskStoreRegistry(transportStore, { debug }),
     transportStore,
     lockStore: createLockStoreRegistry({ debug }),
   };
 };
 
-const getScopedBundle = (scope: string, debug = false): RekuestStoreBundle => {
-  const bundleKey = `${scope}::debug-${debug ? 'on' : 'off'}`;
+const getScopedBundle = (
+  scope: string,
+  debug = false,
+  latestPatchesBufferSize = 100,
+): RekuestStoreBundle => {
+  const bundleKey = `${scope}::debug-${debug ? 'on' : 'off'}::patches-${latestPatchesBufferSize}`;
   const existingBundle = scopedBundles.get(bundleKey);
 
   if (existingBundle) {
     return existingBundle;
   }
 
-  const nextBundle = createRekuestStoreBundle(debug);
+  const nextBundle = createRekuestStoreBundle(debug, latestPatchesBufferSize);
   scopedBundles.set(bundleKey, nextBundle);
   return nextBundle;
 };
@@ -66,8 +74,12 @@ export function RekuestStoreProvider({
   children,
   scope = 'default',
   debug = false,
+  latestPatchesBufferSize = 100,
 }: RekuestStoreProviderProps) {
-  const stores = useMemo(() => getScopedBundle(scope, debug), [debug, scope]);
+  const stores = useMemo(
+    () => getScopedBundle(scope, debug, latestPatchesBufferSize),
+    [debug, latestPatchesBufferSize, scope],
+  );
 
   return (
     <AppStateStoreContext.Provider value={stores.appStateStore}>

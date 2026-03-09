@@ -28,7 +28,10 @@ import {
 	type CheckoutStateOptions,
 	type StateContextValue,
 } from '@/lib/rekuest/state/state-context';
-import type { Envelope as StateStoreEnvelope } from '@/lib/rekuest/state/store';
+import type {
+	Envelope as StateStoreEnvelope,
+	LatestPatchEntry,
+} from '@/lib/rekuest/state/store';
 import { useGlobalStateStoreRegistry } from '@/lib/rekuest/state/store';
 import { TaskContext } from '@/lib/rekuest/task/task-context';
 import {
@@ -49,6 +52,7 @@ import type {
 	AssignOptions,
 	LockCollectionResponse,
 	LockView,
+	RetrieverPatchEventResponse,
 	RevisedStatesSnapshotMap,
 	StateCollectionResponse,
 	StateSegmentsResponse,
@@ -185,6 +189,47 @@ function normalizeLockCollection(payload: LockCollectionResponse): Record<string
 	);
 }
 
+function getAppStateKeys(
+	definitions: StateContextValue['definitions'],
+	appKey: AppKey,
+): string[] {
+	return Object.values(definitions)
+		.filter((definition) => definition.appKey === appKey)
+		.map((definition) => definition.key);
+}
+
+function toLatestPatchEntriesFromEvents(patchEvents: RetrieverPatchEventResponse[]): LatestPatchEntry[] {
+	return patchEvents.flatMap((patchEvent) => {
+		const patchOperations = Array.isArray(patchEvent.patch)
+			? patchEvent.patch
+			: patchEvent.patch == null
+				? []
+				: [patchEvent.patch];
+
+		return patchOperations.map((operation) => ({
+			stateName: patchEvent.state_id,
+			path:
+				typeof operation === 'object'
+				&& operation !== null
+				&& 'path' in operation
+				&& typeof operation.path === 'string'
+					? operation.path
+					: '',
+			revision: patchEvent.global_future_rev,
+			ts: new Date(patchEvent.timepoint).getTime(),
+		}));
+	});
+}
+
+function toLatestPatchEntriesFromSegments(segments: StateSegmentsResponse[]): LatestPatchEntry[] {
+	return segments
+		.flatMap((segment) =>
+			toLatestPatchEntriesFromEvents(segment.patches),
+		)
+		.flat()
+		.sort((left, right) => left.ts - right.ts);
+}
+
 export function BundleProvider({ children }: BundleProviderProps) {
 	const transport = useTransport();
 	const appStateStoreRegistry = useAppStateStoreRegistry();
@@ -243,6 +288,8 @@ export function BundleProvider({ children }: BundleProviderProps) {
 
 	const ensureAppLiveSubscription = useCallback(
 		(appKey: AppKey) => {
+			const appStateKeys = getAppStateKeys(definitions, appKey);
+
 			if (!subscriptionsRef.current.has(appKey)) {
 				subscriptionsRef.current.set(
 					appKey,
@@ -263,7 +310,10 @@ export function BundleProvider({ children }: BundleProviderProps) {
 										definitions,
 									);
 
-									stateStore.setStateSnapshots(snapshotMap);
+									stateStore.setStateSnapshots(
+										snapshotMap,
+										initMessage.states.current_global_revision,
+									);
 									if (initMessage.states.current_global_revision != null) {
 										stateStore.setGlobalRevision(initMessage.states.current_global_revision);
 										stateStore.cacheSnapshot(
@@ -271,6 +321,11 @@ export function BundleProvider({ children }: BundleProviderProps) {
 											snapshotMap,
 										);
 									}
+									stateStore.replaceLatestPatches([]);
+
+									appStateKeys.forEach((stateKey) => {
+										stateStore.setLoading(stateKey, false);
+									});
 
 									lockStore.replaceLocks(normalizeLockCollection(initMessage.locks));
 									taskStore.upsertTasks(normalizeTaskCollection(appKey, initMessage.tasks));
@@ -413,19 +468,32 @@ export function BundleProvider({ children }: BundleProviderProps) {
 
 	const startLive = useCallback(
 		async (appKey: AppKey) => {
+			const stateStore = globalStateStoreRegistry.getStoreApi(appKey).getState();
+			const appStateKeys = getAppStateKeys(definitions, appKey);
 			const nextCount = getLiveCount(appKey) + 1;
 			liveCountsRef.current.set(appKey, nextCount);
 			appStateStoreRegistry.getStoreApi(appKey).getState().setIsLive(true);
-			globalStateStoreRegistry.getStoreApi(appKey).getState().setIsLive(true);
-
-			if (nextCount > 1) {
-				ensureAppLiveSubscription(appKey);
-				return;
-			}
+			stateStore.setIsLive(true);
+			appStateKeys.forEach((stateKey) => {
+				stateStore.setLoading(stateKey, true);
+				stateStore.setError(stateKey, null);
+			});
 
 			ensureAppLiveSubscription(appKey);
+			transport.reconnectSocket(appKey);
+
+			if (nextCount > 1) {
+				return;
+			}
 		},
-		[appStateStoreRegistry, ensureAppLiveSubscription, getLiveCount, globalStateStoreRegistry],
+		[
+			appStateStoreRegistry,
+			definitions,
+			ensureAppLiveSubscription,
+			getLiveCount,
+			globalStateStoreRegistry,
+			transport,
+		],
 	);
 
 	const stopAllLiveSync = useCallback(
@@ -451,9 +519,20 @@ export function BundleProvider({ children }: BundleProviderProps) {
 			appKey: string,
 			globalRevisionId: string | number,
 			stateKeys: string[],
-		): Promise<RevisedStatesSnapshotMap> => {
-			const snapshot = await transport.fetchStateCheckout(appKey, globalRevisionId, stateKeys);
-			return validateSnapshots(appKey, globalRevisionId, snapshot, definitions);
+		): Promise<{
+			snapshotMap: RevisedStatesSnapshotMap;
+			recentPatches: LatestPatchEntry[];
+		}> => {
+			const response = await transport.fetchStateCheckout(appKey, globalRevisionId, stateKeys);
+			return {
+				snapshotMap: validateSnapshots(
+					appKey,
+					response.current_global_revision ?? globalRevisionId,
+					toSnapshotMapFromCollection(response, stateKeys),
+					definitions,
+				),
+				recentPatches: toLatestPatchEntriesFromEvents(response.recent_patches),
+			};
 		},
 		[definitions, transport],
 	);
@@ -482,6 +561,31 @@ export function BundleProvider({ children }: BundleProviderProps) {
 		[definitions, transport],
 	);
 
+	const materializeValidatedSnapshot = useCallback(
+		(
+			appKey: string,
+			globalRevisionId: string | number,
+			baseSnapshot: RevisedStatesSnapshotMap,
+			segments: StateSegmentsResponse[],
+		): RevisedStatesSnapshotMap | null => {
+			try {
+				return validateSnapshots(
+					appKey,
+					globalRevisionId,
+					materializeSnapshotMap(baseSnapshot, segments),
+					definitions,
+				);
+			} catch (error) {
+				console.warn(
+					`[BundleProvider] Falling back to direct checkout for ${appKey}@${String(globalRevisionId)} after local materialization failed.`,
+					error,
+				);
+				return null;
+			}
+		},
+		[definitions],
+	);
+
 	const fetchSnapshotWithForwardWindow = useCallback(
 		async (
 			appKey: string,
@@ -493,11 +597,12 @@ export function BundleProvider({ children }: BundleProviderProps) {
 			baseSnapshot: RevisedStatesSnapshotMap;
 			materializedSnapshot: RevisedStatesSnapshotMap;
 			segments: StateSegmentsResponse[];
+			recentPatches: LatestPatchEntry[];
 		}> => {
 			const numericTargetRevision = toNumericGlobalRevision(globalRevisionId);
 
 			if (numericTargetRevision === null) {
-				const directSnapshot = await fetchValidatedCheckoutSnapshot(
+				const directCheckout = await fetchValidatedCheckoutSnapshot(
 					appKey,
 					globalRevisionId,
 					stateKeys,
@@ -505,15 +610,17 @@ export function BundleProvider({ children }: BundleProviderProps) {
 
 				return {
 					baseRevision: globalRevisionId,
-					baseSnapshot: directSnapshot,
-					materializedSnapshot: directSnapshot,
+					baseSnapshot: directCheckout.snapshotMap,
+					materializedSnapshot: directCheckout.snapshotMap,
 					segments: [],
+					recentPatches: directCheckout.recentPatches,
 				};
 			}
 
 			const forwardEventWindow = Math.max(0, config.forwardEventWindow);
 			const baseRevision = Math.max(0, numericTargetRevision - forwardEventWindow);
-			const baseSnapshot = await fetchValidatedCheckoutSnapshot(appKey, baseRevision, stateKeys);
+			const baseCheckout = await fetchValidatedCheckoutSnapshot(appKey, baseRevision, stateKeys);
+			const baseSnapshot = baseCheckout.snapshotMap;
 
 			if (baseRevision === numericTargetRevision) {
 				return {
@@ -521,6 +628,7 @@ export function BundleProvider({ children }: BundleProviderProps) {
 					baseSnapshot,
 					materializedSnapshot: baseSnapshot,
 					segments: [],
+					recentPatches: baseCheckout.recentPatches,
 				};
 			}
 
@@ -531,21 +639,38 @@ export function BundleProvider({ children }: BundleProviderProps) {
 				stateKeys,
 			);
 
-			const materializedSnapshot = validateSnapshots(
+			const materializedSnapshot = materializeValidatedSnapshot(
 				appKey,
 				globalRevisionId,
-				materializeSnapshotMap(baseSnapshot, [segments]),
-				definitions,
+				baseSnapshot,
+				[segments],
 			);
+
+			if (!materializedSnapshot) {
+				const directCheckout = await fetchValidatedCheckoutSnapshot(
+					appKey,
+					globalRevisionId,
+					stateKeys,
+				);
+
+				return {
+					baseRevision: globalRevisionId,
+					baseSnapshot: directCheckout.snapshotMap,
+					materializedSnapshot: directCheckout.snapshotMap,
+					segments: [],
+					recentPatches: directCheckout.recentPatches,
+				};
+			}
 
 			return {
 				baseRevision,
 				baseSnapshot,
 				materializedSnapshot,
 				segments: [segments],
+				recentPatches: toLatestPatchEntriesFromSegments([segments]),
 			};
 		},
-		[definitions, fetchValidatedCheckoutSnapshot, transport],
+		[fetchValidatedCheckoutSnapshot, materializeValidatedSnapshot, transport],
 	);
 
 	const refetchState = useCallback(
@@ -625,7 +750,8 @@ export function BundleProvider({ children }: BundleProviderProps) {
 			try {
 				const { snapshotMap, globalRevision } = await fetchValidatedStateCollection(appKey, stateKeys);
 				const stateStore = storeApi.getState();
-				stateStore.setStateSnapshots(snapshotMap);
+				stateStore.setStateSnapshots(snapshotMap, globalRevision);
+				stateStore.replaceLatestPatches([]);
 				if (globalRevision != null) {
 					stateStore.setGlobalRevision(globalRevision);
 					stateStore.cacheSnapshot(globalRevision, snapshotMap);
@@ -704,31 +830,48 @@ export function BundleProvider({ children }: BundleProviderProps) {
 							);
 
 				const checkoutResult = localPlan
-					? {
-							baseRevision: localPlan.baseSnapshot.revision,
-							baseSnapshot: toSnapshotMap(localPlan.baseSnapshot),
-							materializedSnapshot: validateSnapshots(
+					? (() => {
+							const baseSnapshot = toSnapshotMap(localPlan.baseSnapshot);
+							const materializedSnapshot = materializeValidatedSnapshot(
 								appKey,
 								globalRevisionId,
-								materializeSnapshotMap(
-									toSnapshotMap(localPlan.baseSnapshot),
-									localPlan.segments,
-								),
-								definitions,
-							),
-							segments: localPlan.segments,
-						}
-					: await fetchSnapshotWithForwardWindow(appKey, globalRevisionId, stateKeys, checkoutConfig);
+								baseSnapshot,
+								localPlan.segments,
+							);
+
+							if (!materializedSnapshot) {
+								return null;
+							}
+
+							return {
+								baseRevision: localPlan.baseSnapshot.revision,
+								baseSnapshot,
+								materializedSnapshot,
+								segments: localPlan.segments,
+								recentPatches: toLatestPatchEntriesFromSegments(localPlan.segments),
+							};
+					  })()
+					: null;
+
+				const resolvedCheckoutResult = checkoutResult
+					?? await fetchSnapshotWithForwardWindow(appKey, globalRevisionId, stateKeys, checkoutConfig);
 
 				const stateStore = storeApi.getState();
-				stateStore.setStateSnapshots(checkoutResult.materializedSnapshot);
-				stateStore.cacheSnapshot(checkoutResult.baseRevision, checkoutResult.baseSnapshot);
-				stateStore.cacheSnapshot(globalRevisionId, checkoutResult.materializedSnapshot);
-				if (checkoutResult.segments.length > 0) {
-					stateStore.upsertSegments(checkoutResult.segments);
+				stateStore.replaceStateSnapshots(
+					resolvedCheckoutResult.materializedSnapshot,
+					globalRevisionId,
+				);
+				stateStore.setGlobalRevision(globalRevisionId);
+				stateStore.replaceLatestPatches(
+					resolvedCheckoutResult.recentPatches,
+				);
+				stateStore.cacheSnapshot(resolvedCheckoutResult.baseRevision, resolvedCheckoutResult.baseSnapshot);
+				stateStore.cacheSnapshot(globalRevisionId, resolvedCheckoutResult.materializedSnapshot);
+				if (resolvedCheckoutResult.segments.length > 0) {
+					stateStore.upsertSegments(resolvedCheckoutResult.segments);
 				}
 
-				return checkoutResult.materializedSnapshot;
+				return resolvedCheckoutResult.materializedSnapshot;
 			} catch (error) {
 				const normalizedError = normalizeError(error, `${appKey}@${String(globalRevisionId)}`);
 				stateKeys.forEach((key) => {
@@ -741,7 +884,7 @@ export function BundleProvider({ children }: BundleProviderProps) {
 				});
 			}
 		},
-		[definitions, fetchSnapshotWithForwardWindow, globalStateStoreRegistry, resolveCheckoutConfig, stopAllLiveSync],
+		[definitions, fetchSnapshotWithForwardWindow, globalStateStoreRegistry, materializeValidatedSnapshot, resolveCheckoutConfig, stopAllLiveSync],
 	);
 
 	const assign: TaskContextValue['assign'] = useCallback(

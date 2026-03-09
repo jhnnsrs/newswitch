@@ -31,7 +31,7 @@ export const useState = <
   definition: StateDefinition<T, TKey>,
   options: UseStateOptions<T, U> = {},
 ): UseStateResult<U> => {
-  const { subscribe = false, fetchOnMount = true, selector } = options;
+  const { subscribe = false, fetchOnMount = false, selector } = options;
   const stateContext = useStateContext();
   void subscribe;
 
@@ -56,5 +56,11 @@ export const useState = <
     }
   }, [definition, fetchOnMount, stateContext]);
 
-  return { data, loading, error, refetch, revision };
+  return {
+    data,
+    loading,
+    error,
+    refetch,
+    revision,
+  };
 };

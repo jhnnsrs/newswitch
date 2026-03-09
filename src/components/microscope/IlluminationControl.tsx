@@ -13,7 +13,6 @@ import {
 import { useIlluminationState } from "@/apps/default/hooks/states";
 import { cn } from "@/lib/utils";
 import { Power, Waves } from "lucide-react";
-import { useState } from "react";
 import { OptimisticSlider } from "../ui/optimistic_slider";
 import { ResponsiveGrid } from "../ui/responsive-grid";
 
@@ -61,19 +60,10 @@ export function IlluminationControl() {
   const { call: setIntensity, isLoading: isSettingIntensity } =
     useSetIlluminationIntensity();
 
-  const [localIntensities, setLocalIntensities] = useState<
-    Record<number, number>
-  >({});
-
   // Get illuminations from state
   const illuminations = illuminationState?.illuminations ?? [];
   const activeIlluminations = illuminations.filter((i) => i.is_active);
   const activeSlots = new Set(activeIlluminations.map((i) => i.slot));
-
-  const getActiveIntensity = (slot: number): number => {
-    const source = illuminations.find((i) => i.slot === slot);
-    return source?.is_active ? source.intensity : 0;
-  };
 
   const handleToggleSource = (
     channel: number,
@@ -102,15 +92,15 @@ export function IlluminationControl() {
             <div
               key={source.slot}
               className={cn(
-                "p-3 rounded-lg border transition-all",
+                "@container min-w-0 overflow-hidden rounded-lg border p-3 transition-all",
                 isActive
                   ? "bg-primary/5 border-primary/30"
                   : "bg-muted/30 border-transparent",
               )}
             >
               {/* Source Header */}
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
+              <div className="mb-2 flex flex-col gap-2 @[280px]:flex-row @[280px]:items-start @[280px]:justify-between">
+                <div className="flex min-w-0 items-center gap-2">
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger>
@@ -127,20 +117,20 @@ export function IlluminationControl() {
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
-                  <span className="text-sm font-medium">
+                  <span className="truncate text-sm font-medium">
                     {getKindLabel(source.kind)}
                   </span>
                   <span
                     className={cn(
-                      "text-xs font-mono",
+                      "hidden text-xs font-mono @[320px]:inline",
                       getWavelengthTextColor(source.wavelength),
                     )}
                   >
                     {source.wavelength}nm
                   </span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground font-mono w-8 text-right">
+                <div className="flex items-center justify-between gap-2 @[280px]:justify-end">
+                  <span className="w-8 text-right font-mono text-xs text-muted-foreground">
                     {isActive ? currentIntensity : 0}%
                   </span>
                   <Switch
@@ -158,7 +148,7 @@ export function IlluminationControl() {
               </div>
 
               {/* Intensity Slider */}
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 overflow-hidden">
                 <Waves className="h-3 w-3 text-muted-foreground" />
                 <OptimisticSlider
                   value={[currentIntensity]}
@@ -174,12 +164,12 @@ export function IlluminationControl() {
               </div>
 
               {/* Channel indicator */}
-              <div className="flex items-center gap-2 mt-2">
+              <div className="mt-2 grid grid-cols-2 gap-x-2 gap-y-1 text-xs text-muted-foreground @[240px]:flex @[240px]:items-center">
                 <span className="text-xs text-muted-foreground">
                   Ch {source.channel}
                 </span>
-                <span className="text-xs text-muted-foreground">•</span>
-                <span className="text-xs text-muted-foreground">
+                <span className="hidden text-xs text-muted-foreground @[240px]:inline">•</span>
+                <span className="hidden text-xs text-muted-foreground @[300px]:inline">
                   Slot {source.slot}
                 </span>
               </div>

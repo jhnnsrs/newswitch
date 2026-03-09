@@ -43,6 +43,34 @@ export interface TaskCollectionResponse {
   tasks: Record<string, TaskView>;
 }
 
+export interface RetrieverSessionInfoResponse {
+  current_session: string | null;
+}
+
+export interface RetrieverTaskBoundaryResponse {
+  correlation_id: string;
+  start_global_revision: number;
+  end_global_revision: number;
+  start_time: string;
+  end_time: string;
+}
+
+export interface RetrieverSessionBoundaryResponse {
+  session_id: string;
+  start_global_revision: number;
+  end_global_revision: number;
+  start_time: string;
+  end_time: string;
+}
+
+export interface RetrieverSnapshotResponse<T = unknown> {
+  timepoint: string;
+  data: T;
+  revision: number;
+  global_revision: number | null;
+  session_id: string;
+}
+
 export interface AssignPolicy {
   maxRetries?: number;
   timeout?: number;
@@ -127,6 +155,15 @@ export interface StateCollectionResponse<T = unknown> {
   current_global_revision: number | null;
   count: number;
   states: Record<string, StateView<T>>;
+  recent_patches: RetrieverPatchEventResponse[];
+}
+
+export interface StateCheckoutResponse<T = unknown> {
+  current_session: string | null;
+  current_global_revision: number | null;
+  count: number;
+  states: Record<string, StateView<T>>;
+  recent_patches: RetrieverPatchEventResponse[];
 }
 
 export interface RetrieverPatchEventResponse {
@@ -576,7 +613,7 @@ export interface TransportContextValue {
     appKey: AppKey,
     globalRevisionId: string | number,
     stateKeys: string[],
-  ) => Promise<RevisedStatesSnapshotMap>;
+  ) => Promise<StateCheckoutResponse>;
   fetchStateSegments: (
     appKey: AppKey,
     fromGlobalRevisionId: string | number,

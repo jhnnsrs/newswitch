@@ -127,7 +127,7 @@ export function CameraControl() {
             <div
               key={detector.slot}
               className={cn(
-                "rounded-lg border transition-all",
+                "@container min-w-0 overflow-hidden rounded-lg border transition-all",
                 isActive
                   ? "bg-primary/5 border-primary/30"
                   : "bg-muted/30 border-transparent",
@@ -135,21 +135,26 @@ export function CameraControl() {
             >
               {/* Detector Header */}
               <div
-                className="p-3 cursor-pointer"
+                className="cursor-pointer p-3"
                 onClick={() =>
                   setSelectedDetectorSlot(isExpanded ? null : detector.slot)
                 }
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
+                <div className="flex flex-col gap-2 @[280px]:flex-row @[280px]:items-start @[280px]:justify-between">
+                  <div className="flex min-w-0 items-center gap-2">
                     <MonitorUp
-                      className={cn("h-4 w-4", isActive && "text-green-500")}
+                      className={cn(
+                        "h-4 w-4 shrink-0",
+                        isActive && "text-green-500",
+                      )}
                     />
-                    <span className="text-sm font-medium">{detector.name}</span>
+                    <span className="truncate text-sm font-medium">
+                      {detector.name}
+                    </span>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center justify-between gap-2 @[280px]:justify-end">
                     {isActive && (
-                      <span className="text-xs text-muted-foreground font-mono">
+                      <span className="hidden text-xs font-mono text-muted-foreground @[340px]:inline">
                         {detector.current_exposure_time.toFixed(0)}ms /{" "}
                         {detector.current_gain.toFixed(1)}×
                       </span>
@@ -166,14 +171,14 @@ export function CameraControl() {
                 </div>
 
                 {/* Compact info */}
-                <div className="flex items-center gap-3 mt-1">
+                <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-muted-foreground @[360px]:grid-cols-3">
                   <span className="text-xs text-muted-foreground">
                     {detector.width}×{detector.height}
                   </span>
                   <span className="text-xs text-muted-foreground">
                     {detector.pixel_size_um}µm
                   </span>
-                  <span className="text-xs text-muted-foreground">
+                  <span className="hidden text-xs text-muted-foreground @[360px]:inline">
                     Slot {detector.slot}
                   </span>
                 </div>
@@ -210,7 +215,7 @@ export function CameraControl() {
                       disabled={isUpdating}
                     />
                     {detector.preset_exposure_times?.length > 0 && (
-                      <div className="flex gap-1 flex-wrap">
+                      <div className="hidden flex-wrap gap-1 @[360px]:flex">
                         {detector.preset_exposure_times
                           .slice(0, 6)
                           .map((val) => (
@@ -265,7 +270,7 @@ export function CameraControl() {
                       className="flex-1"
                       disabled={isUpdating}
                     />
-                    <div className="flex gap-1">
+                    <div className="hidden gap-1 @[360px]:flex">
                       {[1, 2, 4, 8, 16, 32]
                         .filter(
                           (v) =>

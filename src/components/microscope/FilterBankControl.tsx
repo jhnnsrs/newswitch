@@ -65,7 +65,7 @@ export function FilterBankControl() {
             <div
               key={filter.slot}
               className={cn(
-                "p-3 rounded-lg border transition-all cursor-pointer",
+                "@container min-w-0 overflow-hidden cursor-pointer rounded-lg border p-3 transition-all",
                 isActive
                   ? "bg-primary/5 border-primary/30"
                   : "bg-muted/30 border-transparent hover:bg-muted/50",
@@ -73,8 +73,8 @@ export function FilterBankControl() {
               onClick={() => handleSelectFilter(filter.slot)}
             >
               {/* Filter Header */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
+              <div className="flex flex-col gap-2 @[280px]:flex-row @[280px]:items-start @[280px]:justify-between">
+                <div className="flex min-w-0 items-center gap-2">
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger>
@@ -91,10 +91,10 @@ export function FilterBankControl() {
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
-                  <span className="text-sm font-medium">{filter.name}</span>
+                  <span className="truncate text-sm font-medium">{filter.name}</span>
                   <span
                     className={cn(
-                      "text-xs font-mono",
+                      "hidden text-xs font-mono @[320px]:inline",
                       getWavelengthTextColor(filter.center_wavelength),
                     )}
                   >
@@ -112,16 +112,14 @@ export function FilterBankControl() {
               </div>
 
               {/* Filter Details */}
-              <div className="flex items-center gap-3 mt-2">
+              <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-muted-foreground @[360px]:grid-cols-3">
                 <span className="text-xs text-muted-foreground">
                   BW: {filter.bandwidth}nm
                 </span>
-                <span className="text-xs text-muted-foreground">•</span>
                 <span className="text-xs text-muted-foreground">
                   T: {(filter.transmission * 100).toFixed(0)}%
                 </span>
-                <span className="text-xs text-muted-foreground">•</span>
-                <span className="text-xs text-muted-foreground">
+                <span className="hidden text-xs text-muted-foreground @[360px]:inline">
                   Slot {filter.slot}
                 </span>
               </div>

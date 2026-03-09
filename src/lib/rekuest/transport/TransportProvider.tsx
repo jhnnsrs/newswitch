@@ -11,8 +11,9 @@ import type {
   AssignOptions,
   AssignResponse,
   LockCollectionResponse,
-  RevisedStatesSnapshotMap,
+  RetrieverSessionBoundaryResponse,
   SessionBoundaries,
+  StateCheckoutResponse,
   StateCollectionResponse,
   StateSegmentsResponse,
   StateView,
@@ -119,16 +120,16 @@ function createSubscriptionInitWithIntervals(
 
 function parseSessionBoundaries(data: {
   session_id: string;
-  start_revision: number;
-  end_revision: number;
+  start_global_revision: number;
+  end_global_revision: number;
   start_time: string;
   end_time: string;
 }): SessionBoundaries {
   return {
     sessionStart: new Date(data.start_time),
     sessionEnd: new Date(data.end_time),
-    startRevision: data.start_revision,
-    endRevision: data.end_revision,
+    startRevision: data.start_global_revision,
+    endRevision: data.end_global_revision,
     sessionId: data.session_id,
   };
 }
@@ -329,7 +330,15 @@ export function TransportProvider({ children, config, apps }: TransportProviderP
         throw new Error(`Failed to fetch states: ${response.status} ${errorText}`);
       }
 
-      return (await response.json()) as StateCollectionResponse<T>;
+      const data = (await response.json()) as Partial<StateCollectionResponse<T>>;
+
+      return {
+        current_session: data.current_session ?? null,
+        current_global_revision: data.current_global_revision ?? null,
+        count: data.count ?? Object.keys(data.states ?? {}).length,
+        states: data.states ?? {},
+        recent_patches: data.recent_patches ?? [],
+      };
     },
     [getEndpoints],
   );
@@ -339,7 +348,7 @@ export function TransportProvider({ children, config, apps }: TransportProviderP
       appKey: AppKey,
       globalRevisionId: string | number,
       stateKeys: string[],
-    ): Promise<RevisedStatesSnapshotMap> => {
+    ): Promise<StateCheckoutResponse> => {
       const { apiEndpoint } = getEndpoints(appKey);
       const url = new URL(`${apiEndpoint.replace(/\/$/, '')}/states/checkout`);
       url.searchParams.set('global_revision_id', String(globalRevisionId));
@@ -355,7 +364,15 @@ export function TransportProvider({ children, config, apps }: TransportProviderP
         throw new Error(`Failed to checkout states: ${response.status} ${errorText}`);
       }
 
-      return (await response.json()) as RevisedStatesSnapshotMap;
+      const data = (await response.json()) as Partial<StateCheckoutResponse>;
+
+      return {
+        current_session: data.current_session ?? null,
+        current_global_revision: data.current_global_revision ?? null,
+        count: data.count ?? Object.keys(data.states ?? {}).length,
+        states: data.states ?? {},
+        recent_patches: data.recent_patches ?? [],
+      };
     },
     [getEndpoints],
   );
@@ -434,13 +451,7 @@ export function TransportProvider({ children, config, apps }: TransportProviderP
         );
       }
 
-      const data = (await response.json()) as {
-        session_id: string;
-        start_revision: number;
-        end_revision: number;
-        start_time: string;
-        end_time: string;
-      };
+      const data = (await response.json()) as RetrieverSessionBoundaryResponse;
 
       return parseSessionBoundaries(data);
     },
@@ -460,13 +471,7 @@ export function TransportProvider({ children, config, apps }: TransportProviderP
         );
       }
 
-      const data = (await response.json()) as {
-        session_id: string;
-        start_revision: number;
-        end_revision: number;
-        start_time: string;
-        end_time: string;
-      };
+      const data = (await response.json()) as RetrieverSessionBoundaryResponse;
 
       return parseSessionBoundaries(data);
     },
