@@ -27,38 +27,41 @@ export interface RekuestStoreBundle {
 export interface RekuestStoreProviderProps {
   children: ReactNode;
   scope?: string;
+  debug?: boolean;
 }
 
 const scopedBundles = new Map<string, RekuestStoreBundle>();
 
-const createRekuestStoreBundle = (): RekuestStoreBundle => {
+const createRekuestStoreBundle = (debug = false): RekuestStoreBundle => {
   const transportStore = createTransportStore();
 
   return {
-    globalStateStore: createGlobalStateStoreRegistry(),
-    taskStore: createTaskStoreRegistry(transportStore),
+    globalStateStore: createGlobalStateStoreRegistry({ debug }),
+    taskStore: createTaskStoreRegistry(transportStore, { debug }),
     transportStore,
-    lockStore: createLockStoreRegistry(),
+    lockStore: createLockStoreRegistry({ debug }),
   };
 };
 
-const getScopedBundle = (scope: string): RekuestStoreBundle => {
-  const existingBundle = scopedBundles.get(scope);
+const getScopedBundle = (scope: string, debug = false): RekuestStoreBundle => {
+  const bundleKey = `${scope}::debug-${debug ? 'on' : 'off'}`;
+  const existingBundle = scopedBundles.get(bundleKey);
 
   if (existingBundle) {
     return existingBundle;
   }
 
-  const nextBundle = createRekuestStoreBundle();
-  scopedBundles.set(scope, nextBundle);
+  const nextBundle = createRekuestStoreBundle(debug);
+  scopedBundles.set(bundleKey, nextBundle);
   return nextBundle;
 };
 
 export function RekuestStoreProvider({
   children,
   scope = 'default',
+  debug = false,
 }: RekuestStoreProviderProps) {
-  const stores = useMemo(() => getScopedBundle(scope), [scope]);
+  const stores = useMemo(() => getScopedBundle(scope, debug), [debug, scope]);
 
   return (
     <GlobalStateStoreContext.Provider value={stores.globalStateStore}>

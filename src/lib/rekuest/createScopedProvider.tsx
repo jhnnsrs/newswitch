@@ -53,6 +53,7 @@ export interface CreateScopedProviderOptions<
   config: ScopedProviderTransportConfig<TKey>;
   instanceId?: string;
   defaultScope?: string;
+  debug?: boolean;
   reconnect?: TransportConfig['reconnect'];
   pingInterval?: number;
 }
@@ -63,6 +64,7 @@ export interface ScopedProviderProps {
   revision?: string | number;
   instanceId?: string;
   transportConfig?: Partial<TransportConfig>;
+  debug?: boolean;
 }
 
 const DEFAULT_SCOPE = 'default';
@@ -214,6 +216,7 @@ export function createScopedProvider<
   instanceId = DEFAULT_INSTANCE_ID,
   defaultScope = DEFAULT_SCOPE,
   reconnect,
+  debug: debugOverride,
   pingInterval,
 }: CreateScopedProviderOptions<TKey, TActions, TLocks, TStates>) {
   const normalizedDefinition = normalizeDefinition(definition);
@@ -224,6 +227,7 @@ export function createScopedProvider<
     revision,
     transportConfig,
     instanceId: instanceIdOverride,
+    debug = debugOverride,
   }: ScopedProviderProps) {
     const scopeKey = buildScopeKey(scope, revision);
     const resolvedConfig = buildTransportConfig(
@@ -240,14 +244,12 @@ export function createScopedProvider<
         apps={normalizedDefinition.apps as TransportProviderApps}
         config={resolvedConfig}
       >
-        <RekuestStoreProvider scope={scopeKey}>
-          <LocalStoreProvider scope={scopeKey}>
+        <RekuestStoreProvider scope={scopeKey} debug={debug}>
             <StateProvider>
               <TaskProvider>
                 <LockProvider>{children}</LockProvider>
               </TaskProvider>
             </StateProvider>
-          </LocalStoreProvider>
         </RekuestStoreProvider>
       </TransportProvider>
     );

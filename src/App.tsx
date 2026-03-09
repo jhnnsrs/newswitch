@@ -13,15 +13,13 @@ import { cn } from "./lib/utils";
 import { createScopedProvider } from "./lib/rekuest";
 import { IndexPage, ReplayPage } from "./pages";
 import { appsDefinition } from "./apps";
+import { LocalStoreProvider } from "./store";
 
 // The backend API URL is either injected into the global scope by the
 // electron app or taken from environment variables, allowing for flexibility in different deployment scenarios.
 const BACKEND_API = window.__agent_url__ || import.meta.env.VITE_BACKEND_URL;
 const BACKEND_WS =
   window.__agent_ws_url__ || import.meta.env.VITE_WEBSOCKET_URL;
-
-
-
 
 
 
@@ -33,6 +31,7 @@ const ScopedAppsProvider = createScopedProvider({
       wsEndpoint: BACKEND_WS,
     },
   },
+  debug: true,
   instanceId: "microscope-control-panel",
 });
 
@@ -45,7 +44,9 @@ function ScopedRoute({
 }) {
   return (
     <ScopedAppsProvider scope={scope}>
-      {children}
+      <LocalStoreProvider scope={scope}>
+        {children}
+      </LocalStoreProvider>
     </ScopedAppsProvider>
   );
 }

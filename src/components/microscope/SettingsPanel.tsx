@@ -76,9 +76,6 @@ function SettingsSection({
 export function SettingsPanel() {
   const { data: cameraState } = useCameraState({ subscribe: true });
   const { data: objectiveState } = useObjectiveState({ subscribe: true });
-
-  const {call: killBenedigt} = useKillBenedict()
-
   // Live view and capture controls
   const {
     assign: startLiveView,
@@ -109,9 +106,6 @@ export function SettingsPanel() {
           Settings
         </h2>
 
-        <Button variant="outline" size="sm" onClick={() => killBenedigt({kill_hard: "karl"})} className="w-full">
-          Kill Benedict
-        </Button>
         {/* Acquisition Controls */}
         <div className="flex gap-1.5">
           <Button

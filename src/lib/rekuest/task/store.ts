@@ -1,7 +1,7 @@
 import { createContext, useContext } from 'react';
 import { useStore } from 'zustand';
-import { createStore, type StoreApi } from 'zustand/vanilla';
-import { subscribeWithSelector } from 'zustand/middleware';
+import { createStore, type StateCreator, type StoreApi } from 'zustand/vanilla';
+import { devtools, subscribeWithSelector } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 import type { TransportStore as RuntimeTransportStore } from '@/lib/rekuest/transport/store';
 import type { Task, TaskStatus } from '@/lib/rekuest/transport/types';
@@ -36,10 +36,21 @@ export interface TaskStore {
   clearTasks: () => void;
 }
 
-export const createTaskStore = () =>
-  createStore<TaskStore>()(
-    subscribeWithSelector(
-      immer((set, get) => ({
+interface TaskStoreOptions {
+  debug?: boolean;
+  devtoolsName?: string;
+}
+
+export const createTaskStore = ({
+  debug = false,
+  devtoolsName = 'RekuestTaskStore',
+}: TaskStoreOptions = {}) => {
+  const initializer: StateCreator<
+    TaskStore,
+    [],
+    [['zustand/subscribeWithSelector', never], ['zustand/immer', never]]
+  > = subscribeWithSelector(
+    immer((set, get) => ({
         tasks: {},
         taskIdToReference: {},
         pendingTaskUpdates: {},
@@ -151,8 +162,18 @@ export const createTaskStore = () =>
           });
         },
       })),
-    ),
   );
+
+  if (debug) {
+    return createStore<TaskStore>()(devtools(initializer, { name: devtoolsName }));
+  }
+
+  return createStore<TaskStore>()(initializer);
+};
+
+interface TaskStoreRegistryOptions {
+  debug?: boolean;
+}
 
 export interface TaskStoreRegistry {
   getStoreApi: (appKey: string) => StoreApi<TaskStore>;
@@ -164,6 +185,7 @@ export type TransportStoreRegistry = TaskStoreRegistry;
 
 export const createTaskStoreRegistry = (
   transportStore: StoreApi<RuntimeTransportStore>,
+  { debug = false }: TaskStoreRegistryOptions = {},
 ): TaskStoreRegistry => {
   const stores = new Map<string, StoreApi<TaskStore>>();
 
@@ -173,7 +195,10 @@ export const createTaskStoreRegistry = (
       return existingStore;
     }
 
-    const nextStore = createTaskStore();
+    const nextStore = createTaskStore({
+      debug,
+      devtoolsName: `RekuestTaskStore/${appKey}`,
+    });
     nextStore.subscribe(() => {
       transportStore.getState().bumpRegistryVersion();
     });

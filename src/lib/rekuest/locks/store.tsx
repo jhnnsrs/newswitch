@@ -1,8 +1,8 @@
 import { createContext, useContext, useMemo } from 'react';
 import { useStore } from 'zustand';
-import { subscribeWithSelector } from 'zustand/middleware';
+import { devtools, subscribeWithSelector } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
-import { createStore, type StoreApi } from 'zustand/vanilla';
+import { createStore, type StateCreator, type StoreApi } from 'zustand/vanilla';
 
 export interface LockStore {
   locks: Record<string, string | undefined | null>;
@@ -16,6 +16,11 @@ export interface BlockingLockState {
   isLocked: boolean;
   lockKey: string | null;
   lockingTaskId: string | undefined;
+}
+
+interface LockStoreOptions {
+  debug?: boolean;
+  devtoolsName?: string;
 }
 
 const unlockedState: BlockingLockState = {
@@ -47,10 +52,16 @@ const resolveBlockingLock = (
   return null;
 };
 
-export const createLockStore = () =>
-  createStore<LockStore>()(
-    subscribeWithSelector(
-      immer((set) => ({
+export const createLockStore = ({
+  debug = false,
+  devtoolsName = 'RekuestLockStore',
+}: LockStoreOptions = {}) => {
+  const initializer: StateCreator<
+    LockStore,
+    [],
+    [['zustand/subscribeWithSelector', never], ['zustand/immer', never]]
+  > = subscribeWithSelector(
+    immer((set) => ({
         locks: {},
 
         setLock: (key, value) => {
@@ -77,15 +88,27 @@ export const createLockStore = () =>
           });
         },
       })),
-    ),
   );
+
+  if (debug) {
+    return createStore<LockStore>()(devtools(initializer, { name: devtoolsName }));
+  }
+
+  return createStore<LockStore>()(initializer);
+};
+
+interface LockStoreRegistryOptions {
+  debug?: boolean;
+}
 
 export interface LockStoreRegistry {
   getStoreApi: (appKey: string) => StoreApi<LockStore>;
   getStoreEntries: () => Array<[string, StoreApi<LockStore>]>;
 }
 
-export const createLockStoreRegistry = (): LockStoreRegistry => {
+export const createLockStoreRegistry = ({
+  debug = false,
+}: LockStoreRegistryOptions = {}): LockStoreRegistry => {
   const stores = new Map<string, StoreApi<LockStore>>();
 
   const getStoreApi = (appKey: string) => {
@@ -94,7 +117,10 @@ export const createLockStoreRegistry = (): LockStoreRegistry => {
       return existingStore;
     }
 
-    const nextStore = createLockStore();
+    const nextStore = createLockStore({
+      debug,
+      devtoolsName: `RekuestLockStore/${appKey}`,
+    });
     stores.set(appKey, nextStore);
     return nextStore;
   };

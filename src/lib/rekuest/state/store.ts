@@ -1,8 +1,8 @@
 import { createContext, useContext } from 'react';
 import { useStore } from 'zustand';
 import { applyPatch, type Operation } from 'fast-json-patch';
-import { createStore, type StoreApi } from 'zustand/vanilla';
-import { subscribeWithSelector } from 'zustand/middleware';
+import { createStore, type StateCreator, type StoreApi } from 'zustand/vanilla';
+import { devtools, subscribeWithSelector } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 
 export interface Envelope {
@@ -36,6 +36,7 @@ export interface GlobalStateStore {
   states: Record<string, unknown>;
   stateRevisions: Record<string, number | undefined>;
   globalRevision: number;
+  latestPatches: Operation[],
 
   isLive: boolean;
   segments: PatchSegment[];
@@ -60,10 +61,21 @@ export interface GlobalStateStore {
   clearAll: () => void;
 }
 
-export const createGlobalStateStore = () =>
-  createStore<GlobalStateStore>()(
-    subscribeWithSelector(
-      immer((set, get) => ({
+interface GlobalStateStoreOptions {
+  debug?: boolean;
+  devtoolsName?: string;
+}
+
+export const createGlobalStateStore = ({
+  debug = false,
+  devtoolsName = 'RekuestStateStore',
+}: GlobalStateStoreOptions = {}) => {
+  const initializer: StateCreator<
+    GlobalStateStore,
+    [],
+    [['zustand/subscribeWithSelector', never], ['zustand/immer', never]]
+  > = subscribeWithSelector(
+    immer((set, get) => ({
         states: {},
         stateRevisions: {},
         loading: {},
@@ -71,6 +83,7 @@ export const createGlobalStateStore = () =>
         segments: [],
         snapshots: [],
         errors: {},
+        latestPatches: [],
         globalRevision: 0,
         setIsLive: (isLive) => {
           set((state) => {
@@ -122,9 +135,14 @@ export const createGlobalStateStore = () =>
             );
           }
 
+          set((state) => {
+            state.latestPatches.push(...operations)
+          });
+
           try {
             const clonedState = JSON.parse(JSON.stringify(currentState));
             const { newDocument } = applyPatch(clonedState, operations);
+            
 
             set((state) => {
               state.states[key] = newDocument;
@@ -169,15 +187,29 @@ export const createGlobalStateStore = () =>
           });
         },
       })),
-    ),
   );
+
+  if (debug) {
+    return createStore<GlobalStateStore>()(
+      devtools(initializer, { name: devtoolsName }),
+    );
+  }
+
+  return createStore<GlobalStateStore>()(initializer);
+};
+
+interface GlobalStateStoreRegistryOptions {
+  debug?: boolean;
+}
 
 export interface GlobalStateStoreRegistry {
   getStoreApi: (appKey: string) => StoreApi<GlobalStateStore>;
   getStoreEntries: () => Array<[string, StoreApi<GlobalStateStore>]>;
 }
 
-export const createGlobalStateStoreRegistry = (): GlobalStateStoreRegistry => {
+export const createGlobalStateStoreRegistry = ({
+  debug = false,
+}: GlobalStateStoreRegistryOptions = {}): GlobalStateStoreRegistry => {
   const stores = new Map<string, StoreApi<GlobalStateStore>>();
 
   const getStoreApi = (appKey: string) => {
@@ -186,7 +218,10 @@ export const createGlobalStateStoreRegistry = (): GlobalStateStoreRegistry => {
       return existingStore;
     }
 
-    const nextStore = createGlobalStateStore();
+    const nextStore = createGlobalStateStore({
+      debug,
+      devtoolsName: `RekuestStateStore/${appKey}`,
+    });
     stores.set(appKey, nextStore);
     return nextStore;
   };

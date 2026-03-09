@@ -407,16 +407,7 @@ export type AppDefinition = AppsDefinition[AppKey];
 `,
       );
 
-      await formatAndWrite(
-        path.resolve(SRC_DIR, "app.ts"),
-        `
-export {
-  appDefinition,
-  appsDefinition,
-} from './apps';
-export type { AppDefinition, AppKey, AppsDefinition } from './apps';
-`,
-      );
+      
     },
   };
 }
