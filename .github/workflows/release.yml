@@ -93,10 +93,6 @@ jobs:
             echo "## Blok dependencies"
             jq -r '(.dependencies // []) | .[] | "- `\(.)`"' blok.json
             echo
-            echo "## Raw blok.json"
-            echo '```json'
-            cat blok.json
-            echo '```'
           } > release-manifest-metadata.md
 
       - name: Upload release assets
