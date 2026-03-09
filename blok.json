@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-03-09T19:12:38.595Z",
+  "generatedAt": "2026-03-09T20:17:35.685Z",
   "app": {
     "name": "newswitch",
     "version": "0.0.0",
@@ -2536,8 +2536,8 @@
           "logo": null,
           "locks": [
             "io",
-            "camera_parameters",
-            "expanse_state"
+            "expanse_state",
+            "camera_parameters"
           ]
         },
         "dump_states_to_stdin": {
@@ -2563,12 +2563,12 @@
           "dynamic": false,
           "logo": null,
           "locks": [
-            "camera_parameters",
             "stage_position",
-            "filter_bank",
+            "camera_parameters",
+            "objective",
             "expanse_state",
             "illumination",
-            "objective"
+            "filter_bank"
           ]
         },
         "start_live_view": {
@@ -6282,9 +6282,9 @@
           "dynamic": false,
           "logo": null,
           "locks": [
+            "stage_position",
             "io",
             "hook_registry",
-            "stage_position",
             "expanse_state",
             "illumination",
             "camera_parameters"
@@ -8298,10 +8298,10 @@
           "dynamic": false,
           "logo": null,
           "locks": [
+            "stage_position",
             "io",
             "expanse_state",
-            "camera_parameters",
-            "stage_position"
+            "camera_parameters"
           ]
         }
       },
@@ -15907,13 +15907,13 @@
           "key": "camera_parameters",
           "description": "Lock schema for camera_parameters"
         },
-        "filter_bank": {
-          "key": "filter_bank",
-          "description": "Lock schema for filter_bank"
-        },
         "objective": {
           "key": "objective",
           "description": "Lock schema for objective"
+        },
+        "filter_bank": {
+          "key": "filter_bank",
+          "description": "Lock schema for filter_bank"
         },
         "hook_registry": {
           "key": "hook_registry",

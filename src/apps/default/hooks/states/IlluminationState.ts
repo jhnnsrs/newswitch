@@ -4,7 +4,7 @@ import { buildUseState, type StateDefinition } from "@/lib/rekuest/state";
 // --- Sub-Schemas ---
 export const IlluminationSchema = z
   .object({
-    __brand: z.literal("illumination").default("illumination"),
+    __identifier: z.literal("illumination").default("illumination"),
     kind: z.string(),
     slot: z.number(),
     intensity: z.number(),

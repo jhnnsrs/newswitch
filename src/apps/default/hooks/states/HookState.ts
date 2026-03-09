@@ -4,7 +4,7 @@ import { buildUseState, type StateDefinition } from "@/lib/rekuest/state";
 // --- Sub-Schemas ---
 export const RegisteredHookSchema = z
   .object({
-    __brand: z.literal("registered_hook").default("registered_hook"),
+    __identifier: z.literal("registered_hook").default("registered_hook"),
     type: z.string(),
   })
   .brand("registered_hook");

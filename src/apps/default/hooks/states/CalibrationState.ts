@@ -4,7 +4,7 @@ import { buildUseState, type StateDefinition } from "@/lib/rekuest/state";
 // --- Sub-Schemas ---
 export const CalibratedLightPathSchema = z
   .object({
-    __brand: z
+    __identifier: z
       .literal("calibrated_light_path")
       .default("calibrated_light_path"),
     affine_matrix: z.array(z.array(z.number())),

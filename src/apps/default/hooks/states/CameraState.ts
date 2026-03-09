@@ -4,7 +4,7 @@ import { buildUseState, type StateDefinition } from "@/lib/rekuest/state";
 // --- Sub-Schemas ---
 export const DetectorSchema = z
   .object({
-    __brand: z.literal("detector").default("detector"),
+    __identifier: z.literal("detector").default("detector"),
     slot: z.number(),
     name: z.string(),
     width: z.number(),

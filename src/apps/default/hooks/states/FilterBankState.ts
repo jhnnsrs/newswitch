@@ -4,7 +4,7 @@ import { buildUseState, type StateDefinition } from "@/lib/rekuest/state";
 // --- Sub-Schemas ---
 export const FilterSchema = z
   .object({
-    __brand: z.literal("filter").default("filter"),
+    __identifier: z.literal("filter").default("filter"),
     slot: z.number(),
     name: z.string(),
     center_wavelength: z.number(),

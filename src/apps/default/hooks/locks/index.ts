@@ -4,8 +4,8 @@ import { IlluminationDefinition } from "./Illumination";
 import { StagePositionDefinition } from "./StagePosition";
 import { IoDefinition } from "./Io";
 import { CameraParametersDefinition } from "./CameraParameters";
-import { FilterBankDefinition } from "./FilterBank";
 import { ObjectiveDefinition } from "./Objective";
+import { FilterBankDefinition } from "./FilterBank";
 import { HookRegistryDefinition } from "./HookRegistry";
 
 export { ExpanseStateDefinition, useExpanseStateLock } from "./ExpanseState";
@@ -16,8 +16,8 @@ export {
   CameraParametersDefinition,
   useCameraParametersLock,
 } from "./CameraParameters";
-export { FilterBankDefinition, useFilterBankLock } from "./FilterBank";
 export { ObjectiveDefinition, useObjectiveLock } from "./Objective";
+export { FilterBankDefinition, useFilterBankLock } from "./FilterBank";
 export { HookRegistryDefinition, useHookRegistryLock } from "./HookRegistry";
 
 export const globalLockDefinition = {
@@ -26,8 +26,8 @@ export const globalLockDefinition = {
   StagePosition: StagePositionDefinition,
   Io: IoDefinition,
   CameraParameters: CameraParametersDefinition,
-  FilterBank: FilterBankDefinition,
   Objective: ObjectiveDefinition,
+  FilterBank: FilterBankDefinition,
   HookRegistry: HookRegistryDefinition,
 } satisfies Record<string, LockDefinition<string>>;
 

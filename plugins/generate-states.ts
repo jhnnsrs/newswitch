@@ -95,22 +95,7 @@ import { z } from 'zod';
  * Creates a schema that handles the { use: index, value: data } pattern.
  */
 export function createIndexedUnion<T extends [z.ZodTypeAny, ...z.ZodTypeAny[]]>(schemas: T) {
-  return z
-    .object({
-      use: z.number().int().min(0).max(schemas.length - 1),
-      value: z.unknown(),
-    })
-    .transform((val, ctx): z.infer<T[number]> => {
-      const schema = schemas[val.use];
-      const result = schema.safeParse(val.value);
-      
-      if (!result.success) {
-        result.error.issues.forEach((issue) => ctx.addIssue(issue));
-        return z.NEVER;
-      }
-      
-      return result.data;
-    });
+  return z.union(schemas)
 }
 `;
 
@@ -200,7 +185,7 @@ const mapToZod = (
         let fieldsCode = "";
 
         // Inject a runtime brand into the Zod object using a literal with a default
-        const injectedBrand = `__brand: z.literal('${brandName}').default('${brandName}')`;
+        const injectedBrand = `__identifier: z.literal('${brandName}').default('${brandName}')`;
 
         if (port.children && port.children.length > 0) {
           const fields = port.children.map(

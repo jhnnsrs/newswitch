@@ -5,7 +5,9 @@ import { createIndexedUnion } from "./utils";
 // --- Sub-Schemas ---
 export const ObjectiveKubeStateSchema = z
   .object({
-    __brand: z.literal("objective_kube_state").default("objective_kube_state"),
+    __identifier: z
+      .literal("objective_kube_state")
+      .default("objective_kube_state"),
     kube_id: z.string(),
     slot_id: z.number(),
     affine_matrix: z.array(z.array(z.number())),
@@ -16,7 +18,9 @@ export const ObjectiveKubeStateSchema = z
 
 export const DetectorKubeStateSchema = z
   .object({
-    __brand: z.literal("detector_kube_state").default("detector_kube_state"),
+    __identifier: z
+      .literal("detector_kube_state")
+      .default("detector_kube_state"),
     kube_id: z.string(),
     gain: z.number(),
     exposure_time: z.number(),
@@ -28,7 +32,7 @@ export const DetectorKubeStateSchema = z
 
 export const FilterKubeStateSchema = z
   .object({
-    __brand: z.literal("filter_kube_state").default("filter_kube_state"),
+    __identifier: z.literal("filter_kube_state").default("filter_kube_state"),
     kube_id: z.string(),
     wavelength: z.number(),
     affine_matrix: z.array(z.array(z.number())),
@@ -39,7 +43,7 @@ export const FilterKubeStateSchema = z
 
 export const IlluminationKubeStateSchema = z
   .object({
-    __brand: z
+    __identifier: z
       .literal("illumination_kube_state")
       .default("illumination_kube_state"),
     kube_id: z.string(),
@@ -54,7 +58,7 @@ export const IlluminationKubeStateSchema = z
 
 export const GenericKubeStateSchema = z
   .object({
-    __brand: z.literal("generic_kube_state").default("generic_kube_state"),
+    __identifier: z.literal("generic_kube_state").default("generic_kube_state"),
     kube_id: z.string(),
     other_metadata: z.record(z.string(), z.string()),
     affine_matrix: z.array(z.array(z.number())),
@@ -65,7 +69,7 @@ export const GenericKubeStateSchema = z
 
 export const StageKubeStateSchema = z
   .object({
-    __brand: z.literal("stage_kube_state").default("stage_kube_state"),
+    __identifier: z.literal("stage_kube_state").default("stage_kube_state"),
     kube_id: z.string(),
     affine_matrix: z.array(z.array(z.number())),
     model_name: z.string().nullable(),
@@ -75,7 +79,9 @@ export const StageKubeStateSchema = z
 
 export const DichroicKubeStateSchema = z
   .object({
-    __brand: z.literal("dichroic_kube_state").default("dichroic_kube_state"),
+    __identifier: z
+      .literal("dichroic_kube_state")
+      .default("dichroic_kube_state"),
     kube_id: z.string(),
     affine_matrix: z.array(z.array(z.number())),
     model_name: z.string().nullable(),
@@ -85,7 +91,7 @@ export const DichroicKubeStateSchema = z
 
 export const FilterBankKubeStateSchema = z
   .object({
-    __brand: z
+    __identifier: z
       .literal("filter_bank_kube_state")
       .default("filter_bank_kube_state"),
     kube_id: z.string(),
@@ -101,7 +107,7 @@ export const FilterBankKubeStateSchema = z
 
 export const ObjectiveTurretKubeStateSchema = z
   .object({
-    __brand: z
+    __identifier: z
       .literal("objective_turret_kube_state")
       .default("objective_turret_kube_state"),
     kube_id: z.string(),
@@ -128,7 +134,7 @@ export const KubeUnionSchema = createIndexedUnion([
 
 export const LightEdgeStateSchema = z
   .object({
-    __brand: z.literal("light_edge_state").default("light_edge_state"),
+    __identifier: z.literal("light_edge_state").default("light_edge_state"),
     source: z.string(),
     target: z.string(),
     intensity: z.number().nullable(),
@@ -138,7 +144,7 @@ export const LightEdgeStateSchema = z
 
 export const LightPathStateSchema = z
   .object({
-    __brand: z.literal("light_path_state").default("light_path_state"),
+    __identifier: z.literal("light_path_state").default("light_path_state"),
     hash: z.string(),
     kubes: z.array(KubeUnionSchema),
     edges: z.array(LightEdgeStateSchema),
@@ -148,7 +154,7 @@ export const LightPathStateSchema = z
 
 export const MetadataSchema = z
   .object({
-    __brand: z.literal("metadata").default("metadata"),
+    __identifier: z.literal("metadata").default("metadata"),
     affine_matrix: z.array(z.array(z.number())),
     fov_width: z.number(),
     fov_height: z.number(),
@@ -162,7 +168,7 @@ export const MetadataSchema = z
 
 export const ImageSchema = z
   .object({
-    __brand: z.literal("image").default("image"),
+    __identifier: z.literal("image").default("image"),
     id: z.string(),
     metadata: MetadataSchema,
   })
@@ -170,7 +176,7 @@ export const ImageSchema = z
 
 export const ScaleSchema = z
   .object({
-    __brand: z.literal("scale").default("scale"),
+    __identifier: z.literal("scale").default("scale"),
     x: z.number(),
     y: z.number(),
     z: z.number(),
@@ -181,7 +187,7 @@ export const ScaleSchema = z
 
 export const ArrayMetadataSchema = z
   .object({
-    __brand: z.literal("array_metadata").default("array_metadata"),
+    __identifier: z.literal("array_metadata").default("array_metadata"),
     min_value: z.number(),
     max_value: z.number(),
   })
@@ -189,7 +195,7 @@ export const ArrayMetadataSchema = z
 
 export const FrameSchema = z
   .object({
-    __brand: z.literal("frame").default("frame"),
+    __identifier: z.literal("frame").default("frame"),
     id: z.string(),
     scales: z.array(ScaleSchema),
     metadata: MetadataSchema,

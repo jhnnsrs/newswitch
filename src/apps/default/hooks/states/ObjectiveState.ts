@@ -4,7 +4,7 @@ import { buildUseState, type StateDefinition } from "@/lib/rekuest/state";
 // --- Sub-Schemas ---
 export const ObjectiveLensSchema = z
   .object({
-    __brand: z.literal("objective_lens").default("objective_lens"),
+    __identifier: z.literal("objective_lens").default("objective_lens"),
     slot: z.number(),
     name: z.string(),
     magnification: z.number(),
