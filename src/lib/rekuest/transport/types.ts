@@ -1,4 +1,5 @@
 import type { AppDefinition, AppKey, AppsDefinition } from '@/lib/rekuest/types';
+import type { PatchSegment } from '@/lib/rekuest/state/store';
 
 export type TaskStatus =
   | 'pending'
@@ -96,6 +97,21 @@ export interface RevisedStateSnapshot<T = unknown> {
 }
 
 export type RevisedStatesSnapshotMap = Record<string, RevisedStateSnapshot>;
+
+export interface StateView<T = unknown> {
+  interface: string;
+  name: string;
+  initialized: boolean;
+  local_revision: number;
+  value: T | null;
+}
+
+export interface StateCollectionResponse<T = unknown> {
+  current_session: string | null;
+  current_global_revision: number | null;
+  count: number;
+  states: Record<string, StateView<T>>;
+}
 
 export type LogLevel = 'DEBUG' | 'INFO' | 'ERROR' | 'WARN' | 'CRITICAL';
 
@@ -492,12 +508,19 @@ export interface TransportContextValue {
   pauseTaskRequest: (appKey: AppKey, taskId: string) => Promise<void>;
   unpauseTaskRequest: (appKey: AppKey, taskId: string) => Promise<void>;
   stepTaskRequest: (appKey: AppKey, taskId: string) => Promise<void>;
-  fetchState: <T = unknown>(appKey: AppKey, stateName: string) => Promise<T>;
+  fetchState: <T = unknown>(appKey: AppKey, stateName: string) => Promise<StateView<T>>;
+  fetchAll: <T = unknown>(appKey: AppKey, stateKeys?: string[]) => Promise<StateCollectionResponse<T>>;
   fetchStateCheckout: (
     appKey: AppKey,
     globalRevisionId: string | number,
     stateKeys: string[],
   ) => Promise<RevisedStatesSnapshotMap>;
+  fetchStateSegments: (
+    appKey: AppKey,
+    fromGlobalRevisionId: string | number,
+    toGlobalRevisionId: string | number,
+    stateKeys: string[],
+  ) => Promise<PatchSegment[]>;
   fetchLocks: (appKey: AppKey) => Promise<Record<string, { task_id: string }>>;
   getApp: (appKey: AppKey) => AppDefinition;
   getEndpoints: (appKey: AppKey) => {

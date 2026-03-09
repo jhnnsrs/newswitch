@@ -6,21 +6,29 @@ import {
   resolveStateDefinition,
   type StateDefinition,
 } from '@/lib/rekuest/state';
-import type { Envelope as StateStoreEnvelope } from '@/lib/rekuest/state/store';
+import {
+  buildLocalMaterializationPlan,
+  DEFAULT_FORWARD_EVENT_WINDOW,
+  DEFAULT_MAX_LOCAL_MATERIALIZATION_EVENTS,
+  materializeSnapshotMap,
+  toNumericGlobalRevision,
+  toSnapshotMap,
+  type CheckoutConfig,
+} from '@/lib/rekuest/state/materialization';
+import type {
+  Envelope as StateStoreEnvelope,
+  PatchSegment,
+} from '@/lib/rekuest/state/store';
 import { useGlobalStateStoreRegistry } from '@/lib/rekuest/state/store';
 import { useTransport } from '@/lib/rekuest/transport/transport-context';
 import {
   StateEventType,
   type RevisedStatesSnapshotMap,
+  type StateCollectionResponse,
   type StateTransportMessage,
   type TransportMessageSubscription,
 } from '@/lib/rekuest/transport/types';
 import { StateContext, type StateContextValue } from '@/lib/rekuest/state/state-context';
-
-interface TransportStateResponse<TState> {
-  state: TState;
-  revision: number;
-}
 
 type StateProviderAppDefinitions = Record<
   string,
@@ -44,6 +52,73 @@ function normalizeError(error: unknown, key: string): Error {
   return new Error(`Failed to fetch ${key}`);
 }
 
+/**
+ * Validates a reconstructed snapshot map against the generated state schemas so
+ * checkout can safely switch between live and replayed history.
+ */
+function validateSnapshots(
+  appKey: string,
+  globalRevisionId: string | number,
+  snapshotMap: RevisedStatesSnapshotMap,
+  definitions: StateContextValue['definitions'],
+): RevisedStatesSnapshotMap {
+  return Object.fromEntries(
+    Object.entries(snapshotMap).map(([stateKey, revisedState]) => {
+      const definition = definitions[getScopedStateKey(appKey, stateKey)];
+
+      if (!definition) {
+        return [stateKey, revisedState];
+      }
+
+      const parsed = definition.schema.safeParse(revisedState.value);
+
+      if (!parsed.success) {
+        console.error(
+          `[StateProvider] Checkout validation failed for ${appKey}.${stateKey}`,
+          {
+            error: parsed.error,
+            value: revisedState.value,
+            globalRevisionId,
+          },
+        );
+
+        throw new Error(`Checkout validation failed for ${appKey}.${stateKey}`);
+      }
+
+      return [
+        stateKey,
+        {
+          value: parsed.data,
+          revision: revisedState.revision,
+        },
+      ];
+    }),
+  ) as RevisedStatesSnapshotMap;
+}
+
+function toSnapshotMapFromCollection(
+  response: StateCollectionResponse,
+  stateKeys?: string[],
+): RevisedStatesSnapshotMap {
+  const requestedStateKeys = stateKeys ?? Object.keys(response.states);
+  const snapshotMap: RevisedStatesSnapshotMap = {};
+
+  for (const stateKey of requestedStateKeys) {
+    const stateView = response.states[stateKey];
+
+    if (!stateView || !stateView.initialized || stateView.value == null) {
+      continue;
+    }
+
+    snapshotMap[stateKey] = {
+      value: stateView.value,
+      revision: stateView.local_revision,
+    };
+  }
+
+  return snapshotMap;
+}
+
 export function StateProvider({ children }: StateProviderProps) {
   const transport = useTransport();
   type TransportAppKey = Parameters<typeof transport.fetchState>[0];
@@ -55,6 +130,122 @@ export function StateProvider({ children }: StateProviderProps) {
   const globalStateStoreRegistry = useGlobalStateStoreRegistry();
   const inflightRequestsRef = useRef(new Map<string, Promise<unknown>>());
   const subscriptionsRef = useRef(new Map<TransportAppKey, TransportMessageSubscription>());
+
+  const resolveCheckoutConfig = useCallback(
+    (options?: StateContextValue['checkout'] extends (...args: infer TArgs) => unknown ? TArgs[2] : never): CheckoutConfig => ({
+      maxLocalMaterializationEvents:
+        options?.maxLocalMaterializationEvents ?? DEFAULT_MAX_LOCAL_MATERIALIZATION_EVENTS,
+      forwardEventWindow:
+        options?.forwardEventWindow ?? DEFAULT_FORWARD_EVENT_WINDOW,
+    }),
+    [],
+  );
+
+  const fetchValidatedCheckoutSnapshot = useCallback(
+    async (
+      appKey: string,
+      globalRevisionId: string | number,
+      stateKeys: string[],
+    ): Promise<RevisedStatesSnapshotMap> => {
+      const snapshot = await transport.fetchStateCheckout(appKey, globalRevisionId, stateKeys);
+      return validateSnapshots(appKey, globalRevisionId, snapshot, definitions);
+    },
+    [definitions, transport],
+  );
+
+  const fetchValidatedStateCollection = useCallback(
+    async (
+      appKey: string,
+      stateKeys: string[],
+    ): Promise<{
+      snapshotMap: RevisedStatesSnapshotMap;
+      globalRevision: number | null;
+    }> => {
+      const response = await transport.fetchAll(appKey, stateKeys);
+      const snapshotMap = validateSnapshots(
+        appKey,
+        response.current_global_revision ?? 'current',
+        toSnapshotMapFromCollection(response, stateKeys),
+        definitions,
+      );
+
+      return {
+        snapshotMap,
+        globalRevision: response.current_global_revision,
+      };
+    },
+    [definitions, transport],
+  );
+
+  /**
+   * Fetches a nearer snapshot and replays a bounded forward window. This keeps
+   * replay deterministic while avoiding very large local patch replays.
+   */
+  const fetchSnapshotWithForwardWindow = useCallback(
+    async (
+      appKey: string,
+      globalRevisionId: string | number,
+      stateKeys: string[],
+      config: CheckoutConfig,
+    ): Promise<{
+      baseRevision: string | number;
+      baseSnapshot: RevisedStatesSnapshotMap;
+      materializedSnapshot: RevisedStatesSnapshotMap;
+      segments: PatchSegment[];
+    }> => {
+      const numericTargetRevision = toNumericGlobalRevision(globalRevisionId);
+
+      if (numericTargetRevision === null) {
+        const directSnapshot = await fetchValidatedCheckoutSnapshot(
+          appKey,
+          globalRevisionId,
+          stateKeys,
+        );
+
+        return {
+          baseRevision: globalRevisionId,
+          baseSnapshot: directSnapshot,
+          materializedSnapshot: directSnapshot,
+          segments: [],
+        };
+      }
+
+      const forwardEventWindow = Math.max(0, config.forwardEventWindow);
+      const baseRevision = Math.max(0, numericTargetRevision - forwardEventWindow);
+      const baseSnapshot = await fetchValidatedCheckoutSnapshot(appKey, baseRevision, stateKeys);
+
+      if (baseRevision === numericTargetRevision) {
+        return {
+          baseRevision,
+          baseSnapshot,
+          materializedSnapshot: baseSnapshot,
+          segments: [],
+        };
+      }
+
+      const segments = await transport.fetchStateSegments(
+        appKey,
+        baseRevision,
+        numericTargetRevision,
+        stateKeys,
+      );
+
+      const materializedSnapshot = validateSnapshots(
+        appKey,
+        globalRevisionId,
+        materializeSnapshotMap(baseSnapshot, segments),
+        definitions,
+      );
+
+      return {
+        baseRevision,
+        baseSnapshot,
+        materializedSnapshot,
+        segments,
+      };
+    },
+    [definitions, fetchValidatedCheckoutSnapshot, transport],
+  );
 
   const refetchState = useCallback(
     async <T extends Record<string, unknown>, TKey extends string>(
@@ -76,17 +267,17 @@ export function StateProvider({ children }: StateProviderProps) {
       store.setError(definition.key, null);
 
       const request = transport
-        .fetchState<TransportStateResponse<T>>(
+        .fetchState<T>(
           definition.appKey as TransportAppKey,
           definition.key,
         )
         .then((response) => {
-          const parsed = definition.schema.safeParse(response.state);
+          const parsed = definition.schema.safeParse(response.value);
 
           if (!parsed.success) {
             console.error(`[StateProvider] Validation failed for ${definition.appKey}.${definition.key}`, {
               error: parsed.error,
-              value: response.state,
+              value: response.value,
             });
 
             throw new Error(`Validation failed for ${definition.appKey}.${definition.key}`);
@@ -95,7 +286,7 @@ export function StateProvider({ children }: StateProviderProps) {
           storeApi.getState().setStateSnapshot(
             definition.key,
             parsed.data as T,
-            response.revision ?? 0,
+            response.local_revision ?? 0,
           );
 
           return parsed.data as T;
@@ -118,6 +309,53 @@ export function StateProvider({ children }: StateProviderProps) {
       return request;
     },
     [globalStateStoreRegistry, transport],
+  );
+
+  const refetchAll = useCallback<StateContextValue['refetchAll']>(
+    async (appKey, options) => {
+      const availableDefinitions = Object.values(definitions).filter(
+        (definition) => definition.appKey === appKey,
+      );
+      const stateKeys = options?.stateKeys ?? availableDefinitions.map((definition) => definition.key);
+
+      if (stateKeys.length === 0) {
+        return {};
+      }
+
+      const storeApi = globalStateStoreRegistry.getStoreApi(appKey);
+      stateKeys.forEach((key) => {
+        const stateStore = storeApi.getState();
+        stateStore.setLoading(key, true);
+        stateStore.setError(key, null);
+      });
+
+      try {
+        const { snapshotMap, globalRevision } = await fetchValidatedStateCollection(
+          appKey,
+          stateKeys,
+        );
+
+        const stateStore = storeApi.getState();
+        stateStore.setStateSnapshots(snapshotMap);
+        if (globalRevision != null) {
+          stateStore.setGlobalRevision(globalRevision);
+          stateStore.cacheSnapshot(globalRevision, snapshotMap);
+        }
+
+        return snapshotMap;
+      } catch (error) {
+        const normalizedError = normalizeError(error, `${appKey}@current`);
+        stateKeys.forEach((key) => {
+          storeApi.getState().setError(key, normalizedError);
+        });
+        throw normalizedError;
+      } finally {
+        stateKeys.forEach((key) => {
+          storeApi.getState().setLoading(key, false);
+        });
+      }
+    },
+    [definitions, fetchValidatedStateCollection, globalStateStoreRegistry],
   );
 
   const ensureState = useCallback(
@@ -201,59 +439,63 @@ export function StateProvider({ children }: StateProviderProps) {
       }
 
       const storeApi = globalStateStoreRegistry.getStoreApi(appKey);
-      const store = storeApi.getState();
+      const checkoutConfig = resolveCheckoutConfig(options);
 
+      await stopLive(appKey);
 
-      store.setIsLive(false);
+      storeApi.getState().setGlobalRevision(globalRevisionId);
 
       stateKeys.forEach((key) => {
-        store.setLoading(key, true);
-        store.setError(key, null);
+        const stateStore = storeApi.getState();
+        stateStore.setLoading(key, true);
+        stateStore.setError(key, null);
       });
 
       try {
-        const snapshot = await transport.fetchStateCheckout(
-          appKey,
-          globalRevisionId,
-          stateKeys,
-        );
-
-        const validatedSnapshots = Object.fromEntries(
-          Object.entries(snapshot).map(([stateKey, revisedState]) => {
-            const definition = definitions[getScopedStateKey(appKey, stateKey)];
-
-            if (!definition) {
-              return [stateKey, revisedState];
-            }
-
-            const parsed = definition.schema.safeParse(revisedState.value);
-
-            if (!parsed.success) {
-              console.error(
-                `[StateProvider] Checkout validation failed for ${appKey}.${stateKey}`,
-                {
-                  error: parsed.error,
-                  value: revisedState.value,
-                  globalRevisionId,
-                },
+        const currentStore = storeApi.getState();
+        const numericTargetRevision = toNumericGlobalRevision(globalRevisionId);
+        const localPlan =
+          numericTargetRevision === null
+            ? null
+            : buildLocalMaterializationPlan(
+                currentStore.snapshots,
+                currentStore.segments,
+                stateKeys,
+                numericTargetRevision,
+                checkoutConfig.maxLocalMaterializationEvents,
               );
 
-              throw new Error(`Checkout validation failed for ${appKey}.${stateKey}`);
+        const checkoutResult = localPlan
+          ? {
+              baseRevision: localPlan.baseSnapshot.revision,
+              baseSnapshot: toSnapshotMap(localPlan.baseSnapshot),
+              materializedSnapshot: validateSnapshots(
+                appKey,
+                globalRevisionId,
+                materializeSnapshotMap(
+                  toSnapshotMap(localPlan.baseSnapshot),
+                  localPlan.segments,
+                ),
+                definitions,
+              ),
+              segments: localPlan.segments,
             }
+          : await fetchSnapshotWithForwardWindow(
+              appKey,
+              globalRevisionId,
+              stateKeys,
+              checkoutConfig,
+            );
 
-            return [
-              stateKey,
-              {
-                value: parsed.data,
-                revision: revisedState.revision,
-              },
-            ];
-          }),
-        ) as RevisedStatesSnapshotMap;
+        const stateStore = storeApi.getState();
+        stateStore.setStateSnapshots(checkoutResult.materializedSnapshot);
+        stateStore.cacheSnapshot(checkoutResult.baseRevision, checkoutResult.baseSnapshot);
+        stateStore.cacheSnapshot(globalRevisionId, checkoutResult.materializedSnapshot);
+        if (checkoutResult.segments.length > 0) {
+          stateStore.upsertSegments(checkoutResult.segments);
+        }
 
-        storeApi.getState().setStateSnapshots(validatedSnapshots);
-
-        return validatedSnapshots;
+        return checkoutResult.materializedSnapshot;
       } catch (error) {
         const normalizedError = normalizeError(
           error,
@@ -271,7 +513,13 @@ export function StateProvider({ children }: StateProviderProps) {
         });
       }
     },
-    [definitions, globalStateStoreRegistry, transport],
+    [
+      definitions,
+      fetchSnapshotWithForwardWindow,
+      globalStateStoreRegistry,
+      resolveCheckoutConfig,
+      stopLive,
+    ],
   );
 
   const value = useMemo<StateContextValue>(
@@ -279,11 +527,12 @@ export function StateProvider({ children }: StateProviderProps) {
       definitions,
       ensureState,
       refetchState,
+      refetchAll,
       checkout,
       goLive,
       stopLive,
     }),
-    [checkout, definitions, ensureState, goLive, refetchState, stopLive],
+    [checkout, definitions, ensureState, goLive, refetchAll, refetchState, stopLive],
   );
 
   useEffect(() => {

@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
+import type { PatchSegment } from '@/lib/rekuest/state/store';
 import type { AppKey, AppsDefinition } from '@/lib/rekuest/types';
 import { TransportContext } from './transport-context';
 import type {
@@ -9,6 +10,8 @@ import type {
   FromAgentMessage,
   RevisedStatesSnapshotMap,
   SessionBoundaries,
+  StateCollectionResponse,
+  StateView,
   Task,
   TransportConfig,
   TransportContextValue,
@@ -207,11 +210,13 @@ export function TransportProvider({ children, config, apps }: TransportProviderP
   const channelStatesRef = useRef(
     new Map<string, ChannelState<TransportSubscriptionTopic>>(),
   );
-  
   const connectionListenersRef = useRef(
     new Map<AppKey, Set<(state: SocketState) => void>>(),
   );
   const pingIntervalsRef = useRef(new Map<string, ReturnType<typeof setInterval>>());
+  const connectChannelRef = useRef<
+    ((appKey: AppKey, topic: TransportSubscriptionTopic) => void) | undefined
+  >(undefined);
 
   const channelKeyFor = useCallback(
     (appKey: AppKey, topic: TransportSubscriptionTopic) => `${appKey}:${topic}`,
@@ -317,7 +322,7 @@ export function TransportProvider({ children, config, apps }: TransportProviderP
       state.reconnectTimeoutId = setTimeout(() => {
         state.reconnectTimeoutId = null;
         if (state.shouldReconnect) {
-          connectChannel(appKey, topic);
+          connectChannelRef.current?.(appKey, topic);
         }
       }, delay);
     },
@@ -424,6 +429,10 @@ export function TransportProvider({ children, config, apps }: TransportProviderP
       stopPing,
     ],
   );
+
+  useEffect(() => {
+    connectChannelRef.current = connectChannel;
+  }, [connectChannel]);
 
   const subscribeToMessages = useCallback(
     <TTopic extends TransportSubscriptionTopic>(options: {
@@ -619,17 +628,47 @@ export function TransportProvider({ children, config, apps }: TransportProviderP
   );
 
   const fetchState = useCallback(
-    async <T = unknown,>(appKey: AppKey, stateName: string): Promise<T> => {
+    async <T = unknown,>(appKey: AppKey, stateName: string): Promise<StateView<T>> => {
       const { apiEndpoint } = getEndpoints(appKey);
-      const url = `${apiEndpoint.replace(/\/$/, '')}/states/${stateName}`;
-      const response = await fetch(url);
+      const url = new URL(`${apiEndpoint.replace(/\/$/, '')}/states`);
+      url.searchParams.set('state_keys', stateName);
+
+      const response = await fetch(url.toString());
 
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(`Failed to fetch state: ${response.status} ${errorText}`);
       }
 
-      return (await response.json()) as T;
+      const data = (await response.json()) as StateCollectionResponse<T>;
+      const state = data.states[stateName];
+
+      if (!state) {
+        throw new Error(`State ${stateName} not found in collection response.`);
+      }
+
+      return state;
+    },
+    [getEndpoints],
+  );
+
+  const fetchAll = useCallback(
+    async <T = unknown,>(appKey: AppKey, stateKeys: string[] = []): Promise<StateCollectionResponse<T>> => {
+      const { apiEndpoint } = getEndpoints(appKey);
+      const url = new URL(`${apiEndpoint.replace(/\/$/, '')}/states`);
+
+      if (stateKeys.length > 0) {
+        url.searchParams.set('state_keys', stateKeys.join(','));
+      }
+
+      const response = await fetch(url.toString());
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to fetch states: ${response.status} ${errorText}`);
+      }
+
+      return (await response.json()) as StateCollectionResponse<T>;
     },
     [getEndpoints],
   );
@@ -656,6 +695,34 @@ export function TransportProvider({ children, config, apps }: TransportProviderP
       }
 
       return (await response.json()) as RevisedStatesSnapshotMap;
+    },
+    [getEndpoints],
+  );
+
+  const fetchStateSegments = useCallback(
+    async (
+      appKey: AppKey,
+      fromGlobalRevisionId: string | number,
+      toGlobalRevisionId: string | number,
+      stateKeys: string[],
+    ): Promise<PatchSegment[]> => {
+      const { apiEndpoint } = getEndpoints(appKey);
+      const url = new URL(`${apiEndpoint.replace(/\/$/, '')}/states/segments`);
+      url.searchParams.set('from_global_revision_id', String(fromGlobalRevisionId));
+      url.searchParams.set('to_global_revision_id', String(toGlobalRevisionId));
+
+      for (const stateKey of stateKeys) {
+        url.searchParams.append('state_keys', stateKey);
+      }
+
+      const response = await fetch(url.toString());
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to fetch state segments: ${response.status} ${errorText}`);
+      }
+
+      return (await response.json()) as PatchSegment[];
     },
     [getEndpoints],
   );
@@ -739,10 +806,13 @@ export function TransportProvider({ children, config, apps }: TransportProviderP
   );
 
   useEffect(() => {
+    const channelStates = channelStatesRef.current;
+    const connectionListeners = connectionListenersRef.current;
+
     return () => {
       appKeys.forEach((appKey) => disconnectSocket(appKey));
-      channelStatesRef.current.clear();
-      connectionListenersRef.current.clear();
+      channelStates.clear();
+      connectionListeners.clear();
     };
   }, [appKeys, disconnectSocket]);
 
@@ -764,7 +834,9 @@ export function TransportProvider({ children, config, apps }: TransportProviderP
       assignAction,
       fetchTask,
       fetchState,
+      fetchAll,
       fetchStateCheckout,
+      fetchStateSegments,
       fetchLocks,
       fetchSessionBoundaries,
       fetchActiveSessionBoundaries,
@@ -788,7 +860,9 @@ export function TransportProvider({ children, config, apps }: TransportProviderP
       fetchLocks,
       fetchSessionBoundaries,
       fetchState,
+      fetchAll,
       fetchStateCheckout,
+      fetchStateSegments,
       fetchTask,
       getApp,
       getEndpoints,

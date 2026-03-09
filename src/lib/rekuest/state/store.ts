@@ -16,7 +16,7 @@ export interface Envelope {
 export interface PatchSegment {
   from_global_rev: number;
   to_global_rev: number;
-  patches: Operation[];
+  envelopes: Envelope[];
 }
 
 export interface StateSnapshot {
@@ -26,7 +26,7 @@ export interface StateSnapshot {
 }
 
 export interface SnapshotEnvelope {
-  revision: string;
+  revision: string | number;
   state_snapshots: StateSnapshot[];
 }
 
@@ -35,7 +35,7 @@ export interface GlobalStateStore {
 
   states: Record<string, unknown>;
   stateRevisions: Record<string, number | undefined>;
-  globalRevision: number;
+  globalRevision: string | number | null;
   latestPatches: Operation[],
 
   isLive: boolean;
@@ -52,9 +52,14 @@ export interface GlobalStateStore {
   setStateSnapshots: (
     snapshots: Record<string, { value: unknown; revision: number }>,
   ) => void;
+  cacheSnapshot: (
+    globalRevision: string | number,
+    snapshots: Record<string, { value: unknown; revision: number }>,
+  ) => void;
+  upsertSegments: (segments: PatchSegment[]) => void;
   applyEnvelope: (envelope: Envelope) => void;
   setLoading: (key: string, loading: boolean) => void;
-  setGlobalRevision: (revision: number) => void;
+  setGlobalRevision: (revision: string | number | null) => void;
   setError: (key: string, error: Error | null) => void;
   getState: <T = unknown>(key: string) => T | undefined;
   clearState: (key: string) => void;
@@ -84,7 +89,7 @@ export const createGlobalStateStore = ({
         snapshots: [],
         errors: {},
         latestPatches: [],
-        globalRevision: 0,
+        globalRevision: null,
         setIsLive: (isLive) => {
           set((state) => {
             state.isLive = isLive;
@@ -118,6 +123,59 @@ export const createGlobalStateStore = ({
               state.errors[key] = null;
               state.stateRevisions[key] = snapshot.revision;
             }
+          });
+        },
+
+        cacheSnapshot: (globalRevision, snapshots) => {
+          set((state) => {
+            const snapshotEnvelope: SnapshotEnvelope = {
+              revision: globalRevision,
+              state_snapshots: Object.entries(snapshots).map(([name, snapshot]) => ({
+                name,
+                value: snapshot.value,
+                revision: snapshot.revision,
+              })),
+            };
+
+            const existingIndex = state.snapshots.findIndex(
+              (entry) => String(entry.revision) === String(globalRevision),
+            );
+
+            if (existingIndex >= 0) {
+              state.snapshots[existingIndex] = snapshotEnvelope;
+              return;
+            }
+
+            state.snapshots.push(snapshotEnvelope);
+            state.snapshots.sort(
+              (left, right) => Number(left.revision) - Number(right.revision),
+            );
+          });
+        },
+
+        upsertSegments: (segments) => {
+          set((state) => {
+            const nextSegments = [...state.segments];
+
+            for (const segment of segments) {
+              const existingIndex = nextSegments.findIndex(
+                (entry) =>
+                  entry.from_global_rev === segment.from_global_rev
+                  && entry.to_global_rev === segment.to_global_rev,
+              );
+
+              if (existingIndex >= 0) {
+                nextSegments[existingIndex] = segment;
+              } else {
+                nextSegments.push(segment);
+              }
+            }
+
+            nextSegments.sort(
+              (left, right) => left.from_global_rev - right.from_global_rev,
+            );
+
+            state.segments = nextSegments;
           });
         },
 
@@ -184,6 +242,10 @@ export const createGlobalStateStore = ({
             state.loading = {};
             state.errors = {};
             state.stateRevisions = {};
+            state.latestPatches = [];
+            state.globalRevision = null;
+            state.segments = [];
+            state.snapshots = [];
           });
         },
       })),
