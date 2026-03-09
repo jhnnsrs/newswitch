@@ -407,8 +407,7 @@ export function StateProvider({ children }: StateProviderProps) {
 
       const subscription = transport.subscribeToMessages({
         appKey: typedAppKey,
-        topic: 'states',
-        listener: (message) => handleMessage(typedAppKey, message),
+        listener: (message) => handleMessage(typedAppKey, message as StateTransportMessage),
       });
 
       subscriptionsRef.current.set(typedAppKey, subscription);

@@ -435,17 +435,16 @@ export interface ListenTasksMessage {
   tasks: string[];
 }
 
-export type TransportSubscriptionTopic = 'states' | 'locks' | 'tasks';
+export interface WebSocketSubscriptionInit {
+  type?: string | null;
+  action_keys?: string[] | null;
+  state_keys?: string[] | null;
+  lock_keys?: string[] | null;
+}
 
 export type StateTransportMessage = StateEvent;
 export type LockTransportMessage = LockEventMessage;
 export type TaskTransportMessage = TaskEvent;
-
-export interface TransportTopicMessageMap {
-  states: StateTransportMessage;
-  locks: LockTransportMessage;
-  tasks: TaskTransportMessage;
-}
 
 export interface TransportSocketConnectionState {
   isConnected: boolean;
@@ -551,14 +550,10 @@ export interface TransportContextValue {
   getEndpoints: (appKey: AppKey) => {
     apiEndpoint: string;
     wsUrl: string;
-    stateWsUrl: string;
-    lockWsUrl: string;
-    taskWsUrl: string;
   };
-  subscribeToMessages: <TTopic extends TransportSubscriptionTopic>(options: {
+  subscribeToMessages: (options: {
     appKey: AppKey;
-    topic: TTopic;
-    listener: (message: TransportTopicMessageMap[TTopic]) => void;
+    listener: (message: FromAgentMessage) => void;
   }) => TransportMessageSubscription;
   subscribeToConnectionState: (
     appKey: AppKey,

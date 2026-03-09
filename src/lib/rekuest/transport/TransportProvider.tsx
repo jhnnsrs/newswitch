@@ -18,7 +18,7 @@ import type {
   Task,
   TransportConfig,
   TransportContextValue,
-  TransportSubscriptionTopic,
+  WebSocketSubscriptionInit,
 } from '@/lib/rekuest/transport/types';
 
 const DEFAULT_RECONNECT_CONFIG = {
@@ -33,9 +33,6 @@ const DEFAULT_PING_INTERVAL = 30000;
 type AppEndpoints = {
   apiEndpoint: string;
   wsUrl: string;
-  stateWsUrl: string;
-  lockWsUrl: string;
-  taskWsUrl: string;
 };
 
 export interface TransportProviderProps {
@@ -73,21 +70,19 @@ function createWsBaseUrl(apiEndpoint: string, wsEndpoint?: string) {
   return url.toString();
 }
 
-function createChannelWsUrl(
-  wsBaseUrl: string,
-  channel: TransportSubscriptionTopic,
-  queryParams?: Record<string, string[]>,
-) {
-  const url = new URL(wsBaseUrl);
-  url.pathname = `${url.pathname.replace(/\/$/, '')}/${channel}`;
-
-  Object.entries(queryParams ?? {}).forEach(([key, values]) => {
-    if (values.length > 0) {
-      url.searchParams.set(key, values.join(','));
-    }
-  });
-
-  return url.toString();
+function createSubscriptionInit(app: AppsDefinition[AppKey]): WebSocketSubscriptionInit {
+  return {
+    type: 'INIT',
+    action_keys: Object.values(app.actions as Record<string, { name?: string }>).flatMap(
+      (definition) => (definition.name ? [definition.name] : []),
+    ),
+    state_keys: Object.values(app.states as Record<string, { key?: string }>).flatMap(
+      (definition) => (definition.key ? [definition.key] : []),
+    ),
+    lock_keys: Object.values(app.locks as Record<string, { key?: string }>).flatMap(
+      (definition) => (definition.key ? [definition.key] : []),
+    ),
+  };
 }
 
 function parseSessionBoundaries(data: {
@@ -135,32 +130,11 @@ export function TransportProvider({ children, config, apps }: TransportProviderP
           {
             apiEndpoint,
             wsUrl,
-            stateWsUrl: createChannelWsUrl(wsUrl, 'states', {
-              stateKeys: Object.values(
-                apps[appKey].states as Record<string, { key: string }>,
-              ).map(
-                (definition) => definition.key,
-              ),
-            }),
-            lockWsUrl: createChannelWsUrl(wsUrl, 'locks', {
-              lockKeys: Object.values(
-                apps[appKey].locks as Record<string, { key: string }>,
-              ).map(
-                (definition) => definition.key,
-              ),
-            }),
-            taskWsUrl: createChannelWsUrl(wsUrl, 'tasks', {
-              actionKeys: Object.values(
-                apps[appKey].actions as Record<string, { name: string }>,
-              ).map(
-                (definition) => definition.name,
-              ),
-            }),
           } satisfies AppEndpoints,
         ];
       }),
     ) as Record<AppKey, AppEndpoints>;
-  }, [appKeys, apps, config.apiEndpoint, config.appEndpoints, config.wsEndpoint]);
+  }, [appKeys, config.apiEndpoint, config.appEndpoints, config.wsEndpoint]);
 
   const getApp = useCallback(
     (appKey: AppKey) => {
@@ -191,11 +165,12 @@ export function TransportProvider({ children, config, apps }: TransportProviderP
   const subscriptionManager = useMemo(
     () => new TransportSubscriptionManager({
       getEndpoints: (appKey) => getEndpoints(appKey) as TransportManagerEndpoints,
+      getSubscriptionInit: (appKey) => createSubscriptionInit(getApp(appKey)),
       reconnect,
       pingInterval,
       keepAliveOnNoListeners: true,
     }),
-    [getEndpoints, pingInterval, reconnect],
+    [getApp, getEndpoints, pingInterval, reconnect],
   );
 
   const assignAction = useCallback(

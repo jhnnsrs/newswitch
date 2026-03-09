@@ -46,8 +46,7 @@ export function LockProvider({ children }: LockProviderProps) {
         typedAppKey,
         transport.subscribeToMessages({
           appKey: typedAppKey,
-          topic: 'locks',
-          listener: (message) => handleMessage(typedAppKey, message),
+          listener: (message) => handleMessage(typedAppKey, message as LockTransportMessage),
         }),
       );
     },

@@ -4,22 +4,19 @@ import type {
   TransportConfig,
   TransportMessageSubscription,
   TransportSocketConnectionState,
-  TransportSubscriptionTopic,
-  TransportTopicMessageMap,
+  WebSocketSubscriptionInit,
 } from '@/lib/rekuest/transport/types';
 
 export type TransportManagerEndpoints = {
-  stateWsUrl: string;
-  lockWsUrl: string;
-  taskWsUrl: string;
+  wsUrl: string;
 };
 
 type SocketState = TransportSocketConnectionState;
 type ReconnectConfig = Required<NonNullable<TransportConfig['reconnect']>>;
 
-type ChannelState<TTopic extends TransportSubscriptionTopic> = {
+type AppChannelState = {
   ws: WebSocket | null;
-  listeners: Set<(message: TransportTopicMessageMap[TTopic]) => void>;
+  listeners: Set<(message: FromAgentMessage) => void>;
   connectionState: SocketState;
   reconnectTimeoutId: ReturnType<typeof setTimeout> | null;
   shouldReconnect: boolean;
@@ -27,6 +24,7 @@ type ChannelState<TTopic extends TransportSubscriptionTopic> = {
 
 export interface TransportSubscriptionManagerOptions {
   getEndpoints: (appKey: AppKey) => TransportManagerEndpoints;
+  getSubscriptionInit: (appKey: AppKey) => WebSocketSubscriptionInit;
   reconnect: ReconnectConfig;
   pingInterval: number;
   keepAliveOnNoListeners?: boolean;
@@ -49,10 +47,7 @@ function createInitialConnectionState(): SocketState {
  * or swap listeners during React updates.
  */
 export class TransportSubscriptionManager {
-  private readonly channelStates = new Map<
-    string,
-    ChannelState<TransportSubscriptionTopic>
-  >();
+  private readonly channelStates = new Map<AppKey, AppChannelState>();
 
   private readonly connectionListeners = new Map<
     AppKey,
@@ -63,6 +58,8 @@ export class TransportSubscriptionManager {
 
   private readonly getEndpoints: TransportSubscriptionManagerOptions['getEndpoints'];
 
+  private readonly getSubscriptionInit: TransportSubscriptionManagerOptions['getSubscriptionInit'];
+
   private readonly reconnect: ReconnectConfig;
 
   private readonly pingInterval: number;
@@ -71,28 +68,27 @@ export class TransportSubscriptionManager {
 
   constructor({
     getEndpoints,
+    getSubscriptionInit,
     reconnect,
     pingInterval,
     keepAliveOnNoListeners = true,
   }: TransportSubscriptionManagerOptions) {
     this.getEndpoints = getEndpoints;
+    this.getSubscriptionInit = getSubscriptionInit;
     this.reconnect = reconnect;
     this.pingInterval = pingInterval;
     this.keepAliveOnNoListeners = keepAliveOnNoListeners;
   }
 
-  subscribeToMessages = <TTopic extends TransportSubscriptionTopic>(options: {
+  subscribeToMessages = (options: {
     appKey: AppKey;
-    topic: TTopic;
-    listener: (message: TransportTopicMessageMap[TTopic]) => void;
+    listener: (message: FromAgentMessage) => void;
   }): TransportMessageSubscription => {
-    const key = this.channelKeyFor(options.appKey, options.topic);
-    const state = this.ensureChannelState(options.appKey, options.topic);
+    const state = this.ensureChannelState(options.appKey);
 
-    this.channelStates.set(key, state as ChannelState<TransportSubscriptionTopic>);
     state.listeners.add(options.listener);
     state.shouldReconnect = true;
-    this.connectChannel(options.appKey, options.topic);
+    this.connectChannel(options.appKey);
 
     return {
       unsubscribe: () => {
@@ -107,7 +103,7 @@ export class TransportSubscriptionManager {
           clearTimeout(state.reconnectTimeoutId);
           state.reconnectTimeoutId = null;
         }
-        this.cleanupSocket(key);
+        this.cleanupSocket(options.appKey);
         state.connectionState = createInitialConnectionState();
         this.notifyConnectionListeners(options.appKey);
       },
@@ -137,43 +133,37 @@ export class TransportSubscriptionManager {
   };
 
   reconnectSocket = (appKey: AppKey) => {
-    (['states', 'locks', 'tasks'] as const).forEach((topic) => {
-      const key = this.channelKeyFor(appKey, topic);
-      const state = this.channelStates.get(key);
+    const state = this.channelStates.get(appKey);
 
-      if (!state) {
-        return;
-      }
+    if (!state) {
+      return;
+    }
 
-      state.shouldReconnect = true;
-      state.connectionState = createInitialConnectionState();
-      if (state.reconnectTimeoutId) {
-        clearTimeout(state.reconnectTimeoutId);
-        state.reconnectTimeoutId = null;
-      }
-      this.cleanupSocket(key);
-      this.connectChannel(appKey, topic);
-    });
+    state.shouldReconnect = true;
+    state.connectionState = createInitialConnectionState();
+    if (state.reconnectTimeoutId) {
+      clearTimeout(state.reconnectTimeoutId);
+      state.reconnectTimeoutId = null;
+    }
+    this.cleanupSocket(appKey);
+    this.connectChannel(appKey);
     this.notifyConnectionListeners(appKey);
   };
 
   disconnectSocket = (appKey: AppKey) => {
-    (['states', 'locks', 'tasks'] as const).forEach((topic) => {
-      const key = this.channelKeyFor(appKey, topic);
-      const state = this.channelStates.get(key);
+    const state = this.channelStates.get(appKey);
 
-      if (!state) {
-        return;
-      }
+    if (!state) {
+      return;
+    }
 
-      state.shouldReconnect = false;
-      if (state.reconnectTimeoutId) {
-        clearTimeout(state.reconnectTimeoutId);
-        state.reconnectTimeoutId = null;
-      }
-      this.cleanupSocket(key);
-      state.connectionState = createInitialConnectionState();
-    });
+    state.shouldReconnect = false;
+    if (state.reconnectTimeoutId) {
+      clearTimeout(state.reconnectTimeoutId);
+      state.reconnectTimeoutId = null;
+    }
+    this.cleanupSocket(appKey);
+    state.connectionState = createInitialConnectionState();
     this.notifyConnectionListeners(appKey);
   };
 
@@ -185,24 +175,13 @@ export class TransportSubscriptionManager {
     this.pingIntervals.clear();
   };
 
-  private channelKeyFor(appKey: AppKey, topic: TransportSubscriptionTopic) {
-    return `${appKey}:${topic}`;
-  }
-
-  private ensureChannelState<TTopic extends TransportSubscriptionTopic>(
-    appKey: AppKey,
-    topic: TTopic,
-  ): ChannelState<TTopic> {
-    const key = this.channelKeyFor(appKey, topic);
-    const existingState = this.channelStates.get(key) as
-      | ChannelState<TTopic>
-      | undefined;
-
+  private ensureChannelState(appKey: AppKey): AppChannelState {
+    const existingState = this.channelStates.get(appKey);
     if (existingState) {
       return existingState;
     }
 
-    const nextState: ChannelState<TTopic> = {
+    const nextState: AppChannelState = {
       ws: null,
       listeners: new Set(),
       connectionState: createInitialConnectionState(),
@@ -210,19 +189,8 @@ export class TransportSubscriptionManager {
       shouldReconnect: true,
     };
 
-    this.channelStates.set(key, nextState as ChannelState<TransportSubscriptionTopic>);
+    this.channelStates.set(appKey, nextState);
     return nextState;
-  }
-
-  private getChannelUrl(appKey: AppKey, topic: TransportSubscriptionTopic) {
-    const endpoints = this.getEndpoints(appKey);
-    return endpoints[
-      topic === 'states'
-        ? 'stateWsUrl'
-        : topic === 'locks'
-          ? 'lockWsUrl'
-          : 'taskWsUrl'
-    ];
   }
 
   private notifyConnectionListeners(appKey: AppKey) {
@@ -232,40 +200,26 @@ export class TransportSubscriptionManager {
       return;
     }
 
-    const states = (['states', 'locks', 'tasks'] as const).map((topic) => {
-      const key = this.channelKeyFor(appKey, topic);
-      return (
-        this.channelStates.get(key)?.connectionState ?? createInitialConnectionState()
-      );
-    });
-
-    const aggregateState: SocketState = {
-      isConnected: states.some((state) => state.isConnected),
-      isReconnecting: states.some((state) => state.isReconnecting),
-      isUnconnectable: states.some((state) => state.isUnconnectable),
-      reconnectAttempt: states.reduce(
-        (maxAttempt, state) => Math.max(maxAttempt, state.reconnectAttempt),
-        0,
-      ),
-    };
+    const aggregateState =
+      this.channelStates.get(appKey)?.connectionState ?? createInitialConnectionState();
 
     listeners.forEach((listener) => listener(aggregateState));
   }
 
-  private stopPing(key: string) {
-    const intervalId = this.pingIntervals.get(key);
+  private stopPing(appKey: AppKey) {
+    const intervalId = this.pingIntervals.get(appKey);
 
     if (!intervalId) {
       return;
     }
 
     clearInterval(intervalId);
-    this.pingIntervals.delete(key);
+    this.pingIntervals.delete(appKey);
   }
 
-  private cleanupSocket(key: string) {
-    this.stopPing(key);
-    const state = this.channelStates.get(key);
+  private cleanupSocket(appKey: AppKey) {
+    this.stopPing(appKey);
+    const state = this.channelStates.get(appKey);
 
     if (!state?.ws) {
       return;
@@ -286,9 +240,8 @@ export class TransportSubscriptionManager {
     state.ws = null;
   }
 
-  private scheduleReconnect(appKey: AppKey, topic: TransportSubscriptionTopic) {
-    const key = this.channelKeyFor(appKey, topic);
-    const state = this.channelStates.get(key);
+  private scheduleReconnect(appKey: AppKey) {
+    const state = this.channelStates.get(appKey);
 
     if (!state) {
       return;
@@ -317,14 +270,13 @@ export class TransportSubscriptionManager {
     state.reconnectTimeoutId = setTimeout(() => {
       state.reconnectTimeoutId = null;
       if (state.shouldReconnect) {
-        this.connectChannel(appKey, topic);
+        this.connectChannel(appKey);
       }
     }, delay);
   }
 
-  private connectChannel(appKey: AppKey, topic: TransportSubscriptionTopic) {
-    const key = this.channelKeyFor(appKey, topic);
-    const state = this.ensureChannelState(appKey, topic);
+  private connectChannel(appKey: AppKey) {
+    const state = this.ensureChannelState(appKey);
 
     if (state.connectionState.isUnconnectable) {
       this.notifyConnectionListeners(appKey);
@@ -338,9 +290,9 @@ export class TransportSubscriptionManager {
       return;
     }
 
-    const url = this.getChannelUrl(appKey, topic);
+    const url = this.getEndpoints(appKey).wsUrl;
 
-    this.cleanupSocket(key);
+    this.cleanupSocket(appKey);
 
     const ws = new WebSocket(url);
     state.ws = ws;
@@ -352,10 +304,12 @@ export class TransportSubscriptionManager {
         isUnconnectable: false,
         reconnectAttempt: 0,
       };
+
+      ws.send(JSON.stringify(this.getSubscriptionInit(appKey)));
       this.notifyConnectionListeners(appKey);
-      this.stopPing(key);
+      this.stopPing(appKey);
       this.pingIntervals.set(
-        key,
+        appKey,
         setInterval(() => {
           if (ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify({ type: 'ping' }));
@@ -367,7 +321,7 @@ export class TransportSubscriptionManager {
     ws.onmessage = (event) => {
       const message = JSON.parse(event.data) as FromAgentMessage;
       state.listeners.forEach((listener) => {
-        listener(message as TransportTopicMessageMap[typeof topic]);
+        listener(message);
       });
     };
 
@@ -380,14 +334,14 @@ export class TransportSubscriptionManager {
     };
 
     ws.onclose = () => {
-      this.stopPing(key);
+      this.stopPing(appKey);
       state.connectionState = {
         ...state.connectionState,
         isConnected: false,
       };
       this.notifyConnectionListeners(appKey);
       if (state.shouldReconnect) {
-        this.scheduleReconnect(appKey, topic);
+        this.scheduleReconnect(appKey);
       }
     };
   }

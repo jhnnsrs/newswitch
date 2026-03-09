@@ -1,8 +1,6 @@
 import type { ComponentProps, ReactNode } from 'react';
+import { RealtimeProvider } from './RealtimeProvider';
 import { RekuestStoreProvider } from './RekuestStoreProvider';
-import { LockProvider } from './locks';
-import { StateProvider } from './state';
-import { TaskProvider } from './task';
 import type { TransportConfig } from './transport';
 import { TransportProvider } from './transport';
 import type { RekuestAppDefinition, RekuestAppsDefinition } from './types';
@@ -244,13 +242,7 @@ export function createScopedProvider<
         config={resolvedConfig}
       >
         <RekuestStoreProvider scope={scopeKey} debug={debug}>
-            <StateProvider>
-              <TaskProvider>
-                <LockProvider>
-                  {children}
-                  </LockProvider>
-              </TaskProvider>
-            </StateProvider>
+          <RealtimeProvider>{children}</RealtimeProvider>
         </RekuestStoreProvider>
       </TransportProvider>
     );

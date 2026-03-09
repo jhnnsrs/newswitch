@@ -216,14 +216,14 @@ export function TaskProvider({ children }: TaskProviderProps) {
   );
 
   const waitForTask: TaskContextValue['waitForTask'] = useCallback(
-    (
+    <TArgs = unknown, TReturn = unknown,>(
       appKey: WaitForTaskAppKey,
       taskId: string,
-    ): Promise<Task<unknown, unknown>> => {
+    ): Promise<Task<TArgs, TReturn>> => {
       const cachedTask = taskStoreRegistry
         .getStoreApi(appKey)
         .getState()
-        .getTask(taskId);
+        .getTask<TArgs, TReturn>(taskId);
 
       if (cachedTask?.status === 'completed') {
         return Promise.resolve(cachedTask);
@@ -240,9 +240,9 @@ export function TaskProvider({ children }: TaskProviderProps) {
         return Promise.reject(new Error(`Task was ${cachedTask.status}`));
       }
 
-      return new Promise<Task<unknown, unknown>>((resolve, reject) => {
+      return new Promise<Task<TArgs, TReturn>>((resolve, reject) => {
         const unsubscribe = subscribeToTask(taskId, appKey, (task) => {
-          const typedTask = task
+          const typedTask = task as Task<TArgs, TReturn>;
 
           if (typedTask.status === 'completed') {
             unsubscribe();
@@ -375,8 +375,7 @@ export function TaskProvider({ children }: TaskProviderProps) {
           appKey,
           transport.subscribeToMessages({
             appKey,
-            topic: 'tasks',
-            listener: (message) => handleMessage(appKey, message),
+            listener: (message) => handleMessage(appKey, message as TaskTransportMessage),
           }),
         );
       }
