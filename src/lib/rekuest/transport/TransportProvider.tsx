@@ -74,7 +74,6 @@ function createWsBaseUrl(apiEndpoint: string, wsEndpoint?: string) {
   if (wsEndpoint) {
     return wsEndpoint;
   }
-
   const url = new URL(apiEndpoint);
   url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
   url.pathname = url.pathname.replace(/\/$/, '') + '/ws';
@@ -208,6 +207,7 @@ export function TransportProvider({ children, config, apps }: TransportProviderP
   const channelStatesRef = useRef(
     new Map<string, ChannelState<TransportSubscriptionTopic>>(),
   );
+  
   const connectionListenersRef = useRef(
     new Map<AppKey, Set<(state: SocketState) => void>>(),
   );
