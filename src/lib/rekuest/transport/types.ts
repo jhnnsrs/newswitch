@@ -130,6 +130,17 @@ export interface StateCollectionResponse<T = unknown> {
   states: Record<string, StateView<T>>;
 }
 
+export interface LockView {
+  interface: string;
+  key: string;
+  task_id: string | null;
+}
+
+export interface LockCollectionResponse {
+  count: number;
+  locks: Record<string, LockView>;
+}
+
 export type LogLevel = 'DEBUG' | 'INFO' | 'ERROR' | 'WARN' | 'CRITICAL';
 
 export const TaskEventType = {
@@ -276,6 +287,13 @@ export interface TaskInitMessage extends BaseMessage {
   tasks: Record<string, TaskView>;
 }
 
+export interface WebSocketInitMessage extends BaseMessage {
+  type: 'INIT';
+  tasks: TaskCollectionResponse;
+  states: StateCollectionResponse;
+  locks: LockCollectionResponse;
+}
+
 export interface StateUpdateEvent {
   type: typeof StateEventType.STATE_UPDATE;
   state: string;
@@ -314,6 +332,7 @@ export interface UnlockEvent {
 }
 
 export type TaskEvent =
+  | WebSocketInitMessage
   | TaskInitMessage
   | LogEvent
   | ProgressEvent
@@ -440,6 +459,7 @@ export interface WebSocketSubscriptionInit {
   action_keys?: string[] | null;
   state_keys?: string[] | null;
   lock_keys?: string[] | null;
+  state_update_intervals?: Record<string, number> | null;
 }
 
 export type StateTransportMessage = StateEvent;
@@ -488,6 +508,7 @@ export interface TransportConfig {
   apiEndpoint: string;
   wsEndpoint?: string;
   instanceId: string;
+  appStateUpdateIntervals?: Partial<Record<string, Partial<Record<string, number>>>>;
   reconnect?: {
     maxAttempts?: number;
     initialDelay?: number;
@@ -594,8 +615,6 @@ export interface TaskContextValue {
     appKey: AppKey,
     taskId: string,
   ) => Promise<Task<TArgs, TReturn>>;
-  goLive: (appKey: AppKey) => Promise<void>;
-  stopLive: (appKey: AppKey) => Promise<void>;
   reconnect: (appKey: AppKey) => void;
   disconnect: (appKey: AppKey) => void;
 }

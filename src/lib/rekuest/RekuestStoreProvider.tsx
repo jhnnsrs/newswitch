@@ -1,6 +1,10 @@
 import type { ReactNode } from 'react';
 import { useMemo } from 'react';
 import {
+  AppStateStoreContext,
+  createAppStateStoreRegistry,
+} from '@/lib/rekuest/app-state';
+import {
   createLockStoreRegistry,
   LockStoreContext,
 } from '@/lib/rekuest/locks/store';
@@ -18,6 +22,7 @@ import {
 } from '@/lib/rekuest/transport/store';
 
 export interface RekuestStoreBundle {
+  appStateStore: ReturnType<typeof createAppStateStoreRegistry>;
   globalStateStore: ReturnType<typeof createGlobalStateStoreRegistry>;
   taskStore: ReturnType<typeof createTaskStoreRegistry>;
   transportStore: ReturnType<typeof createTransportStore>;
@@ -36,6 +41,7 @@ const createRekuestStoreBundle = (debug = false): RekuestStoreBundle => {
   const transportStore = createTransportStore();
 
   return {
+    appStateStore: createAppStateStoreRegistry({ debug }),
     globalStateStore: createGlobalStateStoreRegistry({ debug }),
     taskStore: createTaskStoreRegistry(transportStore, { debug }),
     transportStore,
@@ -64,14 +70,16 @@ export function RekuestStoreProvider({
   const stores = useMemo(() => getScopedBundle(scope, debug), [debug, scope]);
 
   return (
-    <GlobalStateStoreContext.Provider value={stores.globalStateStore}>
-      <TransportStoreContext.Provider value={stores.transportStore}>
-        <TaskStoreContext.Provider value={stores.taskStore}>
-          <LockStoreContext.Provider value={stores.lockStore}>
-            {children}
-          </LockStoreContext.Provider>
-        </TaskStoreContext.Provider>
-      </TransportStoreContext.Provider>
-    </GlobalStateStoreContext.Provider>
+    <AppStateStoreContext.Provider value={stores.appStateStore}>
+      <GlobalStateStoreContext.Provider value={stores.globalStateStore}>
+        <TransportStoreContext.Provider value={stores.transportStore}>
+          <TaskStoreContext.Provider value={stores.taskStore}>
+            <LockStoreContext.Provider value={stores.lockStore}>
+              {children}
+            </LockStoreContext.Provider>
+          </TaskStoreContext.Provider>
+        </TransportStoreContext.Provider>
+      </GlobalStateStoreContext.Provider>
+    </AppStateStoreContext.Provider>
   );
 }

@@ -1,5 +1,5 @@
 import type { ComponentProps, ReactNode } from 'react';
-import { RealtimeProvider } from './RealtimeProvider';
+import { BundleProvider } from './BundleProvider';
 import { RekuestStoreProvider } from './RekuestStoreProvider';
 import type { TransportConfig } from './transport';
 import { TransportProvider } from './transport';
@@ -31,6 +31,15 @@ type ScopedProviderTransportConfig<TKey extends string> =
   | TransportConfig
   | TransportEndpointMap<TKey>;
 
+type ScopedAppStateUpdateIntervals<TStates extends Record<string, unknown>> = Partial<
+  Record<Extract<keyof TStates, string> | '*', number>
+>;
+
+type ScopedProviderStateUpdateIntervals<
+  TKey extends string,
+  TStates extends Record<string, unknown>,
+> = Partial<Record<TKey, ScopedAppStateUpdateIntervals<TStates>>>;
+
 interface NormalizedDefinition<
   TKey extends string = string,
   TActions extends Record<string, unknown> = Record<string, unknown>,
@@ -51,17 +60,22 @@ export interface CreateScopedProviderOptions<
   instanceId?: string;
   defaultScope?: string;
   debug?: boolean;
+  stateUpdateIntervals?: ScopedProviderStateUpdateIntervals<TKey, TStates>;
   reconnect?: TransportConfig['reconnect'];
   pingInterval?: number;
 }
 
-export interface ScopedProviderProps {
+export interface ScopedProviderProps<
+  TKey extends string = string,
+  TStates extends Record<string, unknown> = Record<string, unknown>,
+> {
   children: ReactNode;
   scope?: string;
   revision?: string | number;
   instanceId?: string;
   transportConfig?: Partial<TransportConfig>;
   debug?: boolean;
+  stateUpdateIntervals?: ScopedProviderStateUpdateIntervals<TKey, TStates>;
 }
 
 const DEFAULT_SCOPE = 'default';
@@ -153,6 +167,7 @@ const buildTransportConfig = <TKey extends string>(
   instanceId: string,
   reconnect?: TransportConfig['reconnect'],
   pingInterval?: number,
+  stateUpdateIntervals?: ScopedProviderStateUpdateIntervals<TKey, Record<string, unknown>>,
   overrides?: Partial<TransportConfig>,
 ): TransportConfig => {
   if (isTransportConfig(config)) {
@@ -160,6 +175,10 @@ const buildTransportConfig = <TKey extends string>(
       ...config,
       ...overrides,
       instanceId: overrides?.instanceId ?? instanceId ?? config.instanceId,
+      appStateUpdateIntervals:
+        overrides?.appStateUpdateIntervals
+        ?? stateUpdateIntervals
+        ?? config.appStateUpdateIntervals,
       reconnect: overrides?.reconnect ?? reconnect ?? config.reconnect,
       pingInterval: overrides?.pingInterval ?? pingInterval ?? config.pingInterval,
     };
@@ -186,6 +205,7 @@ const buildTransportConfig = <TKey extends string>(
     apiEndpoint: normalizedSelected.apiEndpoint,
     wsEndpoint: normalizedSelected.wsEndpoint,
     instanceId: overrides?.instanceId ?? instanceId,
+    appStateUpdateIntervals: overrides?.appStateUpdateIntervals ?? stateUpdateIntervals,
     reconnect: overrides?.reconnect ?? reconnect,
     pingInterval: overrides?.pingInterval ?? pingInterval,
     appEndpoints,
@@ -214,6 +234,7 @@ export function createScopedProvider<
   defaultScope = DEFAULT_SCOPE,
   reconnect,
   debug: debugOverride,
+  stateUpdateIntervals: stateUpdateIntervalsOverride,
   pingInterval,
 }: CreateScopedProviderOptions<TKey, TActions, TLocks, TStates>) {
   const normalizedDefinition = normalizeDefinition(definition);
@@ -225,13 +246,15 @@ export function createScopedProvider<
     transportConfig,
     instanceId: instanceIdOverride,
     debug = debugOverride,
-  }: ScopedProviderProps) {
+    stateUpdateIntervals = stateUpdateIntervalsOverride,
+  }: ScopedProviderProps<TKey, TStates>) {
     const scopeKey = buildScopeKey(scope, revision);
     const resolvedConfig = buildTransportConfig(
       config,
       instanceIdOverride ?? instanceId,
       reconnect,
       pingInterval,
+      stateUpdateIntervals as ScopedProviderStateUpdateIntervals<TKey, Record<string, unknown>>,
       transportConfig,
     );
 
@@ -242,7 +265,7 @@ export function createScopedProvider<
         config={resolvedConfig}
       >
         <RekuestStoreProvider scope={scopeKey} debug={debug}>
-          <RealtimeProvider>{children}</RealtimeProvider>
+          <BundleProvider>{children}</BundleProvider>
         </RekuestStoreProvider>
       </TransportProvider>
     );

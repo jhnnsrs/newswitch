@@ -13,10 +13,16 @@ export interface Envelope {
   patches: Operation[];
 }
 
+
+
+
+
+
+
 export interface PatchSegment {
   from_global_rev: number;
   to_global_rev: number;
-  envelopes: Envelope[];
+  patches: Envelope[];
 }
 
 export interface StateSnapshot {

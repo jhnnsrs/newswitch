@@ -15,7 +15,7 @@ import { useEffect, useState } from "react";
 
 
 export const useActiveSessionBoundaries = () => {
-  const { fetchActiveSessionBoundaries } = useTransportStore();
+  const { fetchActiveSessionBoundaries } = useTransportStore((s) => s);
 
   const [sessionBoundaries, setSessionBoundaries] = useState<{
     sessionStart: Date;

@@ -1,4 +1,3 @@
-import type { AppDefinition } from '@/lib/rekuest';
 import {
   globalActionDefinition,
   type GlobalActionDefinition,
@@ -9,14 +8,16 @@ import {
   type GlobalStateDefinition,
 } from './hooks/states';
 
+export interface AppDefinition<TAppKey extends string = string> {
+  key: TAppKey;
+  actions: GlobalActionDefinition;
+  locks: GlobalLockDefinition;
+  states: GlobalStateDefinition;
+}
+
 export const appDefinition = {
   key: 'default',
   actions: globalActionDefinition,
   locks: globalLockDefinition,
   states: globalStateDefinition,
-} satisfies AppDefinition<
-  'default',
-  GlobalActionDefinition,
-  GlobalLockDefinition,
-  GlobalStateDefinition
->;
+} satisfies AppDefinition<'default'>;

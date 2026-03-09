@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { z } from 'zod';
+import { selectAppIsLive, useAppStateStore } from '@/lib/rekuest/app-state';
 import {
   getBlockingLock,
   useBlockingLock,
@@ -57,11 +58,13 @@ export const useAction = <TArgs, TReturn>(
   }, [currentReference]);
 
   const task = useTaskStore(appKey, taskSelector) ?? null;
+  const isLive = useAppStateStore(appKey, selectAppIsLive);
   const {
-    isLocked,
+    isLocked: hasBlockingLock,
     lockKey: blockingLockKey,
     lockingTaskId,
   } = useBlockingLock(appKey, definition.lockKeys);
+  const isLocked = !isLive || hasBlockingLock;
   const lockedBy = lockingTaskId ?? null;
 
   const currentTaskId = task?.id;
@@ -111,6 +114,10 @@ export const useAction = <TArgs, TReturn>(
         definition.lockKeys,
       );
 
+      if (!isLive) {
+        throw new Error('Action is unavailable while the app is not in live mode');
+      }
+
       if (lockKey) {
         throw new Error(
           `Action is locked by task ${currentLockingTaskId} (lock: ${lockKey})`,
@@ -133,7 +140,7 @@ export const useAction = <TArgs, TReturn>(
         { ...opts, reference },
       );
     },
-    [taskApi, appKey, definition, lockStoreApi],
+    [taskApi, appKey, definition, isLive, lockStoreApi],
   );
 
   const assign = useCallback(
@@ -185,6 +192,7 @@ export const useAction = <TArgs, TReturn>(
     result,
     error,
     progress,
+    isLive,
     isLoading,
     isLocked,
     lockedBy,

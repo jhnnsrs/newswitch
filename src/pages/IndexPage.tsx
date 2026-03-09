@@ -1,4 +1,3 @@
-import { LiveSync } from "@/lib/rekuest";
 import {
   MultidimensionalAcquisitionControl,
   SettingsPanel,
@@ -15,12 +14,6 @@ import {
 export function IndexPage() {
   return (
     <div className="h-screen flex flex-col bg-background text-foreground dark">
-      <LiveSync
-        appKey="default"
-        subscribeState={true}
-        subscribeLock={true}
-        subscribeTask={true}
-      />
       <ResizablePanelGroup direction="horizontal" className="flex-1">
         <ResizablePanel defaultSize={15} minSize={10} maxSize={30}>
           <SettingsPanel />

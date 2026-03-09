@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject, type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Activity, History, Loader2, PlaySquare, Radio } from "lucide-react";
 import { NavLink } from "react-router-dom";
@@ -10,6 +10,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useAppStateContext } from "@/lib/rekuest/app-state/app-state-context";
 import { useStateContext } from "@/lib/rekuest/state";
 import { useTransport } from "@/lib/rekuest/transport";
 import type { AppKey } from "@/lib/rekuest/types";
@@ -83,6 +84,46 @@ const toRevisionAtTime = (boundary: AppTimelineBoundary, targetMs: number) => {
   );
 };
 
+async function fetchTimelineBoundaries(
+  appKeys: AppKey[],
+  fetchActiveSessionBoundaries: (appKey: AppKey) => Promise<{
+    sessionId: string;
+    sessionStart: Date;
+    sessionEnd: Date;
+    startRevision: number;
+    endRevision: number;
+  }>,
+): Promise<AppTimelineBoundary[]> {
+  return Promise.all(
+    appKeys.map(async (appKey) => {
+      const session = await fetchActiveSessionBoundaries(appKey);
+
+      return {
+        appKey,
+        sessionId: session.sessionId,
+        startMs: session.sessionStart.getTime(),
+        endMs: session.sessionEnd.getTime(),
+        startRevision: session.startRevision,
+        endRevision: session.endRevision,
+      } satisfies AppTimelineBoundary;
+    }),
+  );
+}
+
+function resetTimelineState(
+  setMode: (mode: OverlayMode) => void,
+  setBoundaries: (boundaries: AppTimelineBoundary[]) => void,
+  setSelectedMs: (value: number | null) => void,
+  setDebouncedSelectedMs: (value: number | null) => void,
+  lastCheckoutRevisionRef: MutableRefObject<Partial<Record<AppKey, number>>>,
+) {
+  lastCheckoutRevisionRef.current = {};
+  setMode("live");
+  setBoundaries([]);
+  setSelectedMs(null);
+  setDebouncedSelectedMs(null);
+}
+
 function RouteNavigationBar() {
   return (
     <div className="pointer-events-none fixed top-1/2 left-4 z-50 -translate-y-1/2">
@@ -118,8 +159,10 @@ function RouteNavigationBar() {
 }
 
 function TimelineFloater() {
+  const appStateContext = useAppStateContext();
   const transport = useTransport();
   const stateContext = useStateContext();
+  const { fetchActiveSessionBoundaries } = transport;
 
   const appKeys = useMemo(
     () => Object.keys(transport.apps) as AppKey[],
@@ -134,6 +177,27 @@ function TimelineFloater() {
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [isReturningToLive, setIsReturningToLive] = useState(false);
   const lastCheckoutRevisionRef = useRef<Partial<Record<AppKey, number>>>({});
+  const checkoutRef = useRef(stateContext.checkout);
+
+  useEffect(() => {
+    checkoutRef.current = stateContext.checkout;
+  }, [stateContext.checkout]);
+
+  const goLiveAll = useCallback(async () => {
+    await Promise.all(
+      appKeys.map(async (appKey) => {
+        await appStateContext.goLive(appKey);
+      }),
+    );
+  }, [appKeys, appStateContext]);
+
+  const stopLiveAll = useCallback(async () => {
+    await Promise.all(
+      appKeys.map(async (appKey) => {
+        await appStateContext.stopLive(appKey);
+      }),
+    );
+  }, [appKeys, appStateContext]);
 
   const timelineBounds = useMemo(() => {
     if (boundaries.length === 0) {
@@ -155,6 +219,18 @@ function TimelineFloater() {
   }, [selectedMs, timelineBounds]);
 
   useEffect(() => {
+    if (appKeys.length === 0) {
+      return;
+    }
+
+    void goLiveAll();
+
+    return () => {
+      void stopLiveAll();
+    };
+  }, [appKeys.length, goLiveAll, stopLiveAll]);
+
+  useEffect(() => {
     if (mode !== "timeline" || selectedMs == null) {
       return;
     }
@@ -170,21 +246,11 @@ function TimelineFloater() {
     setIsPreparingTimeline(true);
 
     try {
-      await Promise.all(appKeys.map((appKey) => stateContext.stopLive(appKey)));
+      await stopLiveAll();
 
-      const nextBoundaries = await Promise.all(
-        appKeys.map(async (appKey) => {
-          const session = await transport.fetchActiveSessionBoundaries(appKey);
-
-          return {
-            appKey,
-            sessionId: session.sessionId,
-            startMs: session.sessionStart.getTime(),
-            endMs: session.sessionEnd.getTime(),
-            startRevision: session.startRevision,
-            endRevision: session.endRevision,
-          } satisfies AppTimelineBoundary;
-        }),
+      const nextBoundaries = await fetchTimelineBoundaries(
+        appKeys,
+        fetchActiveSessionBoundaries,
       );
 
       if (nextBoundaries.length === 0) {
@@ -201,29 +267,25 @@ function TimelineFloater() {
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to prepare timeline";
       toast.error(message);
-      void Promise.all(appKeys.map((appKey) => stateContext.goLive(appKey)));
+      void goLiveAll();
       setMode("live");
     } finally {
       setIsPreparingTimeline(false);
     }
-  }, [appKeys, stateContext, transport]);
+  }, [appKeys, fetchActiveSessionBoundaries, goLiveAll, stopLiveAll]);
 
   const returnToLive = useCallback(async () => {
     setIsReturningToLive(true);
 
     try {
-      await Promise.all(
-        appKeys.map(async (appKey) => {
-          await stateContext.refetchAll(appKey, { appKey });
-          await stateContext.goLive(appKey);
-        }),
+      resetTimelineState(
+        setMode,
+        setBoundaries,
+        setSelectedMs,
+        setDebouncedSelectedMs,
+        lastCheckoutRevisionRef,
       );
-
-      setMode("live");
-      setBoundaries([]);
-      setSelectedMs(null);
-      setDebouncedSelectedMs(null);
-      lastCheckoutRevisionRef.current = {};
+      await goLiveAll();
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Failed to return to live mode";
@@ -231,7 +293,7 @@ function TimelineFloater() {
     } finally {
       setIsReturningToLive(false);
     }
-  }, [appKeys, stateContext]);
+  }, [goLiveAll]);
 
   useEffect(() => {
     if (mode !== "timeline" || debouncedSelectedMs == null || boundaries.length === 0) {
@@ -254,7 +316,7 @@ function TimelineFloater() {
 
             lastCheckoutRevisionRef.current[boundary.appKey] = nextRevision;
 
-            await stateContext.checkout(boundary.appKey, nextRevision, {
+            await checkoutRef.current(boundary.appKey, nextRevision, {
               appKey: boundary.appKey,
             });
           }),
@@ -275,7 +337,7 @@ function TimelineFloater() {
     return () => {
       cancelled = true;
     };
-  }, [boundaries, debouncedSelectedMs, mode, stateContext]);
+  }, [boundaries, debouncedSelectedMs, mode]);
 
   const onSliderChange = useCallback(
     (value: number[]) => {
@@ -295,12 +357,12 @@ function TimelineFloater() {
   );
 
   return (
-    <div className="pointer-events-none fixed right-4 bottom-4 left-20 z-50 flex justify-end">
+    <div className="pointer-events-none fixed inset-x-4 bottom-4 z-50 flex justify-end">
       <motion.div
         layout
         transition={{ type: "spring", stiffness: 220, damping: 26 }}
         className={cn(
-          "pointer-events-auto overflow-hidden border border-border/60 bg-background/90 shadow-2xl backdrop-blur-xl dark",
+          "pointer-events-auto overflow-hidden border border-border/60 bg-background/90 shadow-2xl backdrop-blur-xl dark flex-row-reverse flex items-center gap-4 p-3",
           mode === "timeline" ? "w-full rounded-3xl" : "w-auto rounded-full",
         )}
       >

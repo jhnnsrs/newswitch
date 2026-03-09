@@ -34,6 +34,7 @@ export interface UseActionResult<TArgs, TReturn> {
   result: TReturn | null;
   error: string | null;
   progress: number | null;
+  isLive: boolean;
   isLoading: boolean;
   isLocked: boolean;
   lockedBy: string | null;

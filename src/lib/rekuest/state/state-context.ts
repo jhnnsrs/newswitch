@@ -34,8 +34,6 @@ export interface StateContextValue {
     globalRevisionId: string | number,
     options: CheckoutStateOptions,
   ) => Promise<RevisedStatesSnapshotMap>;
-  goLive: (appKey: string) => Promise<void>;
-  stopLive: (appKey: string) => Promise<void>;
 }
 
 export const StateContext = createContext<StateContextValue | null>(null);
@@ -44,7 +42,7 @@ export function useStateContext(): StateContextValue {
   const context = useContext(StateContext);
 
   if (!context) {
-    throw new Error("useStateContext must be used within a StateProvider");
+    throw new Error("useStateContext must be used within a BundleProvider");
   }
 
   return context;

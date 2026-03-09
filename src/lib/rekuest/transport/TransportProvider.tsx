@@ -11,6 +11,7 @@ import type {
   AssignInput,
   AssignOptions,
   AssignResponse,
+  LockCollectionResponse,
   RevisedStatesSnapshotMap,
   SessionBoundaries,
   StateCollectionResponse,
@@ -82,6 +83,37 @@ function createSubscriptionInit(app: AppsDefinition[AppKey]): WebSocketSubscript
     lock_keys: Object.values(app.locks as Record<string, { key?: string }>).flatMap(
       (definition) => (definition.key ? [definition.key] : []),
     ),
+  };
+}
+
+function createSubscriptionInitWithIntervals(
+  app: AppsDefinition[AppKey],
+  configuredIntervals?: Partial<Record<string, number>>,
+): WebSocketSubscriptionInit {
+  const baseInit = createSubscriptionInit(app);
+
+  if (!configuredIntervals) {
+    return baseInit;
+  }
+
+  const mappedIntervals = Object.fromEntries(
+    Object.entries(configuredIntervals).flatMap(([configuredKey, interval]) => {
+      if (interval == null) {
+        return [];
+      }
+
+      if (configuredKey === '*') {
+        return [[configuredKey, interval] as const];
+      }
+
+      const stateDefinition = (app.states as Record<string, { key?: string }>)[configuredKey];
+      return [[stateDefinition?.key ?? configuredKey, interval] as const];
+    }),
+  );
+
+  return {
+    ...baseInit,
+    state_update_intervals: mappedIntervals,
   };
 }
 
@@ -165,12 +197,16 @@ export function TransportProvider({ children, config, apps }: TransportProviderP
   const subscriptionManager = useMemo(
     () => new TransportSubscriptionManager({
       getEndpoints: (appKey) => getEndpoints(appKey) as TransportManagerEndpoints,
-      getSubscriptionInit: (appKey) => createSubscriptionInit(getApp(appKey)),
+      getSubscriptionInit: (appKey) =>
+        createSubscriptionInitWithIntervals(
+          getApp(appKey),
+          config.appStateUpdateIntervals?.[appKey],
+        ),
       reconnect,
       pingInterval,
       keepAliveOnNoListeners: true,
     }),
-    [getApp, getEndpoints, pingInterval, reconnect],
+    [config.appStateUpdateIntervals, getApp, getEndpoints, pingInterval, reconnect],
   );
 
   const assignAction = useCallback(
@@ -347,7 +383,7 @@ export function TransportProvider({ children, config, apps }: TransportProviderP
         throw new Error(`Failed to fetch state segments: ${response.status} ${errorText}`);
       }
 
-      return (await response.json()) as PatchSegment[];
+      return (await response.json()) as PatchSegment;
     },
     [getEndpoints],
   );
@@ -364,8 +400,15 @@ export function TransportProvider({ children, config, apps }: TransportProviderP
       }
 
       const data = (await response.json()) as
+        | LockCollectionResponse
         | Record<string, { task_id: string }>
         | Array<{ key: string; task_id: string }>;
+
+      if ('locks' in data && !Array.isArray(data)) {
+        return Object.fromEntries(
+          Object.entries(data.locks).map(([key, value]) => [key, { task_id: value.task_id ?? '' }]),
+        );
+      }
 
       if (Array.isArray(data)) {
         return Object.fromEntries(
