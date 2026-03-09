@@ -3,7 +3,7 @@ import type { StateDefinition } from "@/lib/rekuest/state";
 import type { RevisedStatesSnapshotMap } from '@/lib/rekuest/transport/types';
 
 export interface CheckoutStateOptions {
-  appKey?: string;
+  appKey: string;
   stateKeys?: string[];
 }
 
@@ -16,9 +16,11 @@ export interface StateContextValue {
     definition: StateDefinition<T, TKey>,
   ) => Promise<T>;
   checkout: (
+    appKey: string,
     globalRevisionId: string | number,
-    options?: CheckoutStateOptions,
+    options: CheckoutStateOptions,
   ) => Promise<RevisedStatesSnapshotMap>;
+  goLive: (appKey: string) => Promise<void>;
 }
 
 export const StateContext = createContext<StateContextValue | null>(null);

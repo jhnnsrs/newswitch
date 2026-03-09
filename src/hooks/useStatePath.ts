@@ -15,9 +15,12 @@ import { selectPath, useGlobalStateStore } from "@/lib/rekuest/state/store";
  * @param path Dot-separated path like "CameraState.exposure_time"
  * @returns The value at that path, or undefined if not found
  */
-export const useStatePath = <T = unknown>(path: string): T | undefined => {
+export const useStatePath = <T = unknown>(
+  appKey: string,
+  path: string,
+): T | undefined => {
   // Use simple selector - Zustand handles reference equality internally
-  return useGlobalStateStore(selectPath<T>(path));
+  return useGlobalStateStore(appKey, selectPath<T>(path));
 };
 
 /**
@@ -30,10 +33,11 @@ export const useStatePath = <T = unknown>(path: string): T | undefined => {
  * });
  */
 export const useStatePaths = <T extends Record<string, string>>(
+  appKey: string,
   paths: T,
 ): { [K in keyof T]: unknown } => {
   // Select each path value - component will re-render when any value changes
-  return useGlobalStateStore((store) => {
+  return useGlobalStateStore(appKey, (store) => {
     const result: Record<string, unknown> = {};
     for (const [key, path] of Object.entries(paths)) {
       result[key] = selectPath(path)(store);

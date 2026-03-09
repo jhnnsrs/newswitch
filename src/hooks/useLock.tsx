@@ -1,6 +1,5 @@
 export {
 	getScopedLockKey,
-	resolveLockAppKey,
 	scopeLockKeys,
 	useLock,
 } from '@/lib/rekuest/locks';

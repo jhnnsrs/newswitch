@@ -4,21 +4,14 @@ import type { ResolvedStateDefinition, StateDefinition } from './types';
 export const getScopedStateKey = (appKey: string, stateKey: string) =>
   `${appKey}::state::${stateKey}`;
 
-export const resolveStateAppKey = <TAppKey extends string>(
-  definition: Pick<StateDefinition<unknown>, 'appKey'>,
-  defaultAppKey: TAppKey,
-): TAppKey => (definition.appKey as TAppKey | undefined) ?? defaultAppKey;
-
 export const resolveStateDefinition = <
-  TAppKey extends string,
   TState extends Record<string, unknown>,
   TKey extends string,
 >(
   definition: StateDefinition<TState, TKey>,
-  defaultAppKey: TAppKey,
 ): ResolvedStateDefinition<TState, TKey> => ({
   ...definition,
-  appKey: resolveStateAppKey(definition, defaultAppKey),
+  appKey: definition.appKey,
 });
 
 export const getAppStateDefinitions = <TAppKey extends string>(
@@ -28,12 +21,10 @@ export const getAppStateDefinitions = <TAppKey extends string>(
     Record<string, unknown>,
     Record<string, StateDefinition<Record<string, unknown>, string>>
   >,
-  fallbackAppKey: TAppKey,
 ) => {
   return Object.values(app.states).map((definition) =>
     resolveStateDefinition(
       definition as StateDefinition<Record<string, unknown>, string>,
-      (definition.appKey as TAppKey | undefined) ?? app.key ?? fallbackAppKey,
     ),
   );
 };
@@ -45,7 +36,6 @@ export const getAllStateDefinitions = <TAppKey extends string>(
     Record<string, unknown>,
     Record<string, StateDefinition<Record<string, unknown>, string>>
   >,
-  defaultAppKey: TAppKey,
 ) => {
   return (
     Object.values(apps) as Array<
@@ -56,9 +46,7 @@ export const getAllStateDefinitions = <TAppKey extends string>(
         Record<string, StateDefinition<Record<string, unknown>, string>>
       >
     >
-  ).flatMap((app) =>
-    getAppStateDefinitions(app, app.key ?? defaultAppKey),
-  );
+  ).flatMap((app) => getAppStateDefinitions(app));
 };
 
 export const getStateDefinitionsRecord = <TAppKey extends string>(
@@ -68,10 +56,9 @@ export const getStateDefinitionsRecord = <TAppKey extends string>(
     Record<string, unknown>,
     Record<string, StateDefinition<Record<string, unknown>, string>>
   >,
-  defaultAppKey: TAppKey,
 ) => {
   return Object.fromEntries(
-    getAllStateDefinitions(apps, defaultAppKey).map((definition) => [
+    getAllStateDefinitions(apps).map((definition) => [
       getScopedStateKey(definition.appKey, definition.key),
       definition,
     ]),

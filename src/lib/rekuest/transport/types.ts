@@ -469,8 +469,6 @@ export interface TransportConfig {
 export interface TransportContextValue {
   apiEndpoint: string;
   apps: AppsDefinition;
-  defaultAppKey: AppKey;
-  app: AppDefinition;
   wsUrl: string;
   instanceId: string;
   pingInterval: number;
@@ -518,8 +516,8 @@ export interface TransportContextValue {
     appKey: AppKey,
     listener: (state: TransportSocketConnectionState) => void,
   ) => () => void;
-  reconnectSocket: (appKey?: AppKey) => void;
-  disconnectSocket: (appKey?: AppKey) => void;
+  reconnectSocket: (appKey: AppKey) => void;
+  disconnectSocket: (appKey: AppKey) => void;
 }
 
 export interface TaskContextValue {
@@ -539,7 +537,7 @@ export interface TaskContextValue {
     appKey: AppKey,
     taskId: string,
   ) => Promise<Task<TArgs, TReturn>>;
-  getCachedTask: (taskId: string, appKey?: AppKey) => Task | undefined;
+  getCachedTask: (taskId: string, appKey: AppKey) => Task | undefined;
   cancelTask: (appKey: AppKey, taskId: string) => Promise<void>;
   pauseTask: (appKey: AppKey, taskId: string) => Promise<void>;
   unpauseTask: (appKey: AppKey, taskId: string) => Promise<void>;
@@ -553,8 +551,8 @@ export interface TaskContextValue {
     appKey: AppKey,
     taskId: string,
   ) => Promise<Task<TArgs, TReturn>>;
-  reconnect: () => void;
-  disconnect: () => void;
+  reconnect: (appKey: AppKey) => void;
+  disconnect: (appKey: AppKey) => void;
 }
 
 export type ActionContextValue = TaskContextValue;

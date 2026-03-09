@@ -43,8 +43,8 @@ export function StateProvider({ children }: StateProviderProps) {
   type TransportAppKey = Parameters<typeof transport.fetchState>[0];
   const stateAwareApps = transport.apps as unknown as StateProviderAppDefinitions;
   const definitions = useMemo(
-    () => getStateDefinitionsRecord(stateAwareApps, transport.defaultAppKey),
-    [stateAwareApps, transport.defaultAppKey],
+    () => getStateDefinitionsRecord(stateAwareApps),
+    [stateAwareApps],
   );
   const globalStateStoreRegistry = useGlobalStateStoreRegistry();
   const inflightRequestsRef = useRef(new Map<string, Promise<unknown>>());
@@ -55,7 +55,6 @@ export function StateProvider({ children }: StateProviderProps) {
     ): Promise<T> => {
       const definition = resolveStateDefinition(
         inputDefinition,
-        transport.defaultAppKey,
       );
       const requestKey = `${definition.appKey}::${definition.key}`;
       const existingRequest = inflightRequestsRef.current.get(requestKey);
@@ -120,7 +119,6 @@ export function StateProvider({ children }: StateProviderProps) {
     ): Promise<void> => {
       const resolvedDefinition = resolveStateDefinition(
         definition,
-        transport.defaultAppKey,
       );
       const currentState = globalStateStoreRegistry
         .getStoreApi(resolvedDefinition.appKey)
@@ -133,12 +131,25 @@ export function StateProvider({ children }: StateProviderProps) {
 
       await refetchState(resolvedDefinition);
     },
-    [globalStateStoreRegistry, refetchState, transport.defaultAppKey],
+    [globalStateStoreRegistry, refetchState],
   );
 
+  const goLive = useCallback<StateContextValue['goLive']>(async (appKey) =>  {
+    globalStateStoreRegistry.getStoreApi(appKey).getState().setIsLive(true);
+
+
+
+  
+
+  }, [globalStateStoreRegistry]);
+
+
+  const stopLive = useCallback<StateContextValue['goLive']>(async (appKey) =>  {
+    globalStateStoreRegistry.getStoreApi(appKey).getState().setIsLive(false);
+  }, [globalStateStoreRegistry]);
+
   const checkout = useCallback<StateContextValue['checkout']>(
-    async (globalRevisionId, options) => {
-      const appKey = (options?.appKey ?? transport.defaultAppKey) as TransportAppKey;
+    async (appKey, globalRevisionId, options) => {
       const availableDefinitions = Object.values(definitions).filter(
         (definition) => definition.appKey === appKey,
       );

@@ -6,9 +6,7 @@ import {
   selectState,
   useGlobalStateStore,
 } from './store';
-import { useTransport } from '@/lib/rekuest/transport/transport-context';
 import { useStateContext } from '@/lib/rekuest/state/state-context';
-import { resolveStateAppKey } from './definitions';
 import type {
   StateDefinition,
   UseStateOptions,
@@ -34,11 +32,10 @@ export const useState = <
   options: UseStateOptions<T, U> = {},
 ): UseStateResult<U> => {
   const { subscribe = false, fetchOnMount = true, selector } = options;
-  const transport = useTransport();
   const stateContext = useStateContext();
   void subscribe;
 
-  const appKey = resolveStateAppKey(definition, transport.defaultAppKey);
+  const appKey = definition.appKey;
 
   const rawData = useGlobalStateStore(appKey, selectState<T>(definition.key)) ?? null;
   const revision = useGlobalStateStore(appKey, selectRevision(definition.key));

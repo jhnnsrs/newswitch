@@ -91,6 +91,44 @@ export const ${qualifiedHookName} = <TSelected>(
 ): TSelected => useBaseTaskStore('${appKey}', selector);${aliasExport}`;
 };
 
+const buildStateStoreHookContent = (
+  appKey: string,
+  symbolPrefix: string | undefined,
+  rekuestImportPath: string,
+) => {
+  const qualifiedHookName = `use${symbolPrefix ?? ''}StateStore`;
+
+  const aliasExport = symbolPrefix
+    ? `\nexport const useStateStore = ${qualifiedHookName};\n`
+    : '';
+
+  return `
+import { useGlobalStateStore as useBaseStateStore, type GlobalStateStore } from '${rekuestImportPath}/state';
+
+export const ${qualifiedHookName} = <TSelected>(
+  selector: (state: GlobalStateStore) => TSelected,
+): TSelected => useBaseStateStore('${appKey}', selector);${aliasExport}`;
+};
+
+const buildLockStoreHookContent = (
+  appKey: string,
+  symbolPrefix: string | undefined,
+  rekuestImportPath: string,
+) => {
+  const qualifiedHookName = `use${symbolPrefix ?? ''}LockStore`;
+
+  const aliasExport = symbolPrefix
+    ? `\nexport const useLockStore = ${qualifiedHookName};\n`
+    : '';
+
+  return `
+import { useLockStore as useBaseLockStore, type LockStore } from '${rekuestImportPath}/locks';
+
+export const ${qualifiedHookName} = <TSelected>(
+  selector: (state: LockStore) => TSelected,
+): TSelected => useBaseLockStore('${appKey}', selector);${aliasExport}`;
+};
+
 const ensureCleanDir = (dirPath: string) => {
   fs.rmSync(dirPath, { force: true, recursive: true });
   fs.mkdirSync(dirPath, { recursive: true });
@@ -293,6 +331,24 @@ export default function generateAppsPlugin(
         );
 
         await formatAndWrite(
+          path.resolve(appHooksDir, 'useStateStore.ts'),
+          buildStateStoreHookContent(
+            app.key,
+            app.symbolPrefix,
+            rekuestImportPath,
+          ),
+        );
+
+        await formatAndWrite(
+          path.resolve(appHooksDir, 'useLockStore.ts'),
+          buildLockStoreHookContent(
+            app.key,
+            app.symbolPrefix,
+            rekuestImportPath,
+          ),
+        );
+
+        await formatAndWrite(
           path.resolve(appRootDir, "app.ts"),
           `
 import {
@@ -357,7 +413,6 @@ export type AppDefinition = AppsDefinition[AppKey];
 export {
   appDefinition,
   appsDefinition,
-  defaultAppKey,
 } from './apps';
 export type { AppDefinition, AppKey, AppsDefinition } from './apps';
 `,

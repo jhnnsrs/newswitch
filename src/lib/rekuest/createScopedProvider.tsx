@@ -1,6 +1,6 @@
 import type { ComponentProps, ReactNode } from 'react';
 import { LocalStoreProvider } from '@/store';
-import type { TransportConfig } from '@/transport';
+import type { TransportConfig } from './transport';
 import { RekuestStoreProvider } from './RekuestStoreProvider';
 import { StateProvider } from './state';
 import { TaskProvider } from './task';
@@ -40,7 +40,6 @@ interface NormalizedDefinition<
   TStates extends Record<string, unknown> = Record<string, unknown>,
 > {
   apps: Record<TKey, RekuestAppDefinition<TKey, TActions, TLocks, TStates>>;
-  defaultAppKey: TKey;
 }
 
 export interface CreateScopedProviderOptions<
@@ -104,19 +103,14 @@ const normalizeDefinition = <
       apps: {
         [singleDefinition.key]: singleDefinition,
       },
-      defaultAppKey: singleDefinition.key,
     } as NormalizedDefinition<TKey, TActions, TLocks, TStates>;
   }
-
-  const appKeys = Object.keys(definition) as TKey[];
-  const defaultAppKey = (appKeys[0] ?? 'default') as TKey;
 
   return {
     apps: definition as Record<
       TKey,
       RekuestAppDefinition<TKey, TActions, TLocks, TStates>
     >,
-    defaultAppKey,
   };
 };
 
@@ -155,7 +149,6 @@ const normalizeEndpoint = (endpoint: TransportEndpointConfig) => {
 };
 
 const buildTransportConfig = <TKey extends string>(
-  defaultAppKey: TKey,
   config: ScopedProviderTransportConfig<TKey>,
   instanceId: string,
   reconnect?: TransportConfig['reconnect'],
@@ -172,10 +165,14 @@ const buildTransportConfig = <TKey extends string>(
     };
   }
 
-  const selected = config[defaultAppKey];
+  const selectedEntry = Object.entries(config).find(
+    (entry): entry is [string, TransportEndpointConfig] => entry[1] !== undefined,
+  );
+
+  const selected = selectedEntry?.[1];
 
   if (!selected) {
-    throw new Error(`No transport endpoint configured for app key "${defaultAppKey}".`);
+    throw new Error('No transport endpoint configured for scoped provider.');
   }
 
   const normalizedSelected = normalizeEndpoint(selected);
@@ -229,7 +226,6 @@ export function createScopedProvider<
   }: ScopedProviderProps) {
     const scopeKey = buildScopeKey(scope, revision);
     const resolvedConfig = buildTransportConfig(
-      normalizedDefinition.defaultAppKey as TKey,
       config,
       instanceIdOverride ?? instanceId,
       reconnect,

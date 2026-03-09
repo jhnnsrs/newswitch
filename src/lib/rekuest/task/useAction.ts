@@ -10,9 +10,7 @@ import {
   useTaskStore,
 } from '@/lib/rekuest/task/store';
 import { useTaskContext } from '@/lib/rekuest/task/task-context';
-import { useTransport } from '@/lib/rekuest/transport/transport-context';
 import type { AssignOptions, Task } from '@/lib/rekuest/transport/types';
-import { resolveActionAppKey } from './keys';
 import type {
   ActionDefinition,
   UseActionOptions,
@@ -34,9 +32,8 @@ export const useAction = <TArgs, TReturn>(
   } = options;
 
   const taskApi = useTaskContext();
-  const transport = useTransport();
-  const lockStoreApi = useLockStoreApi();
-  const appKey = resolveActionAppKey(definition, transport.defaultAppKey);
+  const appKey = definition.appKey;
+  const lockStoreApi = useLockStoreApi(appKey);
   const [currentReference, setCurrentReference] = useState<string | null>(null);
   const [validationError, setValidationError] = useState<z.ZodError | null>(
     null,
@@ -127,7 +124,7 @@ export const useAction = <TArgs, TReturn>(
       }
 
       const reference = opts?.reference || taskApi.createReference();
-  setCurrentReference(reference);
+    setCurrentReference(reference);
 
       return await taskApi.assign<TArgs, TReturn>(
         appKey,

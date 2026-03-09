@@ -1,6 +1,6 @@
 export interface LockDefinition<T extends string> {
   key: T;
-  appKey?: string;
+  appKey: string;
 }
 
 export interface UseLockOptions {

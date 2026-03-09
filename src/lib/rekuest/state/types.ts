@@ -2,7 +2,7 @@ import { ZodType } from 'zod';
 
 export interface StateDefinition<T, TKey extends string = string> {
   key: TKey;
-  appKey?: string;
+  appKey: string;
   schema: ZodType<T>;
 }
 

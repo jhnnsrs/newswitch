@@ -1,6 +1,4 @@
 import { useBlockingLock } from './store';
-import { useTransport } from '@/lib/rekuest/transport/transport-context';
-import { resolveLockAppKey } from './keys';
 import type {
   LockDefinition,
   UseLockOptions,
@@ -12,8 +10,7 @@ export const useLock = <T extends string>(
   options: UseLockOptions = {},
 ): UseLockResult => {
   void options;
-  const transport = useTransport();
-  const appKey = resolveLockAppKey(definition, transport.defaultAppKey);
+  const appKey = definition.appKey;
   const blockingLock = useBlockingLock(appKey, [definition.key]);
 
   return {

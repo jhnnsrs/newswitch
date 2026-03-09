@@ -1,4 +1,5 @@
 import { useCallback, useMemo, type ReactNode } from 'react';
+import type { AppKey } from '@/lib/rekuest/types';
 import {
   getRegistryTasks,
   selectTask,
@@ -90,7 +91,7 @@ export function TaskProvider({ children }: TaskProviderProps) {
   );
 
   const getCachedTask = useCallback(
-    (taskId: string, appKey?: CachedTaskAppKey): Task | undefined =>
+    (taskId: string, appKey: CachedTaskAppKey): Task | undefined =>
       taskStoreRegistry.getStoreApi(appKey).getState().getTask(taskId),
     [taskStoreRegistry],
   );
@@ -100,7 +101,7 @@ export function TaskProvider({ children }: TaskProviderProps) {
       taskId: string,
       status: TaskStatus,
       request: () => Promise<void>,
-      appKey?: CachedTaskAppKey,
+      appKey: CachedTaskAppKey,
     ) => {
       await request();
       taskStoreRegistry.getStoreApi(appKey).getState().updateTask(taskId, { status });
@@ -230,12 +231,12 @@ export function TaskProvider({ children }: TaskProviderProps) {
     [subscribeToTask, taskStoreRegistry],
   );
 
-  const reconnect = useCallback(() => {
-    transport.reconnectSocket();
+  const reconnect = useCallback((appKey: AppKey) => {
+    transport.reconnectSocket(appKey);
   }, [transport]);
 
-  const disconnect = useCallback(() => {
-    transport.disconnectSocket();
+  const disconnect = useCallback((appKey: AppKey) => {
+    transport.disconnectSocket(appKey);
   }, [transport]);
 
   void registryVersion;

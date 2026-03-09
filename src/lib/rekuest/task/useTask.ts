@@ -1,12 +1,11 @@
 import { useCallback, useMemo } from 'react';
 import type { AppKey } from '@/lib/rekuest/types';
 import { selectTask, useTaskStore } from '@/lib/rekuest/task/store';
-import { useTransport } from '@/lib/rekuest/transport/transport-context';
 import type { Task } from '@/lib/rekuest/transport/types';
 import { useTaskContext } from './task-context';
 
 export interface UseTaskOptions {
-  appKey?: AppKey;
+  appKey: AppKey;
 }
 
 export interface UseTaskResult<TArgs = unknown, TReturn = unknown> {
@@ -20,11 +19,10 @@ export interface UseTaskResult<TArgs = unknown, TReturn = unknown> {
 
 export function useTask<TArgs = unknown, TReturn = unknown>(
   taskId: string | null | undefined,
-  options: UseTaskOptions = {},
+  options: UseTaskOptions,
 ): UseTaskResult<TArgs, TReturn> {
   const action = useTaskContext();
-  const transport = useTransport();
-  const appKey = options.appKey ?? transport.defaultAppKey;
+  const { appKey } = options;
   const selector = useMemo(
     () => (taskId ? selectTask<TArgs, TReturn>(taskId) : () => undefined),
     [taskId],

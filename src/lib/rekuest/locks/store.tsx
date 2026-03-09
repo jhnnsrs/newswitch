@@ -81,8 +81,7 @@ export const createLockStore = () =>
   );
 
 export interface LockStoreRegistry {
-  defaultAppKey: string;
-  getStoreApi: (appKey?: string) => StoreApi<LockStore>;
+  getStoreApi: (appKey: string) => StoreApi<LockStore>;
   getStoreEntries: () => Array<[string, StoreApi<LockStore>]>;
 }
 
@@ -118,28 +117,19 @@ export const useLockStoreRegistry = (): LockStoreRegistry => {
   return registry;
 };
 
-export function useLockStoreApi(appKey?: string) {
+export function useLockStoreApi(appKey: string) {
   return useLockStoreRegistry().getStoreApi(appKey);
 }
 
-export function useLockStore<TSelected>(
-  selector: (state: LockStore) => TSelected,
-): TSelected;
 export function useLockStore<TSelected>(
   appKey: string,
   selector: (state: LockStore) => TSelected,
 ): TSelected;
 export function useLockStore<TSelected>(
-  appKeyOrSelector: string | ((state: LockStore) => TSelected),
-  maybeSelector?: (state: LockStore) => TSelected,
+  appKey: string,
+  selector: (state: LockStore) => TSelected,
 ): TSelected {
   const registry = useLockStoreRegistry();
-  const appKey = typeof appKeyOrSelector === 'string'
-    ? appKeyOrSelector
-    : registry.defaultAppKey;
-  const selector = typeof appKeyOrSelector === 'string'
-    ? maybeSelector
-    : appKeyOrSelector;
 
   if (!selector) {
     throw new Error('Missing lock selector');

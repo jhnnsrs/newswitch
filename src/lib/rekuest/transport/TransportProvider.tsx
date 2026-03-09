@@ -125,10 +125,8 @@ function createInitialConnectionState(): SocketState {
 
 export function TransportProvider({ children, config, apps }: TransportProviderProps) {
   const appKeys = useMemo(() => Object.keys(apps) as AppKey[], [apps]);
-  const defaultAppKey = appKeys[0];
-  const app = apps[defaultAppKey];
 
-  if (!defaultAppKey || !app) {
+  if (appKeys.length === 0) {
     throw new Error('TransportProvider requires at least one configured app.');
   }
 
@@ -495,58 +493,50 @@ export function TransportProvider({ children, config, apps }: TransportProviderP
   );
 
   const reconnectSocket = useCallback(
-    (appKey?: AppKey) => {
-      const targetApps = appKey ? [appKey] : appKeys;
+    (appKey: AppKey) => {
+      (['states', 'locks', 'tasks'] as const).forEach((topic) => {
+        const key = channelKeyFor(appKey, topic);
+        const state = channelStatesRef.current.get(key);
 
-      targetApps.forEach((currentAppKey) => {
-        (['states', 'locks', 'tasks'] as const).forEach((topic) => {
-          const key = channelKeyFor(currentAppKey, topic);
-          const state = channelStatesRef.current.get(key);
+        if (!state) {
+          return;
+        }
 
-          if (!state) {
-            return;
-          }
-
-          state.shouldReconnect = true;
-          state.connectionState = createInitialConnectionState();
-          if (state.reconnectTimeoutId) {
-            clearTimeout(state.reconnectTimeoutId);
-            state.reconnectTimeoutId = null;
-          }
-          cleanupSocket(key);
-          connectChannel(currentAppKey, topic);
-        });
-        notifyConnectionListeners(currentAppKey);
+        state.shouldReconnect = true;
+        state.connectionState = createInitialConnectionState();
+        if (state.reconnectTimeoutId) {
+          clearTimeout(state.reconnectTimeoutId);
+          state.reconnectTimeoutId = null;
+        }
+        cleanupSocket(key);
+        connectChannel(appKey, topic);
       });
+      notifyConnectionListeners(appKey);
     },
-    [appKeys, channelKeyFor, cleanupSocket, connectChannel, notifyConnectionListeners],
+    [channelKeyFor, cleanupSocket, connectChannel, notifyConnectionListeners],
   );
 
   const disconnectSocket = useCallback(
-    (appKey?: AppKey) => {
-      const targetApps = appKey ? [appKey] : appKeys;
+    (appKey: AppKey) => {
+      (['states', 'locks', 'tasks'] as const).forEach((topic) => {
+        const key = channelKeyFor(appKey, topic);
+        const state = channelStatesRef.current.get(key);
 
-      targetApps.forEach((currentAppKey) => {
-        (['states', 'locks', 'tasks'] as const).forEach((topic) => {
-          const key = channelKeyFor(currentAppKey, topic);
-          const state = channelStatesRef.current.get(key);
+        if (!state) {
+          return;
+        }
 
-          if (!state) {
-            return;
-          }
-
-          state.shouldReconnect = false;
-          if (state.reconnectTimeoutId) {
-            clearTimeout(state.reconnectTimeoutId);
-            state.reconnectTimeoutId = null;
-          }
-          cleanupSocket(key);
-          state.connectionState = createInitialConnectionState();
-        });
-        notifyConnectionListeners(currentAppKey);
+        state.shouldReconnect = false;
+        if (state.reconnectTimeoutId) {
+          clearTimeout(state.reconnectTimeoutId);
+          state.reconnectTimeoutId = null;
+        }
+        cleanupSocket(key);
+        state.connectionState = createInitialConnectionState();
       });
+      notifyConnectionListeners(appKey);
     },
-    [appKeys, channelKeyFor, cleanupSocket, notifyConnectionListeners],
+    [channelKeyFor, cleanupSocket, notifyConnectionListeners],
   );
 
   const assignAction = useCallback(
@@ -750,19 +740,22 @@ export function TransportProvider({ children, config, apps }: TransportProviderP
 
   useEffect(() => {
     return () => {
-      disconnectSocket();
+      appKeys.forEach((appKey) => disconnectSocket(appKey));
       channelStatesRef.current.clear();
       connectionListenersRef.current.clear();
     };
-  }, [disconnectSocket]);
+  }, [appKeys, disconnectSocket]);
+
+  const transportWsUrl = useMemo(
+    () => createWsBaseUrl(config.apiEndpoint, config.wsEndpoint),
+    [config.apiEndpoint, config.wsEndpoint],
+  );
 
   const contextValue = useMemo<TransportContextValue>(
     () => ({
       apiEndpoint: config.apiEndpoint,
       apps,
-      app,
-      wsUrl: endpointsByApp[defaultAppKey].wsUrl,
-      defaultAppKey,
+      wsUrl: transportWsUrl,
       instanceId: config.instanceId,
       pingInterval,
       reconnect,
@@ -785,15 +778,12 @@ export function TransportProvider({ children, config, apps }: TransportProviderP
       disconnectSocket,
     }),
     [
-      app,
       apps,
       assignAction,
       config.apiEndpoint,
       config.instanceId,
       createTaskMutation,
-      defaultAppKey,
       disconnectSocket,
-      endpointsByApp,
       fetchActiveSessionBoundaries,
       fetchLocks,
       fetchSessionBoundaries,
@@ -807,6 +797,7 @@ export function TransportProvider({ children, config, apps }: TransportProviderP
       reconnectSocket,
       subscribeToConnectionState,
       subscribeToMessages,
+      transportWsUrl,
     ],
   );
 

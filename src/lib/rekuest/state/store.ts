@@ -13,11 +13,39 @@ export interface Envelope {
   patches: Operation[];
 }
 
+export interface PatchSegment {
+  from_global_rev: number;
+  to_global_rev: number;
+  patches: Operation[];
+}
+
+export interface StateSnapshot {
+  name: string;
+  value: unknown;
+  revision: number;
+}
+
+export interface SnapshotEnvelope {
+  revision: string;
+  state_snapshots: StateSnapshot[];
+}
+
 export interface GlobalStateStore {
+
+
   states: Record<string, unknown>;
   stateRevisions: Record<string, number | undefined>;
+  globalRevision: number;
+
+  isLive: boolean;
+  segments: PatchSegment[];
+  snapshots: SnapshotEnvelope[];
+
   loading: Record<string, boolean | undefined>;
   errors: Record<string, Error | null | undefined>;
+
+
+  setIsLive: (isLive: boolean) => void;
   setState: (key: string, value: unknown) => void;
   setStateSnapshot: (key: string, value: unknown, revision: number) => void;
   setStateSnapshots: (
@@ -25,6 +53,7 @@ export interface GlobalStateStore {
   ) => void;
   applyEnvelope: (envelope: Envelope) => void;
   setLoading: (key: string, loading: boolean) => void;
+  setGlobalRevision: (revision: number) => void;
   setError: (key: string, error: Error | null) => void;
   getState: <T = unknown>(key: string) => T | undefined;
   clearState: (key: string) => void;
@@ -38,8 +67,21 @@ export const createGlobalStateStore = () =>
         states: {},
         stateRevisions: {},
         loading: {},
+        isLive: false,
+        segments: [],
+        snapshots: [],
         errors: {},
-
+        globalRevision: 0,
+        setIsLive: (isLive) => {
+          set((state) => {
+            state.isLive = isLive;
+          });
+        },
+        setGlobalRevision: (revision) => {
+          set((state) => {
+            state.globalRevision = revision;
+          });
+        },
         setState: (key, value) => {
           set((state) => {
             state.states[key] = value;
@@ -131,16 +173,14 @@ export const createGlobalStateStore = () =>
   );
 
 export interface GlobalStateStoreRegistry {
-  defaultAppKey: string;
-  getStoreApi: (appKey?: string) => StoreApi<GlobalStateStore>;
+  getStoreApi: (appKey: string) => StoreApi<GlobalStateStore>;
   getStoreEntries: () => Array<[string, StoreApi<GlobalStateStore>]>;
 }
 
 export const createGlobalStateStoreRegistry = (): GlobalStateStoreRegistry => {
   const stores = new Map<string, StoreApi<GlobalStateStore>>();
-  const defaultAppKey = 'default';
 
-  const getStoreApi = (appKey = defaultAppKey) => {
+  const getStoreApi = (appKey: string) => {
     const existingStore = stores.get(appKey);
     if (existingStore) {
       return existingStore;
@@ -152,7 +192,6 @@ export const createGlobalStateStoreRegistry = (): GlobalStateStoreRegistry => {
   };
 
   return {
-    defaultAppKey,
     getStoreApi,
     getStoreEntries: () => Array.from(stores.entries()),
   };
@@ -172,28 +211,19 @@ export const useGlobalStateStoreRegistry = (): GlobalStateStoreRegistry => {
   return registry;
 };
 
-export function useGlobalStateStoreApi(appKey?: string) {
+export function useGlobalStateStoreApi(appKey: string) {
   return useGlobalStateStoreRegistry().getStoreApi(appKey);
 }
 
-export function useGlobalStateStore<TSelected>(
-  selector: (state: GlobalStateStore) => TSelected,
-): TSelected;
 export function useGlobalStateStore<TSelected>(
   appKey: string,
   selector: (state: GlobalStateStore) => TSelected,
 ): TSelected;
 export function useGlobalStateStore<TSelected>(
-  appKeyOrSelector: string | ((state: GlobalStateStore) => TSelected),
-  maybeSelector?: (state: GlobalStateStore) => TSelected,
+  appKey: string,
+  selector: (state: GlobalStateStore) => TSelected,
 ): TSelected {
   const registry = useGlobalStateStoreRegistry();
-  const appKey = typeof appKeyOrSelector === 'string'
-    ? appKeyOrSelector
-    : registry.defaultAppKey;
-  const selector = typeof appKeyOrSelector === 'string'
-    ? maybeSelector
-    : appKeyOrSelector;
 
   if (!selector) {
     throw new Error('Missing state selector');
