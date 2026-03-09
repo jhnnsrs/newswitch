@@ -1,13 +1,16 @@
 import type { ReactNode } from 'react';
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import type { PatchSegment } from '@/lib/rekuest/state/store';
 import type { AppKey, AppsDefinition } from '@/lib/rekuest/types';
+import {
+  TransportSubscriptionManager,
+  type TransportManagerEndpoints,
+} from '@/lib/rekuest/transport/subscription-manager';
 import { TransportContext } from './transport-context';
 import type {
   AssignInput,
   AssignOptions,
   AssignResponse,
-  FromAgentMessage,
   RevisedStatesSnapshotMap,
   SessionBoundaries,
   StateCollectionResponse,
@@ -15,10 +18,7 @@ import type {
   Task,
   TransportConfig,
   TransportContextValue,
-  TransportMessageSubscription,
-  TransportSocketConnectionState,
   TransportSubscriptionTopic,
-  TransportTopicMessageMap,
 } from '@/lib/rekuest/transport/types';
 
 const DEFAULT_RECONNECT_CONFIG = {
@@ -36,16 +36,6 @@ type AppEndpoints = {
   stateWsUrl: string;
   lockWsUrl: string;
   taskWsUrl: string;
-};
-
-type SocketState = TransportSocketConnectionState;
-
-type ChannelState<TTopic extends TransportSubscriptionTopic> = {
-  ws: WebSocket | null;
-  listeners: Set<(message: TransportTopicMessageMap[TTopic]) => void>;
-  connectionState: SocketState;
-  reconnectTimeoutId: ReturnType<typeof setTimeout> | null;
-  shouldReconnect: boolean;
 };
 
 export interface TransportProviderProps {
@@ -113,15 +103,6 @@ function parseSessionBoundaries(data: {
     startRevision: data.start_revision,
     endRevision: data.end_revision,
     sessionId: data.session_id,
-  };
-}
-
-function createInitialConnectionState(): SocketState {
-  return {
-    isConnected: false,
-    isReconnecting: false,
-    isUnconnectable: false,
-    reconnectAttempt: 0,
   };
 }
 
@@ -195,7 +176,7 @@ export function TransportProvider({ children, config, apps }: TransportProviderP
   );
 
   const getEndpoints = useCallback(
-    (appKey: AppKey) => {
+    (appKey: AppKey): AppEndpoints => {
       const endpoints = endpointsByApp[appKey];
 
       if (!endpoints) {
@@ -207,345 +188,14 @@ export function TransportProvider({ children, config, apps }: TransportProviderP
     [endpointsByApp],
   );
 
-  const channelStatesRef = useRef(
-    new Map<string, ChannelState<TransportSubscriptionTopic>>(),
-  );
-  const connectionListenersRef = useRef(
-    new Map<AppKey, Set<(state: SocketState) => void>>(),
-  );
-  const pingIntervalsRef = useRef(new Map<string, ReturnType<typeof setInterval>>());
-  const connectChannelRef = useRef<
-    ((appKey: AppKey, topic: TransportSubscriptionTopic) => void) | undefined
-  >(undefined);
-
-  const channelKeyFor = useCallback(
-    (appKey: AppKey, topic: TransportSubscriptionTopic) => `${appKey}:${topic}`,
-    [],
-  );
-
-  const notifyConnectionListeners = useCallback(
-    (appKey: AppKey) => {
-      const listeners = connectionListenersRef.current.get(appKey);
-
-      if (!listeners || listeners.size === 0) {
-        return;
-      }
-
-      const states = (['states', 'locks', 'tasks'] as const).map((topic) => {
-        const key = channelKeyFor(appKey, topic);
-        return (
-          channelStatesRef.current.get(key)?.connectionState ??
-          createInitialConnectionState()
-        );
-      });
-
-      const aggregateState: SocketState = {
-        isConnected: states.some((state) => state.isConnected),
-        isReconnecting: states.some((state) => state.isReconnecting),
-        isUnconnectable: states.some((state) => state.isUnconnectable),
-        reconnectAttempt: states.reduce(
-          (maxAttempt, state) => Math.max(maxAttempt, state.reconnectAttempt),
-          0,
-        ),
-      };
-
-      listeners.forEach((listener) => listener(aggregateState));
-    },
-    [channelKeyFor],
-  );
-
-  const stopPing = useCallback((key: string) => {
-    const intervalId = pingIntervalsRef.current.get(key);
-
-    if (!intervalId) {
-      return;
-    }
-
-    clearInterval(intervalId);
-    pingIntervalsRef.current.delete(key);
-  }, []);
-
-  const cleanupSocket = useCallback(
-    (key: string) => {
-      stopPing(key);
-      const state = channelStatesRef.current.get(key);
-
-      if (!state?.ws) {
-        return;
-      }
-
-      state.ws.onopen = null;
-      state.ws.onmessage = null;
-      state.ws.onclose = null;
-      state.ws.onerror = null;
-
-      if (
-        state.ws.readyState === WebSocket.OPEN ||
-        state.ws.readyState === WebSocket.CONNECTING
-      ) {
-        state.ws.close(1000, 'Client cleanup');
-      }
-
-      state.ws = null;
-    },
-    [stopPing],
-  );
-
-  const scheduleReconnect = useCallback(
-    (appKey: AppKey, topic: TransportSubscriptionTopic) => {
-      const key = channelKeyFor(appKey, topic);
-      const state = channelStatesRef.current.get(key);
-
-      if (!state) {
-        return;
-      }
-
-      const nextAttempt = state.connectionState.reconnectAttempt + 1;
-      state.connectionState = {
-        ...state.connectionState,
-        isConnected: false,
-        isReconnecting: nextAttempt <= reconnect.maxAttempts,
-        reconnectAttempt: nextAttempt,
-        isUnconnectable: nextAttempt > reconnect.maxAttempts,
-      };
-      notifyConnectionListeners(appKey);
-
-      if (nextAttempt > reconnect.maxAttempts) {
-        return;
-      }
-
-      const delay = Math.min(
-        reconnect.initialDelay * Math.pow(reconnect.backoffMultiplier, nextAttempt - 1),
-        reconnect.maxDelay,
-      );
-
-      state.reconnectTimeoutId = setTimeout(() => {
-        state.reconnectTimeoutId = null;
-        if (state.shouldReconnect) {
-          connectChannelRef.current?.(appKey, topic);
-        }
-      }, delay);
-    },
-    [channelKeyFor, notifyConnectionListeners, reconnect],
-  );
-
-  const connectChannel = useCallback(
-    (appKey: AppKey, topic: TransportSubscriptionTopic) => {
-      const key = channelKeyFor(appKey, topic);
-      const existingState = channelStatesRef.current.get(key) as
-        | ChannelState<typeof topic>
-        | undefined;
-      const state =
-        existingState ?? {
-          ws: null,
-          listeners: new Set(),
-          connectionState: createInitialConnectionState(),
-          reconnectTimeoutId: null,
-          shouldReconnect: true,
-        };
-      channelStatesRef.current.set(
-        key,
-        state as ChannelState<TransportSubscriptionTopic>,
-      );
-
-      if (state.connectionState.isUnconnectable) {
-        notifyConnectionListeners(appKey);
-        return;
-      }
-
-      if (
-        state.ws?.readyState === WebSocket.OPEN ||
-        state.ws?.readyState === WebSocket.CONNECTING
-      ) {
-        return;
-      }
-
-      const url = getEndpoints(appKey)[
-        topic === 'states'
-          ? 'stateWsUrl'
-          : topic === 'locks'
-            ? 'lockWsUrl'
-            : 'taskWsUrl'
-      ];
-
-      cleanupSocket(key);
-
-      const ws = new WebSocket(url);
-      state.ws = ws;
-
-      ws.onopen = () => {
-        state.connectionState = {
-          isConnected: true,
-          isReconnecting: false,
-          isUnconnectable: false,
-          reconnectAttempt: 0,
-        };
-        notifyConnectionListeners(appKey);
-        stopPing(key);
-        pingIntervalsRef.current.set(
-          key,
-          setInterval(() => {
-            if (ws.readyState === WebSocket.OPEN) {
-              ws.send(JSON.stringify({ type: 'ping' }));
-            }
-          }, pingInterval),
-        );
-      };
-
-      ws.onmessage = (event) => {
-        const message = JSON.parse(event.data) as FromAgentMessage;
-        state.listeners.forEach((listener) => {
-          listener(message as TransportTopicMessageMap[typeof topic]);
-        });
-      };
-
-      ws.onerror = () => {
-        state.connectionState = {
-          ...state.connectionState,
-          isConnected: false,
-        };
-        notifyConnectionListeners(appKey);
-      };
-
-      ws.onclose = () => {
-        stopPing(key);
-        state.connectionState = {
-          ...state.connectionState,
-          isConnected: false,
-        };
-        notifyConnectionListeners(appKey);
-        if (state.shouldReconnect) {
-          scheduleReconnect(appKey, topic);
-        }
-      };
-    },
-    [
-      channelKeyFor,
-      cleanupSocket,
-      getEndpoints,
-      notifyConnectionListeners,
+  const subscriptionManager = useMemo(
+    () => new TransportSubscriptionManager({
+      getEndpoints: (appKey) => getEndpoints(appKey) as TransportManagerEndpoints,
+      reconnect,
       pingInterval,
-      scheduleReconnect,
-      stopPing,
-    ],
-  );
-
-  useEffect(() => {
-    connectChannelRef.current = connectChannel;
-  }, [connectChannel]);
-
-  const subscribeToMessages = useCallback(
-    <TTopic extends TransportSubscriptionTopic>(options: {
-      appKey: AppKey;
-      topic: TTopic;
-      listener: (message: TransportTopicMessageMap[TTopic]) => void;
-    }): TransportMessageSubscription => {
-      const key = channelKeyFor(options.appKey, options.topic);
-      const existingState = channelStatesRef.current.get(key) as
-        | ChannelState<TTopic>
-        | undefined;
-      const state =
-        existingState ?? {
-          ws: null,
-          listeners: new Set(),
-          connectionState: createInitialConnectionState(),
-          reconnectTimeoutId: null,
-          shouldReconnect: true,
-        };
-
-      channelStatesRef.current.set(
-        key,
-        state as ChannelState<TransportSubscriptionTopic>,
-      );
-      state.listeners.add(options.listener);
-      connectChannel(options.appKey, options.topic);
-
-      return {
-        unsubscribe: () => {
-          state.listeners.delete(options.listener);
-          if (state.listeners.size === 0) {
-            state.shouldReconnect = false;
-            if (state.reconnectTimeoutId) {
-              clearTimeout(state.reconnectTimeoutId);
-              state.reconnectTimeoutId = null;
-            }
-            cleanupSocket(key);
-            state.connectionState = createInitialConnectionState();
-            notifyConnectionListeners(options.appKey);
-          }
-        },
-      };
-    },
-    [channelKeyFor, cleanupSocket, connectChannel, notifyConnectionListeners],
-  );
-
-  const subscribeToConnectionState = useCallback(
-    (appKey: AppKey, listener: (state: SocketState) => void) => {
-      const listeners = connectionListenersRef.current.get(appKey) ?? new Set();
-      listeners.add(listener);
-      connectionListenersRef.current.set(appKey, listeners);
-      notifyConnectionListeners(appKey);
-
-      return () => {
-        const currentListeners = connectionListenersRef.current.get(appKey);
-        if (!currentListeners) {
-          return;
-        }
-
-        currentListeners.delete(listener);
-        if (currentListeners.size === 0) {
-          connectionListenersRef.current.delete(appKey);
-        }
-      };
-    },
-    [notifyConnectionListeners],
-  );
-
-  const reconnectSocket = useCallback(
-    (appKey: AppKey) => {
-      (['states', 'locks', 'tasks'] as const).forEach((topic) => {
-        const key = channelKeyFor(appKey, topic);
-        const state = channelStatesRef.current.get(key);
-
-        if (!state) {
-          return;
-        }
-
-        state.shouldReconnect = true;
-        state.connectionState = createInitialConnectionState();
-        if (state.reconnectTimeoutId) {
-          clearTimeout(state.reconnectTimeoutId);
-          state.reconnectTimeoutId = null;
-        }
-        cleanupSocket(key);
-        connectChannel(appKey, topic);
-      });
-      notifyConnectionListeners(appKey);
-    },
-    [channelKeyFor, cleanupSocket, connectChannel, notifyConnectionListeners],
-  );
-
-  const disconnectSocket = useCallback(
-    (appKey: AppKey) => {
-      (['states', 'locks', 'tasks'] as const).forEach((topic) => {
-        const key = channelKeyFor(appKey, topic);
-        const state = channelStatesRef.current.get(key);
-
-        if (!state) {
-          return;
-        }
-
-        state.shouldReconnect = false;
-        if (state.reconnectTimeoutId) {
-          clearTimeout(state.reconnectTimeoutId);
-          state.reconnectTimeoutId = null;
-        }
-        cleanupSocket(key);
-        state.connectionState = createInitialConnectionState();
-      });
-      notifyConnectionListeners(appKey);
-    },
-    [channelKeyFor, cleanupSocket, notifyConnectionListeners],
+      keepAliveOnNoListeners: true,
+    }),
+    [getEndpoints, pingInterval, reconnect],
   );
 
   const assignAction = useCallback(
@@ -806,15 +456,32 @@ export function TransportProvider({ children, config, apps }: TransportProviderP
   );
 
   useEffect(() => {
-    const channelStates = channelStatesRef.current;
-    const connectionListeners = connectionListenersRef.current;
-
     return () => {
-      appKeys.forEach((appKey) => disconnectSocket(appKey));
-      channelStates.clear();
-      connectionListeners.clear();
+      subscriptionManager.dispose(appKeys);
     };
-  }, [appKeys, disconnectSocket]);
+  }, [appKeys, subscriptionManager]);
+
+  const subscribeToMessages = useCallback<TransportContextValue['subscribeToMessages']>(
+    (options) => subscriptionManager.subscribeToMessages(options),
+    [subscriptionManager],
+  );
+
+  const subscribeToConnectionState = useCallback<
+    TransportContextValue['subscribeToConnectionState']
+  >(
+    (appKey, listener) => subscriptionManager.subscribeToConnectionState(appKey, listener),
+    [subscriptionManager],
+  );
+
+  const reconnectSocket = useCallback<TransportContextValue['reconnectSocket']>(
+    (appKey) => subscriptionManager.reconnectSocket(appKey),
+    [subscriptionManager],
+  );
+
+  const disconnectSocket = useCallback<TransportContextValue['disconnectSocket']>(
+    (appKey) => subscriptionManager.disconnectSocket(appKey),
+    [subscriptionManager],
+  );
 
   const transportWsUrl = useMemo(
     () => createWsBaseUrl(config.apiEndpoint, config.wsEndpoint),

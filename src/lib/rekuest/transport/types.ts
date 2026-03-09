@@ -27,6 +27,23 @@ export interface Task<TArgs = unknown, TReturn = unknown> {
   updatedAt: Date;
 }
 
+export interface TaskView {
+  assignation: string;
+  action_key: string;
+  interface: string | null;
+  extension: string | null;
+  user: string | null;
+  app: string | null;
+  action: string | null;
+  running: boolean;
+  actor_id: string | null;
+}
+
+export interface TaskCollectionResponse {
+  count: number;
+  tasks: Record<string, TaskView>;
+}
+
 export interface AssignPolicy {
   maxRetries?: number;
   timeout?: number;
@@ -116,6 +133,7 @@ export interface StateCollectionResponse<T = unknown> {
 export type LogLevel = 'DEBUG' | 'INFO' | 'ERROR' | 'WARN' | 'CRITICAL';
 
 export const TaskEventType = {
+  TASK_INIT: 'TASK_INIT',
   REGISTER: 'REGISTER',
   LOG: 'LOG',
   PROGRESS: 'PROGRESS',
@@ -252,6 +270,12 @@ export interface RegisterMessage extends BaseMessage {
   token: string;
 }
 
+export interface TaskInitMessage extends BaseMessage {
+  type: typeof TaskEventType.TASK_INIT;
+  count: number;
+  tasks: Record<string, TaskView>;
+}
+
 export interface StateUpdateEvent {
   type: typeof StateEventType.STATE_UPDATE;
   state: string;
@@ -290,6 +314,7 @@ export interface UnlockEvent {
 }
 
 export type TaskEvent =
+  | TaskInitMessage
   | LogEvent
   | ProgressEvent
   | YieldEvent

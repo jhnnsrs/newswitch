@@ -18,9 +18,11 @@ import { useTransport } from '@/lib/rekuest/transport/transport-context';
 import type {
   AssignOptions,
   Task,
+  TaskCollectionResponse,
   TaskContextValue,
   TaskStatus,
   TaskTransportMessage,
+  TaskView,
   TransportMessageSubscription,
   TransportSocketConnectionState,
 } from '@/lib/rekuest/transport/types';
@@ -42,6 +44,25 @@ const defaultConnectionState: TransportSocketConnectionState = {
   isUnconnectable: false,
   reconnectAttempt: 0,
 };
+
+function normalizeTaskView(appKey: AppKey, taskView: TaskView): Task {
+  const now = new Date();
+
+  return {
+    id: taskView.assignation,
+    appKey,
+    action: taskView.action ?? taskView.action_key,
+    args: {},
+    reference: taskView.assignation,
+    status: taskView.running ? 'running' : 'submitted',
+    createdAt: now,
+    updatedAt: now,
+  };
+}
+
+function normalizeTaskCollection(appKey: AppKey, payload: TaskCollectionResponse): Task[] {
+  return Object.values(payload.tasks).map((taskView) => normalizeTaskView(appKey, taskView));
+}
 
 export function TaskProvider({ children }: TaskProviderProps) {
   const transport = useTransport();
@@ -195,14 +216,14 @@ export function TaskProvider({ children }: TaskProviderProps) {
   );
 
   const waitForTask: TaskContextValue['waitForTask'] = useCallback(
-    <TArgs = unknown, TReturn = unknown>(
+    (
       appKey: WaitForTaskAppKey,
       taskId: string,
-    ): Promise<Task<TArgs, TReturn>> => {
+    ): Promise<Task<unknown, unknown>> => {
       const cachedTask = taskStoreRegistry
         .getStoreApi(appKey)
         .getState()
-        .getTask<TArgs, TReturn>(taskId);
+        .getTask(taskId);
 
       if (cachedTask?.status === 'completed') {
         return Promise.resolve(cachedTask);
@@ -219,9 +240,9 @@ export function TaskProvider({ children }: TaskProviderProps) {
         return Promise.reject(new Error(`Task was ${cachedTask.status}`));
       }
 
-      return new Promise<Task<TArgs, TReturn>>((resolve, reject) => {
+      return new Promise<Task<unknown, unknown>>((resolve, reject) => {
         const unsubscribe = subscribeToTask(taskId, appKey, (task) => {
-          const typedTask = task as Task<TArgs, TReturn>;
+          const typedTask = task
 
           if (typedTask.status === 'completed') {
             unsubscribe();
@@ -276,6 +297,9 @@ export function TaskProvider({ children }: TaskProviderProps) {
       const store = taskStoreRegistry.getStoreApi(appKey).getState();
 
       switch (message.type) {
+        case TaskEventType.TASK_INIT:
+          store.upsertTasks(normalizeTaskCollection(appKey, message));
+          return;
         case TaskEventType.PROGRESS:
           store.updateTask(message.assignation, {
             status: 'running',

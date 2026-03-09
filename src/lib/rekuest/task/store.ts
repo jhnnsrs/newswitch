@@ -21,6 +21,7 @@ export interface TaskStore {
   tasks: Record<string, Task>;
   taskIdToReference: Record<string, string>;
   pendingTaskUpdates: Record<string, Partial<Task>[]>;
+  upsertTasks: (tasks: Task[]) => void;
   addTask: <TArgs = unknown, TReturn = unknown>(
     action: string,
     reference: string,
@@ -54,6 +55,37 @@ export const createTaskStore = ({
         tasks: {},
         taskIdToReference: {},
         pendingTaskUpdates: {},
+        upsertTasks: (tasks) => {
+          set((state) => {
+            tasks.forEach((task) => {
+              const reference = task.reference;
+              const existingTask = state.tasks[reference];
+
+              if (existingTask) {
+                Object.assign(existingTask, task, { updatedAt: new Date() });
+              } else {
+                state.tasks[reference] = task;
+              }
+
+              if (task.id && task.id !== reference) {
+                state.taskIdToReference[task.id] = reference;
+              }
+
+              const pendingUpdates = task.id
+                ? state.pendingTaskUpdates[task.id]
+                : undefined;
+
+              if (pendingUpdates && pendingUpdates.length > 0) {
+                pendingUpdates.forEach((update) => {
+                  Object.assign(state.tasks[reference], update, {
+                    updatedAt: new Date(),
+                  });
+                });
+                delete state.pendingTaskUpdates[task.id];
+              }
+            });
+          });
+        },
         addTask: <TArgs = unknown, TReturn = unknown>(
           action: string,
           reference: string,
