@@ -1,9 +1,9 @@
 import React from "react";
 import { Handle, Position, type Node, type NodeProps } from "@xyflow/react";
 import { type z } from "zod";
-import type { FilterKubeStateSchema } from "@/hooks/states/ExpanseState";
+import type { FilterKubeStateSchema } from "@/apps/default/hooks/states/ExpanseState";
 import { NodeHeader, nodeStyle } from "./NodeHeader";
-import type { FilterKubeSchema } from "@/hooks/states";
+import type { FilterKubeSchema } from "@/apps/default/hooks/states";
 
 type FilterData = z.infer<typeof FilterKubeSchema>;
 type CustomNodeProps = NodeProps<Node<FilterData>>;

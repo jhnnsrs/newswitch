@@ -3,13 +3,24 @@ import path from "node:path";
 import prettier from "prettier";
 import type { Plugin } from "vite";
 
-// --- CONFIG ---
-const OUTPUT_DIR = path.resolve(__dirname, "../src/hooks/generated");
-const IMPORT_PATH_TO_USE_ACTION = "../../transport/useTransportAction";
-
 // --- PLUGIN OPTIONS ---
 export interface GenerateHooksPluginOptions {
   schemaUrl?: string;
+  whitelist?: string[];
+  blacklist?: string[];
+  /** Absolute output directory for generated action hooks */
+  outputDir?: string;
+  /** Import path used inside generated action hook files */
+  importPathToUseAction?: string;
+  /** Import path used inside the generated actions index file */
+  indexImportPathToUseAction?: string;
+  appKey?: string;
+  symbolPrefix?: string;
+  hookNamePrefix?: string;
+}
+
+interface HooksSchema {
+  implementations: Record<string, Implementation>;
 }
 
 interface ValidatorSchema {
@@ -29,7 +40,7 @@ interface SchemaArg {
   kind: string;
   nullable: boolean;
   identifier?: string;
-  default?: any;
+  default?: unknown;
   children?: SchemaArg[];
   choices?: Choice[];
   description?: string;
@@ -38,6 +49,7 @@ interface SchemaArg {
 
 interface GeneratorContext {
   namedTypes: Map<string, { schema: string; description?: string }>;
+  symbolPrefix?: string;
 }
 
 const toCamel = (s: string) =>
@@ -45,6 +57,23 @@ const toCamel = (s: string) =>
 const toPascal = (s: string) => {
   const c = toCamel(s);
   return c.charAt(0).toUpperCase() + c.slice(1);
+};
+
+const withSymbolPrefix = (value: string, symbolPrefix?: string) =>
+  symbolPrefix ? `${symbolPrefix}${value}` : value;
+
+const toGeneratedName = (value: string, symbolPrefix?: string) =>
+  withSymbolPrefix(toPascal(value), symbolPrefix);
+
+const shouldGenerateHook = (
+  key: string,
+  whitelist?: string[],
+  blacklist?: string[],
+) => {
+  const isAllowed = whitelist ? whitelist.includes(key) : true;
+  const isBlocked = blacklist ? blacklist.includes(key) : false;
+
+  return isAllowed && !isBlocked;
 };
 
 /**
@@ -135,7 +164,7 @@ const mapToZod = (arg: SchemaArg, ctx: GeneratorContext): string => {
     arg.identifier &&
     ctx.namedTypes.has(arg.identifier)
   ) {
-    base = `${toPascal(arg.identifier)}Schema`;
+    base = `${toGeneratedName(arg.identifier, ctx.symbolPrefix)}Schema`;
   } else {
     switch (arg.kind) {
       case "FLOAT":
@@ -168,7 +197,7 @@ const mapToZod = (arg: SchemaArg, ctx: GeneratorContext): string => {
           base = "z.record(z.string(), z.any())";
         }
         break;
-      case "MODEL":
+      case "MODEL": {
         const children = arg.children || [];
 
         // 1. Generate fields
@@ -190,11 +219,12 @@ const mapToZod = (arg: SchemaArg, ctx: GeneratorContext): string => {
             schema: schemaCode,
             description: arg.description,
           });
-          base = `${toPascal(arg.identifier)}Schema`;
+          base = `${toGeneratedName(arg.identifier, ctx.symbolPrefix)}Schema`;
         } else {
           base = schemaCode;
         }
         break;
+      }
       case "UNION":
         if (arg.children && arg.children.length > 0) {
           const types = arg.children.map((child) => mapToZod(child, ctx));
@@ -248,8 +278,10 @@ type Implementation = {
 };
 
 const generateOptimisticState = (optimistic: Optimistic) => {
+  const optimisticName = `Optimistic${toCamel(optimistic.state)}`;
+
   return `
-  export const Optimistic${toCamel(optimistic.state)} = {
+  export const ${optimisticName} = {
     key: "${optimistic.state}",
     selector: (state: never) => ${optimistic.path.split(".").reduce((acc, part) => (part && part != "" ? `${acc}.${part}` : acc), "state")},
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -257,11 +289,22 @@ const generateOptimisticState = (optimistic: Optimistic) => {
   };`;
 };
 
-const generateContent = (key: string, impl: Implementation) => {
-  const ctx: GeneratorContext = { namedTypes: new Map() };
+const generateContent = (
+  key: string,
+  impl: Implementation,
+  importPathToUseAction: string,
+  appKey?: string,
+  symbolPrefix?: string,
+) => {
+  const ctx: GeneratorContext = { namedTypes: new Map(), symbolPrefix };
 
-  const hookName = `use${toPascal(key)}`;
-  const defName = `${toPascal(key)}Definition`;
+  const baseName = toPascal(key);
+  const generatedName = withSymbolPrefix(baseName, symbolPrefix);
+  const hookName = `use${baseName}`;
+  const qualifiedHookName = symbolPrefix
+    ? `use${generatedName}`
+    : hookName;
+  const defName = `${generatedName}Definition`;
 
   // --- ARGS SCHEMA GENERATION ---
   const argsList: SchemaArg[] = impl.definition.args || [];
@@ -279,7 +322,7 @@ const generateContent = (key: string, impl: Implementation) => {
   // Apply validators to the root Args object
   argsSchemaCode = appendValidators(argsSchemaCode, argsList);
 
-  const argsSchemaName = `${toPascal(key)}ArgsSchema`;
+  const argsSchemaName = `${generatedName}ArgsSchema`;
   const argsDef = `export const ${argsSchemaName} = ${argsSchemaCode};`;
 
   // --- RETURN SCHEMA GENERATION ---
@@ -289,7 +332,7 @@ const generateContent = (key: string, impl: Implementation) => {
     )
     .join(",\n");
 
-  const returnSchemaName = `${toPascal(key)}ReturnSchema`;
+  const returnSchemaName = `${generatedName}ReturnSchema`;
   let returnSchemaCode = `z.object({\n${returnsFields}\n})`;
   returnSchemaCode = appendValidators(returnSchemaCode, returnsList);
   const returnDef = `export const ${returnSchemaName} = ${returnSchemaCode};`;
@@ -297,16 +340,51 @@ const generateContent = (key: string, impl: Implementation) => {
   // --- NAMED TYPES ---
   const namedTypesCode = Array.from(ctx.namedTypes.entries())
     .map(([id, data]) => {
-      const name = toPascal(id);
+      const name = toGeneratedName(id, symbolPrefix);
+      const aliasName = toPascal(id);
       return `
 ${renderDescription(data.description)}export const ${name}Schema = ${data.schema};
-${renderDescription(data.description)}export type ${name} = z.infer<typeof ${name}Schema>;`;
+${renderDescription(data.description)}export type ${name} = z.infer<typeof ${name}Schema>;
+${symbolPrefix ? `export const ${aliasName}Schema = ${name}Schema;
+export type ${aliasName} = ${name};` : ""}`;
     })
     .join("\n");
 
+  const argsTypeName = `${generatedName}Args`;
+  const returnTypeName = `${generatedName}Return`;
+  const schemaAndTypeAliases = symbolPrefix
+    ? `
+export const ${baseName}ArgsSchema = ${argsSchemaName};
+export const ${baseName}ReturnSchema = ${returnSchemaName};
+export type ${baseName}Args = ${argsTypeName};
+export type ${baseName}Return = ${returnTypeName};`
+    : "";
+  const definitionAlias = symbolPrefix
+    ? `
+export const ${baseName}Definition = ${defName};`
+    : "";
+
+  const optimisticExports = (impl.optimistics || []).map((optimistic) => {
+    const optimisticName = `Optimistic${toCamel(optimistic.state)}`;
+    const generatedOptimisticName = withSymbolPrefix(
+      optimisticName,
+      symbolPrefix,
+    );
+    const optimisticExport = generateOptimisticState(optimistic).replace(
+      `export const ${optimisticName}`,
+      `export const ${generatedOptimisticName}`,
+    );
+
+    if (!symbolPrefix) {
+      return optimisticExport;
+    }
+
+    return `${optimisticExport}\n\nexport const ${optimisticName} = ${generatedOptimisticName};`;
+  });
+
   return `
 import { z } from 'zod';
-import { useTransportAction, type ActionDefinition } from '${IMPORT_PATH_TO_USE_ACTION}';
+import { useAction, type ActionDefinition } from '${importPathToUseAction}';
 
 // --- Shared Models ---
 ${namedTypesCode}
@@ -316,27 +394,32 @@ ${argsDef}
 ${returnDef}
 
 // --- Types ---
-export type ${toPascal(key)}Args = z.infer<typeof ${argsSchemaName}>;
-export type ${toPascal(key)}Return = z.infer<typeof ${returnSchemaName}>;
+export type ${argsTypeName} = z.infer<typeof ${argsSchemaName}>;
+export type ${returnTypeName} = z.infer<typeof ${returnSchemaName}>;
+${schemaAndTypeAliases}
 
 // --- Definition ---
-export const ${defName}: ActionDefinition<${toPascal(key)}Args, ${toPascal(key)}Return> = {
+export const ${defName}: ActionDefinition<${argsTypeName}, ${returnTypeName}> = {
   name: "${key}",
+  appKey: '${appKey}',
   description: "${impl.description || ""}",
   argsSchema: ${argsSchemaName},
   returnSchema: ${returnSchemaName},
   lockKeys: ${JSON.stringify((impl.locks || []).sort())},
 };
+${definitionAlias}
 
 /**
  * ${impl.description}
  */
-export const ${hookName} = () => {
-  return useTransportAction(${defName});
+export const ${qualifiedHookName} = () => {
+  return useAction(${defName});
 };
+${qualifiedHookName !== hookName ? `
+export const ${hookName} = ${qualifiedHookName};` : ""}
 
-${(impl.optimistics || []).length > 0 ? `/** Optimistic state hooks for ${key} */` : ""}
-${(impl.optimistics || []).map(generateOptimisticState).join("\n")}
+${optimisticExports.length > 0 ? `/** Optimistic state hooks for ${key} */` : ""}
+${optimisticExports.join("\n")}
 
 
 
@@ -347,38 +430,105 @@ ${(impl.optimistics || []).map(generateOptimisticState).join("\n")}
 export default function generateHooksPlugin(
   options: GenerateHooksPluginOptions = {},
 ): Plugin {
-  const { schemaUrl } = options;
+  const {
+    schemaUrl,
+    whitelist,
+    blacklist,
+    outputDir,
+    importPathToUseAction,
+    indexImportPathToUseAction = importPathToUseAction,
+    appKey,
+    hookNamePrefix,
+    symbolPrefix = hookNamePrefix,
+  } = options;
 
   return {
     name: "vite-plugin-generate-hooks",
     async buildStart() {
       if (!schemaUrl) return;
+      if (!outputDir || !importPathToUseAction || !indexImportPathToUseAction) {
+        console.warn(
+          "⚠️ [GenHooks] Missing required generator options: outputDir, importPathToUseAction, or indexImportPathToUseAction.",
+        );
+        return;
+      }
 
       try {
         const response = await fetch(schemaUrl);
         if (!response.ok) return;
-        const schema = await response.json();
+        const schema = (await response.json()) as HooksSchema;
 
-        if (!fs.existsSync(OUTPUT_DIR))
-          fs.mkdirSync(OUTPUT_DIR, { recursive: true });
-        fs.rmSync(OUTPUT_DIR, { recursive: true, force: true });
-        fs.mkdirSync(OUTPUT_DIR, { recursive: true });
+        if (!fs.existsSync(outputDir))
+          fs.mkdirSync(outputDir, { recursive: true });
+        fs.rmSync(outputDir, { recursive: true, force: true });
+        fs.mkdirSync(outputDir, { recursive: true });
 
         const files: string[] = [];
+        const generatedHooks: Array<{
+          fileName: string;
+          hookName: string;
+          definitionName: string;
+        }> = [];
         for (const [key, impl] of Object.entries(schema.implementations)) {
-          const code = generateContent(key, impl);
+          if (!shouldGenerateHook(key, whitelist, blacklist)) {
+            continue;
+          }
+
+          const code = generateContent(
+            key,
+            impl,
+            importPathToUseAction,
+            appKey,
+            symbolPrefix,
+          );
           const formatted = await prettier.format(code, {
             parser: "typescript",
             singleQuote: true,
             trailingComma: "all",
           });
-          const fname = `${toCamel(key)}.ts`;
-          fs.writeFileSync(path.join(OUTPUT_DIR, fname), formatted);
-          files.push(toCamel(key));
+          const hookFileName = toCamel(key);
+          const hookName = toPascal(key);
+          const definitionName = `${withSymbolPrefix(hookName, symbolPrefix)}Definition`;
+          const fname = `${hookFileName}.ts`;
+          fs.writeFileSync(path.join(outputDir, fname), formatted);
+          files.push(hookFileName);
+          generatedHooks.push({
+            fileName: hookFileName,
+            hookName,
+            definitionName,
+          });
         }
 
-        const index = files.map((f) => `export * from './${f}';`).join("\n");
-        fs.writeFileSync(path.join(OUTPUT_DIR, "index.ts"), index);
+        const definitionImports = generatedHooks
+          .map(
+            ({ fileName, definitionName }) =>
+              `import { ${definitionName} } from './${fileName}';`,
+          )
+          .join("\n");
+
+        const definitionEntries = generatedHooks
+          .map(({ hookName, definitionName }) => `  ${hookName}: ${definitionName},`)
+          .join("\n");
+
+        const index = `import type { ActionDefinition } from '${indexImportPathToUseAction}';
+${definitionImports}
+
+${files.map((f) => `export * from './${f}';`).join("\n")}
+
+export const globalActionDefinition = {
+${definitionEntries}
+} satisfies Record<string, ActionDefinition<unknown, unknown>>;
+
+export type GlobalActionDefinition = typeof globalActionDefinition;
+// Backwards-compatible alias for the requested misspelling.
+export const globalActionDefintiion = globalActionDefinition;
+`;
+        const formattedIndex = await prettier.format(index, {
+          parser: "typescript",
+          singleQuote: true,
+          trailingComma: "all",
+        });
+        fs.writeFileSync(path.join(outputDir, "index.ts"), formattedIndex);
         console.log(
           `✅ [GenHooks] Generated definitions for ${files.length} actions.`,
         );

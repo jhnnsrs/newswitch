@@ -8,9 +8,9 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { MoveHomeDefinition, MoveStageDefinition } from "@/hooks/generated";
-import { useStagePositionLock } from "@/hooks/locks";
-import { useStageState } from "@/hooks/states";
+import { MoveHomeDefinition, MoveStageDefinition } from "@/apps/default/hooks/actions";
+import { useStagePositionLock } from "@/apps/default/hooks/locks";
+import { useStageState } from "@/apps/default/hooks/states";
 import { cn } from "@/lib/utils";
 import {
   ArrowDown,

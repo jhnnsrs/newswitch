@@ -4,7 +4,7 @@ import { TestNoiseZarrStore } from "@/components/stage/hooks/zarr/zarr_stores/no
 import type { ZarrStore } from "@/components/stage/hooks/zarr/zarr_stores/type";
 import { createStore } from "zustand/vanilla";
 import { BACKEND_API } from "@/constants";
-import { createScopedStoreHooks } from "./createScopedStore";
+import { createScopedStoreHooks } from "@/lib/rekuest/createScopedStore";
 
 export type StoreBuilder = (frame: Frame) => ZarrStore;
 

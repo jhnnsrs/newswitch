@@ -5,11 +5,11 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useBlockingLock } from "@/lib/rekuest/locks/store";
+import { useAction } from "@/lib/rekuest/task";
+import { type ActionDefinition } from "@/lib/rekuest/task/types";
+import { type AssignOptions } from "@/lib/rekuest/transport/types";
 import { cn } from "@/lib/utils";
-import { useBlockingLock } from "@/store";
-import { useAction } from "@/transport/action-context";
-import { type AssignOptions } from "@/transport/types";
-import { type ActionDefinition } from "@/transport/useTransportAction";
 import { type VariantProps } from "class-variance-authority";
 import React, { type ButtonHTMLAttributes } from "react";
 import { toast } from "sonner";
@@ -43,19 +43,17 @@ export function ActionButton<TArgs, TReturn>({
   disabled,
   ...props
 }: ActionButtonProps<TArgs, TReturn>) {
-  const { isLocked, lockKey: blockingLock, lockingTaskId: blockingTaskId } =
-    useBlockingLock(action.lockKeys);
 
-  const actionApi = useAction();
+  const actionApi = useAction(action);
 
   const handleClick = async (e: React.MouseEvent<HTMLButtonElement>) => {
     onClick?.(e);
     if (e.isDefaultPrevented()) return;
 
     // Check if any lockKey has an active task
-    if (isLocked) {
+    if (actionApi.isLocked) {
       toast.warning("Action locked", {
-        description: `Another task (${blockingTaskId}) is using a required resource.`,
+        description: `Another task (${actionApi.lockedBy}) is using a required resource.`,
       });
       return;
     }
@@ -72,7 +70,7 @@ export function ActionButton<TArgs, TReturn>({
         "reference:",
         reference,
       );
-      const task = await actionApi.assign(action.name, args, {
+      const task = await actionApi.assign(args, {
         ...assignOptions,
         reference,
         step,
@@ -93,10 +91,10 @@ export function ActionButton<TArgs, TReturn>({
       variant={variant}
       size={size}
       className={cn(className)}
-      disabled={disabled || isLocked}
+      disabled={disabled || actionApi.isLocked}
       onClick={handleClick}
-      data-locked={isLocked}
-      data-blocking-task={blockingTaskId}
+      data-locked={actionApi.isLocked ? "true" : "false"}
+      data-blocking-task={actionApi.lockedBy || "unknown"}
       {...props}
     >
       {children || action.name}
@@ -104,18 +102,13 @@ export function ActionButton<TArgs, TReturn>({
   );
 
   // If locked, wrap in tooltip showing the blocking task
-  if (isLocked && !disabled) {
+  if (actionApi.isLocked && !disabled) {
     return (
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>{button}</TooltipTrigger>
           <TooltipContent>
-            <p>Blocked by task: {blockingTaskId}</p>
-            {blockingLock && (
-              <p className="text-xs text-muted-foreground">
-                Lock: {blockingLock}
-              </p>
-            )}
+            Action locked by task: {actionApi.lockedBy || "unknown"}
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>

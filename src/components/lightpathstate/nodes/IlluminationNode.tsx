@@ -1,7 +1,7 @@
 import React from "react";
 import { Handle, Position, type Node, type NodeProps } from "@xyflow/react";
 import { type z } from "zod";
-import type { IlluminationKubeStateSchema } from "@/hooks/states/ExpanseState";
+import type { IlluminationKubeStateSchema } from "@/apps/default/hooks/states/ExpanseState";
 import { NodeHeader, nodeStyle } from "./NodeHeader";
 
 type IlluminationData = z.infer<typeof IlluminationKubeStateSchema>;

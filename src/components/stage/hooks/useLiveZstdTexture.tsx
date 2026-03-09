@@ -1,5 +1,5 @@
 import { ZSTD_STREAM_PATH } from "@/constants";
-import type { Detector } from "@/hooks/generated";
+import type { Detector } from "@/apps/default/hooks/actions";
 import { decompress } from "fzstd";
 import { useEffect, useMemo, useState } from "react";
 import { DataTexture, LinearFilter, RedFormat, UnsignedByteType } from "three";

@@ -1,5 +1,5 @@
-import { useMoveStage } from "@/hooks/generated";
-import { useStageState } from "@/hooks/states/StageState";
+import { useMoveStage } from "@/apps/default/hooks/actions";
+import { useStageState } from "@/apps/default/hooks/states/StageState";
 import { Html, Line } from "@react-three/drei";
 import type { Vector3 } from "@react-three/fiber";
 import { useState } from "react";

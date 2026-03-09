@@ -4,7 +4,7 @@ import {
   useIlluminationState,
   useObjectiveState,
   useStageState,
-} from "@/hooks/states";
+} from "@/apps/default/hooks/states";
 import { CheckCircle2, RefreshCw, XCircle } from "lucide-react";
 
 function StatusBadge({

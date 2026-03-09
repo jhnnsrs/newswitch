@@ -1,8 +1,8 @@
 import React, { useRef, useLayoutEffect } from "react";
 import { useLoader } from "@react-three/fiber";
 import { TextureLoader, DoubleSide, Mesh, Matrix4 } from "three";
-import type { ExpanseState } from "@/hooks/states/ExpanseState";
-import { useTransport } from "@/transport/transport-context";
+import type { ExpanseState } from "@/apps/default/hooks/states/ExpanseState";
+import { useTransport } from "@/lib/rekuest/transport/transport-context";
 import { useSelectionStore } from "@/store/imageStore";
 // import { useTransport } from '../transport/TransportProvider';
 // import type { ExpanseState } from '../store/types';

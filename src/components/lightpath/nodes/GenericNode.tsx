@@ -1,9 +1,9 @@
 import React from "react";
 import { Handle, Position, type Node, type NodeProps } from "@xyflow/react";
 import { type z } from "zod";
-import type { GenericKubeStateSchema } from "@/hooks/states/ExpanseState";
+import type { GenericKubeStateSchema } from "@/apps/default/hooks/states/ExpanseState";
 import { NodeHeader, nodeStyle } from "./NodeHeader";
-import type { GenericKubeSchema } from "@/hooks/states";
+import type { GenericKubeSchema } from "@/apps/default/hooks/states";
 
 type GenericData = z.infer<typeof GenericKubeSchema>;
 type CustomNodeProps = NodeProps<Node<GenericData>>;

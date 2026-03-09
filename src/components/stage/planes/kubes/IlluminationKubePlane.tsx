@@ -1,4 +1,4 @@
-import type { IlluminationKubeStateSchema } from "@/hooks/states/ExpanseState";
+import type { IlluminationKubeStateSchema } from "@/apps/default/hooks/states/ExpanseState";
 import { type z } from "zod";
 import { useThreeAffine } from "./useThreeAffine";
 

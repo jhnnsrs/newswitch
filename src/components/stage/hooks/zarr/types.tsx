@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { FrameSchema } from "@/hooks/states/ExpanseState";
+import { FrameSchema } from "@/apps/default/hooks/states/ExpanseState";
 
 
 export type Frame = z.infer<typeof FrameSchema>;

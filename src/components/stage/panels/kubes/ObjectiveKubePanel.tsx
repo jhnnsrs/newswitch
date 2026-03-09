@@ -1,4 +1,4 @@
-import type { ObjectiveKubeStateSchema } from "@/hooks/states";
+import type { ObjectiveKubeStateSchema } from "@/apps/default/hooks/states";
 import { type z } from "zod";
 import { KubePanelLayout } from "./KubePanelLayout";
 

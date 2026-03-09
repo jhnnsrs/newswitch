@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/badge";
-import { useCameraState, useStageState } from "@/hooks/states";
+import { useCameraState, useStageState } from "@/apps/default/hooks/states";
 import { Camera } from "lucide-react";
 import { StreamingView } from "../liveview/StreamingView";
 

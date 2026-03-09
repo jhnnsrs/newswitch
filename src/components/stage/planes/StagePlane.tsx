@@ -1,4 +1,4 @@
-import { useStageState } from "@/hooks/states/StageState";
+import { useStageState } from "@/apps/default/hooks/states/StageState";
 import { useModeStore } from "@/store/modeStore";
 
 /**

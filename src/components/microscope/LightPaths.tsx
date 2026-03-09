@@ -1,4 +1,4 @@
-import { useLightPathState } from "@/hooks/states";
+import { useLightPathState } from "@/apps/default/hooks/states";
 
 export const LightPaths = () => {
   const { data } = useLightPathState({ subscribe: true });

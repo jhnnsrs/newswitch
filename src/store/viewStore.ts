@@ -1,6 +1,6 @@
 import { createStore } from "zustand/vanilla";
 import * as THREE from "three";
-import { createScopedStoreHooks } from "./createScopedStore";
+import { createScopedStoreHooks } from "@/lib/rekuest/createScopedStore";
 
 interface ViewState {
   // We store the combined projection + view matrix

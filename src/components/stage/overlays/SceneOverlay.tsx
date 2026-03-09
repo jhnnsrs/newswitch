@@ -1,10 +1,11 @@
 import { ActionButton } from "@/components/ActionButton";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
-import { ClearExpanseDefinition } from "@/hooks/generated/clearExpanse";
-import { useExpanseState } from "@/hooks/states/ExpanseState";
+import { ClearExpanseDefinition } from "@/apps/default/hooks/actions/clearExpanse";
+import { useExpanseState } from "@/apps/default/hooks/states/ExpanseState";
 import { useModeStore } from "@/store/modeStore";
 import { RefreshCwIcon } from "lucide-react";
+import { useViewerStore } from "@/store/viewerStore";
 
 export const SceneOverlay = () => {
   const displayMode = useModeStore((s) => s.displayMode);
@@ -13,6 +14,9 @@ export const SceneOverlay = () => {
   const interactionMode = useModeStore((s) => s.interactionMode);
   const setInteractionMode = useModeStore((s) => s.setInteractionMode);
   const setDisplayMode = useModeStore((s) => s.setDisplayMode);
+  const isDebug = useViewerStore((state) => state.debug);
+  
+  const setDebug =  useViewerStore((state) => state.setDebug);
   const { data: expanseState } = useExpanseState({ subscribe: true });
 
   return (
@@ -31,6 +35,7 @@ export const SceneOverlay = () => {
               <span className="text-xs font-bold">{mode.label}</span>
             </Button>
           ))}
+
         </ButtonGroup>
 
         <ButtonGroup>
@@ -45,6 +50,14 @@ export const SceneOverlay = () => {
               <span className="text-xs font-bold">{mode.label}</span>
             </Button>
           ))}
+        </ButtonGroup>
+
+        <ButtonGroup>
+          <Button onClick={() => {
+            setDebug(!isDebug);
+        }} variant={isDebug ? "destructive" : "outline"} size={"xs"}>
+            { isDebug ? "Disable Debug" : "Enable Debug" }
+        </Button>
         </ButtonGroup>
       </div>
       <div className="absolute bottom-2 right-2 rounded bg-black/80 p-2 font-mono text-[10px] text-white">

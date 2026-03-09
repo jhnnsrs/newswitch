@@ -1,17 +1,20 @@
-import { selectTask, useTransportStore } from "@/store"; // Ensure selectTask is exported from your store index
-import { useCancelTask } from "@/transport/useCancelTask";
-import { usePauseTask } from "@/transport/usePauseTask";
-import { useResumeTask } from "@/transport/useResumeTask";
+
 import { Button } from "./ui/button";
 import { Progress } from "./ui/progress";
+import { useCancelTask } from "@/apps/default/hooks/useCancelTask";
+import { useResumeTask } from "@/apps/default/hooks/useResumeTask";
+import { usePauseTask } from "@/apps/default/hooks/usePauseTask";
+import { useTaskStore } from "@/apps/default/hooks/useTaskStore";
+import { selectTask } from "@/lib/rekuest/task/store";
 
 export const ProgressDisplay = (props: {
   activeTaskId: string | null | undefined;
+
 }) => {
   const activeTaskId = props.activeTaskId;
 
   // Use the built-in selector which safely resolves both local references and server IDs
-  const task = useTransportStore(
+  const task = useTaskStore(
     activeTaskId ? selectTask(activeTaskId) : () => undefined,
   );
 

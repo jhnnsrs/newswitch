@@ -6,7 +6,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { useBlockingLock } from "@/store";
+import { useBlockingLock } from "@/lib/rekuest/locks/store";
 import { Lock } from "lucide-react";
 import * as React from "react";
 

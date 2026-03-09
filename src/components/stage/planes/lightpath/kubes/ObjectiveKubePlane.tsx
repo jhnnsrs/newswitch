@@ -1,4 +1,4 @@
-import { ObjectiveKubeSchema } from "@/hooks/states/LightPathState";
+import { ObjectiveKubeSchema } from "@/apps/default/hooks/states/LightPathState";
 import { type z } from "zod";
 import { useThreeAffine } from "./useThreeAffine";
 

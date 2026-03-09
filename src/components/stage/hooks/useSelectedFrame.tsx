@@ -1,4 +1,4 @@
-import { useExpanseState } from "@/hooks/states";
+import { useExpanseState } from "@/apps/default/hooks/states";
 import { useSelectionStore } from "@/store/imageStore";
 
 export const useSelectedFrame = () => {

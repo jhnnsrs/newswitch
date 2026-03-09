@@ -1,19 +1,21 @@
+import { useTaskStore } from "@/apps/default/hooks/useTaskStore";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useLockSync } from "@/hooks/useLockSync";
-import { useTransportStore } from "@/store";
+import { useLock } from "@/hooks/useLock";
+import { selectTask } from "@/lib/rekuest/task/store";
 import { Bug } from "lucide-react";
 
 interface SyncKeyDebugProps {
   syncKey: string;
+  appKey: string;
 }
 
-export function SyncKeyDebug({ syncKey }: SyncKeyDebugProps) {
-  const syncKeyState = useLockSync({ key: syncKey });
-  const task = useTransportStore((state) =>
+export function SyncKeyDebug({ syncKey, appKey }: SyncKeyDebugProps) {
+  const syncKeyState = useLock({ key: syncKey, appKey });
+  const task = useTaskStore(
     syncKeyState?.lockingTaskId
-      ? state.tasks[syncKeyState.lockingTaskId]
-      : undefined,
+      ? selectTask(syncKeyState.lockingTaskId)
+      : () => undefined,
   );
 
   return (

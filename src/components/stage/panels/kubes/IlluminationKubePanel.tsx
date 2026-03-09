@@ -1,4 +1,4 @@
-import type { IlluminationKubeStateSchema } from "@/hooks/states";
+import type { IlluminationKubeStateSchema } from "@/apps/default/hooks/states";
 import { type z } from "zod";
 import { KubePanelLayout } from "./KubePanelLayout";
 

@@ -1,6 +1,6 @@
-import { useTransport } from "@/transport/transport-context";
+import { useTransport } from "@/lib/rekuest/transport/transport-context";
 import { useCallback, useState } from "react";
-import { useCaptureImage } from "./generated";
+import { useCaptureImage } from "@/apps/default/hooks/actions";
 
 interface UseCaptureAndDownloadOptions {
   /** Custom filename for the download (without extension) */

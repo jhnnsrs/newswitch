@@ -9,7 +9,7 @@ import { FilterKubePlane } from "./kubes/FilterKubePlane";
 import { IlluminationKubePlane } from "./kubes/IlluminationKubePlane";
 import { ObjectiveKubePlane } from "./kubes/ObjectiveKubePlane";
 import { StageKubePlane } from "./kubes/StageKubePlane";
-import { LightPathSchema, ObjectiveKubeSchema, useLightPathState } from "@/hooks/states";
+import { LightPathSchema, ObjectiveKubeSchema, useLightPathState } from "@/apps/default/hooks/states";
 import { type z } from "zod";
 import { useKubeStore } from "@/store/kubeStore";
 import { ObjectiveTurretKubePlane } from "../kubes/ObjectiveTurretKubePlane";

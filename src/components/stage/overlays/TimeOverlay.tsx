@@ -15,7 +15,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useExpanseState } from "@/hooks/states";
+import { useExpanseState } from "@/apps/default/hooks/states";
 import { useSelectionStore } from "@/store/imageStore";
 import { useTimeStoreApi } from "@/store/timeStore";
 import { AnimatePresence, motion } from "framer-motion";

@@ -1,4 +1,4 @@
-import { useIlluminationState, type IlluminationKubeSchema } from "@/hooks/states";
+import { useIlluminationState, type IlluminationKubeSchema } from "@/apps/default/hooks/states";
 import { Handle, Position, type Node, type NodeProps } from "@xyflow/react";
 import React from "react";
 import { type z } from "zod";

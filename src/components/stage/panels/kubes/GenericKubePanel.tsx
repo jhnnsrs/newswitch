@@ -1,4 +1,4 @@
-import type { GenericKubeStateSchema } from "@/hooks/states";
+import type { GenericKubeStateSchema } from "@/apps/default/hooks/states";
 import { Badge } from "@/components/ui/badge";
 import { type z } from "zod";
 import { KubePanelLayout } from "./KubePanelLayout";
