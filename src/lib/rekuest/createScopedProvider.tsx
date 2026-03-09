@@ -2,6 +2,7 @@ import type { ComponentProps, ReactNode } from 'react';
 import { LocalStoreProvider } from '@/store';
 import type { TransportConfig } from './transport';
 import { RekuestStoreProvider } from './RekuestStoreProvider';
+import { LockProvider } from './locks';
 import { StateProvider } from './state';
 import { TaskProvider } from './task';
 import { TransportProvider } from './transport';
@@ -242,7 +243,9 @@ export function createScopedProvider<
         <RekuestStoreProvider scope={scopeKey}>
           <LocalStoreProvider scope={scopeKey}>
             <StateProvider>
-              <TaskProvider>{children}</TaskProvider>
+              <TaskProvider>
+                <LockProvider>{children}</LockProvider>
+              </TaskProvider>
             </StateProvider>
           </LocalStoreProvider>
         </RekuestStoreProvider>

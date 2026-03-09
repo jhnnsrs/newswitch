@@ -1,4 +1,4 @@
-import { useCallback, useMemo, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, type ReactNode } from 'react';
 import type { AppKey } from '@/lib/rekuest/types';
 import {
   getRegistryTasks,
@@ -10,6 +10,7 @@ import {
   selectIsReconnecting,
   selectReconnectAttempt,
   selectRegistryVersion,
+  useTransportStoreApi,
   useTransportStore,
 } from '@/lib/rekuest/transport/store';
 import { TaskContext } from './task-context';
@@ -19,7 +20,12 @@ import type {
   Task,
   TaskContextValue,
   TaskStatus,
+  TaskTransportMessage,
+  TransportMessageSubscription,
+  TransportSocketConnectionState,
 } from '@/lib/rekuest/transport/types';
+import { TaskEventType } from '@/lib/rekuest/transport/types';
+import { toast } from 'sonner';
 
 export interface TaskProviderProps {
   children: ReactNode;
@@ -30,9 +36,20 @@ type CachedTaskAppKey = Parameters<TaskContextValue['getCachedTask']>[1];
 type SubscribeAppKey = Parameters<TaskContextValue['subscribeToTask']>[1];
 type WaitForTaskAppKey = Parameters<TaskContextValue['waitForTask']>[0];
 
+const defaultConnectionState: TransportSocketConnectionState = {
+  isConnected: false,
+  isReconnecting: false,
+  isUnconnectable: false,
+  reconnectAttempt: 0,
+};
+
 export function TaskProvider({ children }: TaskProviderProps) {
   const transport = useTransport();
   const taskStoreRegistry = useTaskStoreRegistry();
+  const runtimeStoreApi = useTransportStoreApi();
+  const subscriptionsRef = useRef(new Map<AppKey, TransportMessageSubscription>());
+  const connectionSubscriptionsRef = useRef(new Map<AppKey, () => void>());
+  const connectionStatesRef = useRef(new Map<AppKey, TransportSocketConnectionState>());
 
   const isConnected = useTransportStore(selectIsConnected);
   const isReconnecting = useTransportStore(selectIsReconnecting);
@@ -231,6 +248,146 @@ export function TaskProvider({ children }: TaskProviderProps) {
     [subscribeToTask, taskStoreRegistry],
   );
 
+  const syncConnectionState = useCallback(() => {
+    const states = Array.from(connectionStatesRef.current.values());
+    const runtimeStore = runtimeStoreApi.getState();
+
+    if (states.length === 0) {
+      runtimeStore.setConnected(false);
+      runtimeStore.setReconnecting(false);
+      runtimeStore.setUnconnectable(false);
+      runtimeStore.setReconnectAttempt(0);
+      return;
+    }
+
+    runtimeStore.setConnected(states.some((state) => state.isConnected));
+    runtimeStore.setReconnecting(states.some((state) => state.isReconnecting));
+    runtimeStore.setUnconnectable(states.some((state) => state.isUnconnectable));
+    runtimeStore.setReconnectAttempt(
+      states.reduce(
+        (maxAttempt, state) => Math.max(maxAttempt, state.reconnectAttempt),
+        0,
+      ),
+    );
+  }, [runtimeStoreApi]);
+
+  const handleMessage = useCallback(
+    (appKey: AppKey, message: TaskTransportMessage) => {
+      const store = taskStoreRegistry.getStoreApi(appKey).getState();
+
+      switch (message.type) {
+        case TaskEventType.PROGRESS:
+          store.updateTask(message.assignation, {
+            status: 'running',
+            progress: message.progress,
+            progressMessage: message.message,
+          });
+          return;
+        case TaskEventType.YIELD:
+          store.updateTask(message.assignation, {
+            status: 'running',
+            result: message.returns,
+          });
+          return;
+        case TaskEventType.DONE: {
+          const existingTask = store.getTask(message.assignation);
+          if (existingTask?.notify) {
+            toast.success(`Task completed: ${existingTask.action}`, {
+              description: `Task ${message.assignation} finished successfully`,
+            });
+          }
+          store.updateTask(message.assignation, {
+            status: 'completed',
+            ...('returns' in message && message.returns !== undefined
+              ? { result: message.returns }
+              : {}),
+          });
+          return;
+        }
+        case TaskEventType.ERROR:
+          store.updateTask(message.assignation, {
+            status: 'failed',
+            error: message.error,
+          });
+          return;
+        case TaskEventType.CRITICAL:
+          store.updateTask(message.assignation, {
+            status: 'failed',
+            error: message.error,
+          });
+          toast.error(`Critical error in task: ${message.error}`);
+          return;
+        case TaskEventType.PAUSED:
+          store.updateTask(message.assignation, { status: 'paused' });
+          return;
+        case TaskEventType.RESUMED:
+          store.updateTask(message.assignation, { status: 'running' });
+          return;
+        case TaskEventType.CANCELLED:
+          store.updateTask(message.assignation, { status: 'cancelled' });
+          return;
+        case TaskEventType.INTERRUPTED:
+          store.updateTask(message.assignation, { status: 'interrupted' });
+          return;
+        case TaskEventType.LOG: {
+          const logMethod =
+            message.level === 'ERROR' || message.level === 'CRITICAL'
+              ? console.error
+              : message.level === 'WARN'
+                ? console.warn
+                : console.log;
+          logMethod(`[Agent Log] [${message.level}] ${message.message}`);
+          return;
+        }
+      }
+    },
+    [taskStoreRegistry],
+  );
+
+  const goLive = useCallback(
+    async (appKey: AppKey) => {
+      if (!subscriptionsRef.current.has(appKey)) {
+        subscriptionsRef.current.set(
+          appKey,
+          transport.subscribeToMessages({
+            appKey,
+            topic: 'tasks',
+            listener: (message) => handleMessage(appKey, message),
+          }),
+        );
+      }
+
+      if (!connectionSubscriptionsRef.current.has(appKey)) {
+        connectionSubscriptionsRef.current.set(
+          appKey,
+          transport.subscribeToConnectionState(appKey, (state) => {
+            connectionStatesRef.current.set(appKey, state);
+            syncConnectionState();
+          }),
+        );
+      }
+
+      if (!connectionStatesRef.current.has(appKey)) {
+        connectionStatesRef.current.set(appKey, defaultConnectionState);
+      }
+
+      syncConnectionState();
+    },
+    [handleMessage, syncConnectionState, transport],
+  );
+
+  const stopLive = useCallback(
+    async (appKey: AppKey) => {
+      subscriptionsRef.current.get(appKey)?.unsubscribe();
+      subscriptionsRef.current.delete(appKey);
+      connectionSubscriptionsRef.current.get(appKey)?.();
+      connectionSubscriptionsRef.current.delete(appKey);
+      connectionStatesRef.current.delete(appKey);
+      syncConnectionState();
+    },
+    [syncConnectionState],
+  );
+
   const reconnect = useCallback((appKey: AppKey) => {
     transport.reconnectSocket(appKey);
   }, [transport]);
@@ -271,6 +428,8 @@ export function TaskProvider({ children }: TaskProviderProps) {
       pauseTask,
       unpauseTask,
       stepTask,
+      goLive,
+      stopLive,
       reconnect,
       disconnect,
     }),
@@ -286,6 +445,8 @@ export function TaskProvider({ children }: TaskProviderProps) {
       pauseTask,
       reconnect,
       reconnectAttempt,
+      goLive,
+      stopLive,
       stepTask,
       subscribeToTask,
       tasksMap,
@@ -295,6 +456,25 @@ export function TaskProvider({ children }: TaskProviderProps) {
       waitForTask,
     ],
   );
+
+  useEffect(() => {
+    const subscriptions = subscriptionsRef.current;
+    const connectionSubscriptions = connectionSubscriptionsRef.current;
+    const connectionStates = connectionStatesRef.current;
+
+    return () => {
+      subscriptions.forEach((subscription) => subscription.unsubscribe());
+      subscriptions.clear();
+      connectionSubscriptions.forEach((unsubscribe) => unsubscribe());
+      connectionSubscriptions.clear();
+      connectionStates.clear();
+      const runtimeStore = runtimeStoreApi.getState();
+      runtimeStore.setConnected(false);
+      runtimeStore.setReconnecting(false);
+      runtimeStore.setUnconnectable(false);
+      runtimeStore.setReconnectAttempt(0);
+    };
+  }, [runtimeStoreApi]);
 
   return (
     <TaskContext.Provider value={contextValue}>

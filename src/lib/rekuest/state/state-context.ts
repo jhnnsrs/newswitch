@@ -21,6 +21,7 @@ export interface StateContextValue {
     options: CheckoutStateOptions,
   ) => Promise<RevisedStatesSnapshotMap>;
   goLive: (appKey: string) => Promise<void>;
+  stopLive: (appKey: string) => Promise<void>;
 }
 
 export const StateContext = createContext<StateContextValue | null>(null);

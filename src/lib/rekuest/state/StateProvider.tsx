@@ -1,14 +1,20 @@
 import type { ReactNode } from 'react';
-import { useCallback, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import {
   getScopedStateKey,
   getStateDefinitionsRecord,
   resolveStateDefinition,
   type StateDefinition,
 } from '@/lib/rekuest/state';
+import type { Envelope as StateStoreEnvelope } from '@/lib/rekuest/state/store';
 import { useGlobalStateStoreRegistry } from '@/lib/rekuest/state/store';
 import { useTransport } from '@/lib/rekuest/transport/transport-context';
-import type { RevisedStatesSnapshotMap } from '@/lib/rekuest/transport/types';
+import {
+  StateEventType,
+  type RevisedStatesSnapshotMap,
+  type StateTransportMessage,
+  type TransportMessageSubscription,
+} from '@/lib/rekuest/transport/types';
 import { StateContext, type StateContextValue } from '@/lib/rekuest/state/state-context';
 
 interface TransportStateResponse<TState> {
@@ -48,6 +54,7 @@ export function StateProvider({ children }: StateProviderProps) {
   );
   const globalStateStoreRegistry = useGlobalStateStoreRegistry();
   const inflightRequestsRef = useRef(new Map<string, Promise<unknown>>());
+  const subscriptionsRef = useRef(new Map<TransportAppKey, TransportMessageSubscription>());
 
   const refetchState = useCallback(
     async <T extends Record<string, unknown>, TKey extends string>(
@@ -134,19 +141,53 @@ export function StateProvider({ children }: StateProviderProps) {
     [globalStateStoreRegistry, refetchState],
   );
 
-  const goLive = useCallback<StateContextValue['goLive']>(async (appKey) =>  {
-    globalStateStoreRegistry.getStoreApi(appKey).getState().setIsLive(true);
+  const handleMessage = useCallback(
+    (appKey: TransportAppKey, message: StateTransportMessage) => {
+      const store = globalStateStoreRegistry.getStoreApi(appKey).getState();
 
+      switch (message.type) {
+        case StateEventType.STATE_UPDATE:
+          store.setState(message.state, message.value);
+          return;
+        case StateEventType.STATE_PATCH:
+          store.applyEnvelope(message.envelope as unknown as StateStoreEnvelope);
+          return;
+      }
+    },
+    [globalStateStoreRegistry],
+  );
 
+  const goLive = useCallback<StateContextValue['goLive']>(
+    async (appKey) => {
+      const typedAppKey = appKey as TransportAppKey;
+      const existing = subscriptionsRef.current.get(typedAppKey);
 
-  
+      if (existing) {
+        globalStateStoreRegistry.getStoreApi(typedAppKey).getState().setIsLive(true);
+        return;
+      }
 
-  }, [globalStateStoreRegistry]);
+      const subscription = transport.subscribeToMessages({
+        appKey: typedAppKey,
+        topic: 'states',
+        listener: (message) => handleMessage(typedAppKey, message),
+      });
 
+      subscriptionsRef.current.set(typedAppKey, subscription);
+      globalStateStoreRegistry.getStoreApi(typedAppKey).getState().setIsLive(true);
+    },
+    [globalStateStoreRegistry, handleMessage, transport],
+  );
 
-  const stopLive = useCallback<StateContextValue['goLive']>(async (appKey) =>  {
-    globalStateStoreRegistry.getStoreApi(appKey).getState().setIsLive(false);
-  }, [globalStateStoreRegistry]);
+  const stopLive = useCallback<StateContextValue['stopLive']>(
+    async (appKey) => {
+      const typedAppKey = appKey as TransportAppKey;
+      subscriptionsRef.current.get(typedAppKey)?.unsubscribe();
+      subscriptionsRef.current.delete(typedAppKey);
+      globalStateStoreRegistry.getStoreApi(typedAppKey).getState().setIsLive(false);
+    },
+    [globalStateStoreRegistry],
+  );
 
   const checkout = useCallback<StateContextValue['checkout']>(
     async (appKey, globalRevisionId, options) => {
@@ -161,6 +202,9 @@ export function StateProvider({ children }: StateProviderProps) {
 
       const storeApi = globalStateStoreRegistry.getStoreApi(appKey);
       const store = storeApi.getState();
+
+
+      store.setIsLive(false);
 
       stateKeys.forEach((key) => {
         store.setLoading(key, true);
@@ -236,9 +280,20 @@ export function StateProvider({ children }: StateProviderProps) {
       ensureState,
       refetchState,
       checkout,
+      goLive,
+      stopLive,
     }),
-    [checkout, definitions, ensureState, refetchState],
+    [checkout, definitions, ensureState, goLive, refetchState, stopLive],
   );
+
+  useEffect(() => {
+    const subscriptions = subscriptionsRef.current;
+
+    return () => {
+      subscriptions.forEach((subscription) => subscription.unsubscribe());
+      subscriptions.clear();
+    };
+  }, []);
 
   return <StateContext.Provider value={value}>{children}</StateContext.Provider>;
 }

@@ -1,7 +1,8 @@
 import type { AppKey } from './types';
-import { LockWebSocketSync } from './syncs/LockWebSocketSync';
-import { StateWebSocketSync } from './syncs/StateWebSocketSync';
-import { TaskWebSocketSync } from './syncs/TaskWebSocketSync';
+import { useEffect } from 'react';
+import { useLockContext } from './locks';
+import { useStateContext } from './state';
+import { useTaskContext } from './task';
 
 export interface LiveSyncProps {
   appKey: AppKey;
@@ -16,15 +17,45 @@ export function LiveSync({
   subscribeLock = true,
   subscribeTask = true,
 }: LiveSyncProps) {
-  if (!subscribeState && !subscribeLock && !subscribeTask) {
-    return null;
-  }
+  const stateContext = useStateContext();
+  const taskContext = useTaskContext();
+  const lockContext = useLockContext();
 
-  return (
-    <>
-      {subscribeTask ? <TaskWebSocketSync appKey={appKey} /> : null}
-      {subscribeState ? <StateWebSocketSync appKey={appKey} /> : null}
-      {subscribeLock ? <LockWebSocketSync appKey={appKey} /> : null}
-    </>
-  );
+  useEffect(() => {
+    if (!subscribeState) {
+      return;
+    }
+
+    void stateContext.goLive(appKey);
+
+    return () => {
+      void stateContext.stopLive(appKey);
+    };
+  }, [appKey, stateContext, subscribeState]);
+
+  useEffect(() => {
+    if (!subscribeTask) {
+      return;
+    }
+
+    void taskContext.goLive(appKey);
+
+    return () => {
+      void taskContext.stopLive(appKey);
+    };
+  }, [appKey, subscribeTask, taskContext]);
+
+  useEffect(() => {
+    if (!subscribeLock) {
+      return;
+    }
+
+    void lockContext.goLive(appKey);
+
+    return () => {
+      void lockContext.stopLive(appKey);
+    };
+  }, [appKey, lockContext, subscribeLock]);
+
+  return null;
 }

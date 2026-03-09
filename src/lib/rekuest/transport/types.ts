@@ -551,6 +551,8 @@ export interface TaskContextValue {
     appKey: AppKey,
     taskId: string,
   ) => Promise<Task<TArgs, TReturn>>;
+  goLive: (appKey: AppKey) => Promise<void>;
+  stopLive: (appKey: AppKey) => Promise<void>;
   reconnect: (appKey: AppKey) => void;
   disconnect: (appKey: AppKey) => void;
 }
