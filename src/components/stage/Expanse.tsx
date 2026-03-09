@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { useCameraState } from "@/apps/default/hooks/states";
 import { Canvas } from "@react-three/fiber";
 import { CameraMatrixSync } from "./CameraMatrixSync";
@@ -7,7 +8,6 @@ import { RectangleDrawer } from "./interactions/RectangleDrawer";
 import { StagePositioner } from "./interactions/StagePositioner";
 import { DebugOverlay } from "./overlays/DebugOverlay";
 import { SceneOverlay } from "./overlays/SceneOverlay";
-import { TimeOverlay } from "./overlays/TimeOverlay";
 import { PanelProvider } from "./PanelProvider";
 import { FramePanel } from "./panels/FramePanel";
 import { ImageMetadataPanel } from "./panels/ImageMetadata";
@@ -19,14 +19,14 @@ import { CurrentFrameLightPathPlane } from "./planes/LightPathStatePlane";
 import { LivesPlane } from "./planes/LivesPlane";
 import { StageAxis } from "./planes/StageAxis";
 import { StagePlane } from "./planes/StagePlane";
-import { CurrentLightPathPlane, LightPathPlane } from "./planes/lightpath/LightPathPlane";
+import { CurrentLightPathPlane } from "./planes/lightpath/LightPathPlane";
 
-export const SceneWrapper = ({ children }) => {
+export const SceneWrapper = ({ children }: { children: ReactNode }) => {
   return <Canvas>{children}</Canvas>;
 };
 
 export const Expanse = () => {
-  const { data: cameraState } = useCameraState({ subscribe: true });
+  useCameraState({ subscribe: true });
 
   return (
     <div className="relative h-full w-full overflow-hidden rounded-lg bg-black">
@@ -71,7 +71,6 @@ export const Expanse = () => {
 
         <SceneOverlay />
         <DebugOverlay />
-        <TimeOverlay />
       </PanelProvider>
     </div>
   );

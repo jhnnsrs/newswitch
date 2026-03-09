@@ -1,15 +1,8 @@
 import "./App.css";
 import type { ReactNode } from "react";
-import { Activity, PlaySquare } from "lucide-react";
-import { NavLink, Navigate, Route, Routes } from "react-router-dom";
-import { buttonVariants } from "./components/ui/button";
+import { Navigate, Route, Routes } from "react-router-dom";
 import { Toaster } from "./components/ui/sonner";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "./components/ui/tooltip";
-import { cn } from "./lib/utils";
+import { AppNavigationChrome } from "./components/navigation/AppNavigationChrome";
 import { createScopedProvider } from "./lib/rekuest";
 import { IndexPage, ReplayPage } from "./pages";
 import { appsDefinition } from "./apps";
@@ -45,63 +38,15 @@ function ScopedRoute({
   return (
     <ScopedAppsProvider scope={scope}>
       <LocalStoreProvider scope={scope}>
-        {children}
+        <AppNavigationChrome>{children}</AppNavigationChrome>
       </LocalStoreProvider>
     </ScopedAppsProvider>
-  );
-}
-
-function AppNavigation() {
-  const items = [
-    {
-      to: "/",
-      label: "Index",
-      icon: Activity,
-    },
-    {
-      to: "/replay",
-      label: "Replay",
-      icon: PlaySquare,
-    },
-  ];
-
-  return (
-    <div className="pointer-events-none fixed right-4 bottom-4 z-50 -translate-y-1/2">
-      <div className="pointer-events-auto flex flex-row items-center gap-2 rounded-2xl border border-border bg-background/85 p-2 shadow-lg backdrop-blur-sm dark">
-        {items.map(({ to, label, icon: Icon }) => (
-          <Tooltip key={to}>
-            <TooltipTrigger asChild>
-              <NavLink
-                to={to}
-                end={to === "/"}
-                aria-label={label}
-                className={({ isActive }) =>
-                  cn(
-                    buttonVariants({
-                      variant: isActive ? "default" : "ghost",
-                      size: "icon",
-                    }),
-                    "rounded-xl",
-                  )
-                }
-              >
-                <Icon className="size-4" />
-              </NavLink>
-            </TooltipTrigger>
-            <TooltipContent side="right" sideOffset={10}>
-              {label}
-            </TooltipContent>
-          </Tooltip>
-        ))}
-      </div>
-    </div>
   );
 }
 
 function App() {
   return (
     <>
-      <AppNavigation />
       <Routes>
         <Route
           path="/"
