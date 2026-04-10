@@ -4,16 +4,7 @@ import { applyPatch, type Operation } from 'fast-json-patch';
 import { createStore, type StateCreator, type StoreApi } from 'zustand/vanilla';
 import { devtools, subscribeWithSelector } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
-import type { StateSegmentsResponse } from '@/lib/rekuest/transport/types';
-
-export interface Envelope {
-  state_name: string;
-  rev: number;
-  base_rev: number;
-  ts: number;
-  patches: Operation[];
-}
-
+import type { StatePatchEvent, StateSegmentsResponse } from '@/lib/rekuest/transport/types';
 
 
 
@@ -50,6 +41,7 @@ export interface GlobalStateStore {
   segments: StateSegmentsResponse[];
   snapshots: SnapshotEnvelope[];
 
+
   loading: Record<string, boolean | undefined>;
   errors: Record<string, Error | null | undefined>;
 
@@ -70,7 +62,7 @@ export interface GlobalStateStore {
     snapshots: Record<string, { value: unknown; revision: number }>,
   ) => void;
   upsertSegments: (segments: StateSegmentsResponse[]) => void;
-  applyEnvelope: (envelope: Envelope) => void;
+  applyPatch: (envelope: StatePatchEvent) => void;
   replaceLatestPatches: (patches: LatestPatchEntry[]) => void;
   setLoading: (key: string, loading: boolean) => void;
   setGlobalRevision: (revision: string | number | null) => void;
@@ -224,45 +216,37 @@ export const createGlobalStateStore = ({
           });
         },
 
-        applyEnvelope: (envelope) => {
-          const { state_name: key, patches: operations } = envelope;
-          const currentState = get().states[key];
-          const currentRevision = get().stateRevisions[key] ?? 0;
-          if (currentState === undefined) {
-            console.warn(`[StateStore] Cannot apply patch to unknown state: ${key}`);
-            return;
-          }
-          if (envelope.base_rev !== currentRevision) {
-            console.warn(
-              `[StateStore] Revision mismatch for ${key}: current=${currentRevision}, envelope.base_rev=${envelope.base_rev}`,
-            );
-          }
+        applyPatch: (message) => {
+          
+          const currentState = get().states[message.state_name];
+
+          console.log(`[StateStore] Applying patch to ${message.state_name} at global revision ${message.global_rev}:`, message);
+
 
           set((state) => {
-            const nextEntries = operations.map((operation) => ({
-              stateName: key,
-              path: operation.path,
-              revision: envelope.rev,
-              ts: envelope.ts,
-            }));
+            const nextEntry = {
+              stateName: message.state_name,
+              path: message.path,
+              ts: message.ts,
+            };
 
             state.latestPatches = [
               ...state.latestPatches,
-              ...nextEntries,
+              nextEntry,
             ].slice(-latestPatchesBufferSize);
           });
 
           try {
             const clonedState = JSON.parse(JSON.stringify(currentState));
-            const { newDocument } = applyPatch(clonedState, operations);
+            const { newDocument } = applyPatch(clonedState, [message]);
             
 
             set((state) => {
-              state.states[key] = newDocument;
-              state.stateRevisions[key] = envelope.rev;
+              state.states[message.state_name] = newDocument;
+              state.globalRevision = message.global_rev;
             });
           } catch (err) {
-            console.error(`[StateStore] Failed to apply patch to ${key}:`, err);
+            console.error(`[StateStore] Failed to apply patch to ${message.state_name}:`, err);
           }
         },
 

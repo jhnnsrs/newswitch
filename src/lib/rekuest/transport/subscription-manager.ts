@@ -320,6 +320,7 @@ export class TransportSubscriptionManager {
 
     ws.onmessage = (event) => {
       const message = JSON.parse(event.data) as FromAgentMessage;
+      console.log(`[TransportSubscriptionManager] Received message for ${appKey}:`, message);
       state.listeners.forEach((listener) => {
         listener(message);
       });

@@ -6,7 +6,7 @@ import {
 
 // --- Definition ---
 export const ExpanseStateDefinition: LockDefinition<'expanse_state'> = {
-  // Lock schema for expanse_state
+  // No description provided
   appKey: 'default',
   key: 'expanse_state',
 };

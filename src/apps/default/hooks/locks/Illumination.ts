@@ -6,7 +6,7 @@ import {
 
 // --- Definition ---
 export const IlluminationDefinition: LockDefinition<'illumination'> = {
-  // Lock schema for illumination
+  // No description provided
   appKey: 'default',
   key: 'illumination',
 };

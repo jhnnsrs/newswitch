@@ -6,7 +6,7 @@ import {
 
 // --- Definition ---
 export const CameraParametersDefinition: LockDefinition<'camera_parameters'> = {
-  // Lock schema for camera_parameters
+  // No description provided
   appKey: 'default',
   key: 'camera_parameters',
 };

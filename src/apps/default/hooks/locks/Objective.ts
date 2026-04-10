@@ -6,7 +6,7 @@ import {
 
 // --- Definition ---
 export const ObjectiveDefinition: LockDefinition<'objective'> = {
-  // Lock schema for objective
+  // No description provided
   appKey: 'default',
   key: 'objective',
 };

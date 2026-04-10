@@ -371,7 +371,15 @@ export interface Envelope {
 
 export interface StatePatchEvent {
   type: typeof StateEventType.STATE_PATCH;
-  envelope: Envelope;
+  session_id: string;
+  global_rev: number;
+  state_name: string;
+  ts: number;
+  op: 'add' | 'remove' | 'replace' | 'move' | 'copy';
+  path: string;
+  value?: unknown;
+  old_value?: string;
+  correlation_id: string;
 }
 
 export interface LockEvent {

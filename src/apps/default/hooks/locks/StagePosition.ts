@@ -6,7 +6,7 @@ import {
 
 // --- Definition ---
 export const StagePositionDefinition: LockDefinition<'stage_position'> = {
-  // Lock schema for stage_position
+  // No description provided
   appKey: 'default',
   key: 'stage_position',
 };

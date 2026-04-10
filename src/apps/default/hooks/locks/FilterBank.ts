@@ -6,7 +6,7 @@ import {
 
 // --- Definition ---
 export const FilterBankDefinition: LockDefinition<'filter_bank'> = {
-  // Lock schema for filter_bank
+  // No description provided
   appKey: 'default',
   key: 'filter_bank',
 };

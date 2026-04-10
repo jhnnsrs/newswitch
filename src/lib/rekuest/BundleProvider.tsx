@@ -300,6 +300,8 @@ export function BundleProvider({ children }: BundleProviderProps) {
 							const lockStore = lockStoreRegistry.getStoreApi(appKey).getState();
 							const taskStore = taskStoreRegistry.getStoreApi(appKey).getState();
 
+							console.debug(`[BundleProvider] Received message for ${appKey}:`, message);
+
 							switch (message.type) {
 								case 'INIT': {
 									const initMessage = message as WebSocketInitMessage;
@@ -335,7 +337,7 @@ export function BundleProvider({ children }: BundleProviderProps) {
 									stateStore.setState(message.state, message.value);
 									return;
 								case StateEventType.STATE_PATCH:
-									stateStore.applyEnvelope(message.envelope as unknown as StateStoreEnvelope);
+									stateStore.applyPatch(message);
 									return;
 								case LockEventType.LOCK:
 									lockStore.setLock(message.key, message.assignation);

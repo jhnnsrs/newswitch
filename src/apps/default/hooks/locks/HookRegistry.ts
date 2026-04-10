@@ -6,7 +6,7 @@ import {
 
 // --- Definition ---
 export const HookRegistryDefinition: LockDefinition<'hook_registry'> = {
-  // Lock schema for hook_registry
+  // No description provided
   appKey: 'default',
   key: 'hook_registry',
 };

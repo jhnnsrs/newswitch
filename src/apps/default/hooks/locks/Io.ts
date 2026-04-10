@@ -6,7 +6,7 @@ import {
 
 // --- Definition ---
 export const IoDefinition: LockDefinition<'io'> = {
-  // Lock schema for io
+  // No description provided
   appKey: 'default',
   key: 'io',
 };
