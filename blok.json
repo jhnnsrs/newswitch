@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-03-09T20:56:12.930Z",
+  "generatedAt": "2026-03-10T08:34:19.625Z",
   "app": {
     "name": "newswitch",
     "version": "0.0.0",
@@ -8554,7 +8554,7 @@
                   "key": "...",
                   "label": null,
                   "kind": "MODEL",
-                  "description": "Shared state for illumination parameters.\n\n    Note: intensity is divided by 1000 in the detector for actual scaling,\n    so 10000.0 gives an effective intensity of 10.0.\n    ",
+                  "description": "Shared state for illumination parameters.\n\nNote: intensity is divided by 1000 in the detector for actual scaling,\nso 10000.0 gives an effective intensity of 10.0.\n",
                   "identifier": "illumination",
                   "nullable": false,
                   "effects": [],
@@ -9248,7 +9248,7 @@
                   "key": "...",
                   "label": null,
                   "kind": "MODEL",
-                  "description": "Configuration for a single optical filter.\n\n    Attributes:\n        slot: Filter wheel slot number.\n        name: Human-readable filter name.\n        center_wavelength: Center wavelength of the filter passband (nm).\n        bandwidth: Full width at half maximum of the passband (nm).\n        transmission: Peak transmission efficiency (0.0 to 1.0).\n        is_active: Whether this filter is currently in the light path.\n    ",
+                  "description": "Configuration for a single optical filter.\n\nAttributes:\n    slot: Filter wheel slot number.\n    name: Human-readable filter name.\n    center_wavelength: Center wavelength of the filter passband (nm).\n    bandwidth: Full width at half maximum of the passband (nm).\n    transmission: Peak transmission efficiency (0.0 to 1.0).\n    is_active: Whether this filter is currently in the light path.\n",
                   "identifier": "filter",
                   "nullable": false,
                   "effects": [],
@@ -15899,21 +15899,21 @@
           "key": "stage_position",
           "description": "Lock schema for stage_position"
         },
-        "io": {
-          "key": "io",
-          "description": "Lock schema for io"
-        },
         "camera_parameters": {
           "key": "camera_parameters",
           "description": "Lock schema for camera_parameters"
         },
-        "objective": {
-          "key": "objective",
-          "description": "Lock schema for objective"
+        "io": {
+          "key": "io",
+          "description": "Lock schema for io"
         },
         "filter_bank": {
           "key": "filter_bank",
           "description": "Lock schema for filter_bank"
+        },
+        "objective": {
+          "key": "objective",
+          "description": "Lock schema for objective"
         },
         "hook_registry": {
           "key": "hook_registry",
@@ -15921,9 +15921,9 @@
         }
       },
       "schemas": {
-        "tasks": "http://jhnnsrs-lab:8099/schemas/implementations",
-        "states": "http://jhnnsrs-lab:8099/schemas/states",
-        "locks": "http://jhnnsrs-lab:8099/schemas/locks"
+        "tasks": "http://localhost:8099/schemas/implementations",
+        "states": "http://localhost:8099/schemas/states",
+        "locks": "http://localhost:8099/schemas/locks"
       }
     }
   }
