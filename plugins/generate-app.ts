@@ -80,8 +80,16 @@ type StateSchemaDefinition = {
   ports: SchemaPort[];
 };
 
+
+type StateSchemaImplementation = {
+  definition: StateSchemaDefinition;
+  interface: string;
+}
+
+
+
 type StatesSchema = {
-  states: Record<string, StateSchemaDefinition>;
+  states: Record<string, StateSchemaImplementation>;
 };
 
 type LockSchemaDefinition = {
@@ -702,7 +710,7 @@ ${optimisticExports.join('\n')}
 
 const generateStateContent = (
   key: string,
-  stateDefinition: StateSchemaDefinition,
+  stateDefinition: StateSchemaImplementation,
   importPathToSync: string,
   appKey?: string,
   symbolPrefix?: string,
@@ -718,7 +726,7 @@ const generateStateContent = (
   const schemaName = `${generatedName}Schema`;
   const typeName = generatedName;
   const definitionName = `${generatedName}Definition`;
-  const fields = (stateDefinition.ports ?? [])
+  const fields = (stateDefinition.definition.ports ?? [])
     .map(
       (port) => `  ${toObjectPropertyKey(port.key ?? 'value')}: ${mapPortToZod(port, context, port.key ?? 'State')}`,
     )
