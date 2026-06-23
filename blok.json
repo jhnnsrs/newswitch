@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-05-27T08:51:09.507Z",
+  "generatedAt": "2026-06-23T13:37:37.210Z",
   "app": {
     "name": "newswitch",
     "version": "0.0.0",
@@ -2515,11 +2515,11 @@
             "stage_position"
           ],
           "manipulates": [
-            "ObjectiveState",
-            "CameraState",
-            "IlluminationState",
-            "StageState",
             "ExpanseState",
+            "StageState",
+            "CameraState",
+            "ObjectiveState",
+            "IlluminationState",
             "FilterBankState"
           ],
           "extension": null
@@ -15200,13 +15200,6 @@
             "description": "Lock definition for stage_position"
           }
         },
-        "io": {
-          "key": "io",
-          "definition": {
-            "key": "io",
-            "description": "Lock definition for io"
-          }
-        },
         "camera_parameters": {
           "key": "camera_parameters",
           "definition": {
@@ -15214,11 +15207,11 @@
             "description": "Lock definition for camera_parameters"
           }
         },
-        "objective": {
-          "key": "objective",
+        "io": {
+          "key": "io",
           "definition": {
-            "key": "objective",
-            "description": "Lock definition for objective"
+            "key": "io",
+            "description": "Lock definition for io"
           }
         },
         "filter_bank": {
@@ -15226,6 +15219,13 @@
           "definition": {
             "key": "filter_bank",
             "description": "Lock definition for filter_bank"
+          }
+        },
+        "objective": {
+          "key": "objective",
+          "definition": {
+            "key": "objective",
+            "description": "Lock definition for objective"
           }
         },
         "hook_registry": {
@@ -15237,9 +15237,9 @@
         }
       },
       "schemas": {
-        "tasks": "http://jhnnsrs-lab:8099/schemas/implementations",
-        "states": "http://jhnnsrs-lab:8099/schemas/states",
-        "locks": "http://jhnnsrs-lab:8099/schemas/locks"
+        "tasks": "http://localhost:8099/schemas/implementations",
+        "states": "http://localhost:8099/schemas/states",
+        "locks": "http://localhost:8099/schemas/locks"
       }
     }
   }
